@@ -23,9 +23,6 @@ import com.responsedto.ProductHomeResponse;
 import com.responsedto.Version;
 import com.utils.UploadService;
 
-import com.entities.Product;
-import com.repositories.ProductJPA;
-
 
 
 @Service

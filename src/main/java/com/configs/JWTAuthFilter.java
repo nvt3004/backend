@@ -1,11 +1,8 @@
 package com.configs;
 
 import com.entities.User;
-import com.models.AuthDTO;
-import com.repositories.UserJPA;
 import com.repositories.UsersJPA;
 import com.services.AuthDetailsService;
-import com.services.AuthManagementService;
 // import com.services.PermissionCheckService;
 import com.services.PermissionService;
 import com.utils.JWTUtils;
@@ -16,7 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

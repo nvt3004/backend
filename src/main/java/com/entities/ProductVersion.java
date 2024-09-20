@@ -8,52 +8,55 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
-@Table(name="product_version")
-@NamedQuery(name="ProductVersion.findAll", query="SELECT p FROM ProductVersion p")
+@Table(name = "product_version")
+@NamedQuery(name = "ProductVersion.findAll", query = "SELECT p FROM ProductVersion p")
 public class ProductVersion implements Serializable {
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;
 
-    private int quantity;
+	private int quantity;
 
-    @Column(name="retail_price")
-    private BigDecimal retailPrice;
+	@Column(name = "import_price")
+	private BigDecimal importPrice;
 
-    @Column(name="wholesale_price")
-    private BigDecimal wholesalePrice;
-    
-    @Column(name = "version_name")
-    private String versionName;
+	@Column(name = "retail_price")
+	private BigDecimal retailPrice;
 
-    @OneToMany(mappedBy="productVersion")
-    @JsonManagedReference("productVersion-attributeOptionsVersions")
-    private List<AttributeOptionsVersion> attributeOptionsVersions;
+	@Column(name = "wholesale_price")
+	private BigDecimal wholesalePrice;
 
-    @OneToMany(mappedBy="productVersionBean")
-    @JsonManagedReference("productVersionBean-productVersion")
-    private List<CartProduct> cartProducts;
+	@Column(name = "version_name")
+	private String versionName;
 
-    @OneToMany(mappedBy="productVersion")
-    @JsonManagedReference("productVersion-images")
-    private List<Image> images;
+	@OneToMany(mappedBy = "productVersion")
+	@JsonManagedReference("productVersion-attributeOptionsVersions")
+	private List<AttributeOptionsVersion> attributeOptionsVersions;
 
-    @OneToMany(mappedBy="productVersionBean")
-    @JsonManagedReference("productVersionBean-orderDetails")
-    private List<OrderDetail> orderDetails;
+	@OneToMany(mappedBy = "productVersionBean")
+	@JsonManagedReference("productVersionBean-productVersion")
+	private List<CartProduct> cartProducts;
 
-    @ManyToOne
-    @JoinColumn(name="product_id")
-    @JsonBackReference("product-productVersions")
-    private Product product;
+	@OneToMany(mappedBy = "productVersion")
+	@JsonManagedReference("productVersion-images")
+	private List<Image> images;
 
-    @OneToMany(mappedBy="productVersionBean")
-    @JsonManagedReference("productVersionBean-warehouses")
-    private List<Warehous> warehouses;
+	@OneToMany(mappedBy = "productVersionBean")
+	@JsonManagedReference("productVersionBean-orderDetails")
+	private List<OrderDetail> orderDetails;
 
-    public ProductVersion() {
+	@ManyToOne
+	@JoinColumn(name = "product_id")
+	@JsonBackReference("product-productVersions")
+	private Product product;
+
+	@OneToMany(mappedBy = "productVersion")
+	@JsonManagedReference("product_version-receipt_detail")
+	private List<ReceiptDetail> receiptDetail;
+
+	public ProductVersion() {
 	}
 
 	public int getId() {
@@ -70,6 +73,14 @@ public class ProductVersion implements Serializable {
 
 	public void setQuantity(int quantity) {
 		this.quantity = quantity;
+	}
+
+	public BigDecimal getImportPrice() {
+		return this.importPrice;
+	}
+
+	public void setImportPrice(BigDecimal importPrice) {
+		this.importPrice = importPrice;
 	}
 
 	public BigDecimal getRetailPrice() {
@@ -182,28 +193,6 @@ public class ProductVersion implements Serializable {
 
 	public void setProduct(Product product) {
 		this.product = product;
-	}
-
-	public List<Warehous> getWarehouses() {
-		return this.warehouses;
-	}
-
-	public void setWarehouses(List<Warehous> warehouses) {
-		this.warehouses = warehouses;
-	}
-
-	public Warehous addWarehous(Warehous warehous) {
-		getWarehouses().add(warehous);
-		warehous.setProductVersionBean(this);
-
-		return warehous;
-	}
-
-	public Warehous removeWarehous(Warehous warehous) {
-		getWarehouses().remove(warehous);
-		warehous.setProductVersionBean(null);
-
-		return warehous;
 	}
 
 	public String getVersionName() {

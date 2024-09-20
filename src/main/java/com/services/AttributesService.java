@@ -3,10 +3,6 @@ package com.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.entities.AttributeOptionsVersion;
-import com.entities.ProductVersion;
-import com.models.AttributeDTO;
-import com.models.AttributeProductVersionDTO;
 import com.repositories.ProductVersionJPA;
 
 @Service

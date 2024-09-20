@@ -7,7 +7,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,7 +30,6 @@ import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.UserCoupon;
 import com.errors.ResponseAPI;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.models.CartItemModel;
 import com.models.CartOrderDetailModel;
 import com.models.CartOrderModel;

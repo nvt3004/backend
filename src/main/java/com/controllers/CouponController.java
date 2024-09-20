@@ -33,6 +33,7 @@ import com.services.AuthService;
 import com.services.CouponService;
 import com.services.JWTService;
 import com.services.UserService;
+import com.utils.ValidationUtil;
 
 import jakarta.validation.Valid;
 
@@ -42,7 +43,7 @@ public class CouponController {
 
 	@Autowired
 	private CouponService couponService;
-	
+
 	@Autowired
 	private AuthService authService;
 
@@ -54,8 +55,7 @@ public class CouponController {
 
 	@PostMapping
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreate couponCreate,
-			BindingResult errors,
-			@RequestHeader("Authorization") Optional<String> authHeader) {
+			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
@@ -94,12 +94,11 @@ public class CouponController {
 			errorResponse.setMessage("Account locked");
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
 		}
-		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreate, errors);
 
-		if (!fieldErrors.isEmpty()) {
-			errorResponse = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(),
-					"Validation failed", fieldErrors);
-			return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
+		if (!validationErrors.isEmpty()) {
+			errorResponse = new ApiResponse<>(400, "Validation failed.", validationErrors);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
 		}
 
 		try {
@@ -159,8 +158,7 @@ public class CouponController {
 		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreate, errors);
 
 		if (!fieldErrors.isEmpty()) {
-			errorResponse = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(),
-					"Validation failed", fieldErrors);
+			errorResponse = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "Validation failed", fieldErrors);
 			return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
 		}
 
@@ -169,8 +167,7 @@ public class CouponController {
 			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", updatedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (InvalidException e) {
-			errorResponse = new ApiResponse<>(HttpStatus.NOT_FOUND.value(), "Coupon not found",
-					e.getMessage());
+			errorResponse = new ApiResponse<>(HttpStatus.NOT_FOUND.value(), "Coupon not found", e.getMessage());
 			return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
 		} catch (Exception e) {
 			errorResponse = new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -226,8 +223,7 @@ public class CouponController {
 					null);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (InvalidException e) {
-			errorResponse = new ApiResponse<>(HttpStatus.CONFLICT.value(),
-					"Unable to delete coupon", e.getMessage());
+			errorResponse = new ApiResponse<>(HttpStatus.CONFLICT.value(), "Unable to delete coupon", e.getMessage());
 			return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
 		} catch (Exception e) {
 			errorResponse = new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -284,7 +280,7 @@ public class CouponController {
 
 		try {
 			Pageable pageable = PageRequest.of(page, size);
-			Page<CouponDTO> couponPage = couponService.getCoupons(startDate, endDate,discountType, pageable);
+			Page<CouponDTO> couponPage = couponService.getCoupons(startDate, endDate, discountType, pageable);
 
 			ApiResponse<Page<CouponDTO>> response = new ApiResponse<>(HttpStatus.OK.value(),
 					"Coupons retrieved successfully", couponPage);

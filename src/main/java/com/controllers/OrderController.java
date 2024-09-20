@@ -86,17 +86,26 @@ public class OrderController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			errorResponse.setErrorCode(404);
-			errorResponse.setMessage("Account not found");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+		    errorResponse.setErrorCode(404);
+		    errorResponse.setMessage("Account not found");
+		    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
 		}
 
 		if (user.getStatus() == 0) {
-			errorResponse.setErrorCode(403);
-			errorResponse.setMessage("Account locked");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+		    errorResponse.setErrorCode(403);
+		    errorResponse.setMessage("Account locked - Username: " + username);
+		    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
 		}
 
+		if (page < 0) {
+			return ResponseEntity.badRequest()
+					.body(new ApiResponse<>(400, "Invalid page number. It must be greater than or equal to 0.", null));
+		}
+
+		if (size < 1) {
+			return ResponseEntity.badRequest()
+					.body(new ApiResponse<>(400, "Invalid size. It must be greater than or equal to 1.", null));
+		}
 		try {
 			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(isAdminOrder, keyword, status,
 					page, size);
@@ -331,47 +340,47 @@ public class OrderController {
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@RequestParam Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
-//		ApiResponse<String> errorResponse = new ApiResponse<>();
-//
-//		if (!authHeader.isPresent()) {
-//			errorResponse.setErrorCode(400);
-//			errorResponse.setMessage("Authorization header is missing");
-//			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-//		}
-//
-//		String token = authService.readTokenFromHeader(authHeader);
-//
-//		try {
-//			jwtService.extractUsername(token);
-//		} catch (Exception e) {
-//			errorResponse.setErrorCode(400);
-//			errorResponse.setMessage("Invalid token format");
-//			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-//		}
-//
-//		if (jwtService.isTokenExpired(token)) {
-//			errorResponse.setErrorCode(401);
-//			errorResponse.setMessage("Token expired");
-//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-//		}
-//
-//		String username = jwtService.extractUsername(token);
-//		User user = userService.getUserByUsername(username);
-//		if (user == null) {
-//			errorResponse.setErrorCode(404);
-//			errorResponse.setMessage("Account not found");
-//			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-//		}
-//
-//		if (user.getStatus() == 0) {
-//			errorResponse.setErrorCode(403);
-//			errorResponse.setMessage("Account locked");
-//			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-//		}
-//		if (orderId == null) {
-//			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
-//			return ResponseEntity.badRequest().body(response);
-//		}
+		ApiResponse<String> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		if (jwtService.isTokenExpired(token)) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage("Token expired");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		}
+
+		String username = jwtService.extractUsername(token);
+		User user = userService.getUserByUsername(username);
+		if (user == null) {
+			errorResponse.setErrorCode(404);
+			errorResponse.setMessage("Account not found");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+		}
+
+		if (user.getStatus() == 0) {
+			errorResponse.setErrorCode(403);
+			errorResponse.setMessage("Account locked");
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+		}
+		if (orderId == null) {
+			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
+			return ResponseEntity.badRequest().body(response);
+		}
 
 		ApiResponse<Map<String, Object>> response = orderService.getOrderDetails(orderId);
 

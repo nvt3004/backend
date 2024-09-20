@@ -1,5 +1,6 @@
 package com.services;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,21 @@ public class ProductVersionService {
 	}
 
 	public ProductVersion saveProductVersion(ProductVersion productVersion) {
+		return productVersionJpa.save(productVersion);
+	}
+	
+	public List<ProductVersion> getAllProductVersions() {
+		return productVersionJpa.findAll();
+	}
+
+	public ProductVersion getProductVersionByID(Integer id) {
+		return productVersionJpa.findById(id).orElse(null);
+	}
+
+	public Optional<ProductVersion> getWarehousById(int id) {
+		return productVersionJpa.findById(id);
+	}
+	public ProductVersion updateProdVerSion(ProductVersion productVersion) {
 		return productVersionJpa.save(productVersion);
 	}
 }
