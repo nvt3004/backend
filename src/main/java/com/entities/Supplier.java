@@ -32,7 +32,7 @@ public class Supplier implements Serializable {
 
 	private String phone;
 
-	private byte status;
+	private Boolean status;
 
 	@Column(name="supplier_name")
 	private String supplierName;
@@ -84,11 +84,11 @@ public class Supplier implements Serializable {
 		this.phone = phone;
 	}
 
-	public byte getStatus() {
+	public Boolean getStatus() {
 		return this.status;
 	}
 
-	public void setStatus(byte status) {
+	public void setStatus(Boolean status) {
 		this.status = status;
 	}
 

@@ -4,15 +4,9 @@ import java.io.Serializable;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
-
-/**
- * The persistent class for the product_version database table.
- * 
- */
 @Entity
 @Table(name = "product_version")
 @NamedQuery(name = "ProductVersion.findAll", query = "SELECT p FROM ProductVersion p")
@@ -37,7 +31,7 @@ public class ProductVersion implements Serializable {
 	@Column(name = "version_name")
 	private String versionName;
 
-	@OneToMany(fetch = FetchType.EAGER,mappedBy = "productVersion")
+	@OneToMany(mappedBy = "productVersion")
 	@JsonManagedReference("productVersion-attributeOptionsVersions")
 	private List<AttributeOptionsVersion> attributeOptionsVersions;
 
@@ -45,7 +39,7 @@ public class ProductVersion implements Serializable {
 	@JsonManagedReference("productVersionBean-productVersion")
 	private List<CartProduct> cartProducts;
 
-	@OneToMany(fetch = FetchType.EAGER,mappedBy = "productVersion")
+	@OneToMany(mappedBy = "productVersion")
 	@JsonManagedReference("productVersion-images")
 	private List<Image> images;
 
@@ -208,7 +202,4 @@ public class ProductVersion implements Serializable {
 	public void setVersionName(String versionName) {
 		this.versionName = versionName;
 	}
-	
-	
-
 }

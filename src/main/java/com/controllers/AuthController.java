@@ -22,13 +22,13 @@ public class AuthController {
 
     @PostMapping("/api/register")
     public ResponseEntity<AuthDTO> regeister(@RequestBody AuthDTO reg) {
-    	System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
+        System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
         return ResponseEntity.ok(usersManagementService.register(reg));
     }
-    
+
     @PostMapping("/api/te")
     public ResponseEntity<AuthDTO> regeisterh(@RequestBody AuthDTO reg) {
-    	System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
+        System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
         return ResponseEntity.ok(usersManagementService.register(reg));
     }
 
@@ -44,18 +44,22 @@ public class AuthController {
     }
 
     @GetMapping("/api/admin/get-all-users")
-    public ResponseEntity<AuthDTO> getAllUsers() {
-        return ResponseEntity.ok(usersManagementService.getAllUsers());
+    public ResponseEntity<AuthDTO> getAllUsers(HttpServletRequest request) {
+        AuthDTO response = usersManagementService.getAllUsers(request);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/api/admin/get-users/{userId}")
-    public ResponseEntity<AuthDTO> getUSerByID(@PathVariable Integer userId) {
-        return ResponseEntity.ok(usersManagementService.getUsersById(userId));
+    public ResponseEntity<AuthDTO> getUserById(@PathVariable Integer userId, HttpServletRequest request) {
+        AuthDTO response = usersManagementService.getUsersById(request, userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PutMapping("/api/admin/update/{userId}")
-    public ResponseEntity<AuthDTO> updateUser(@PathVariable Integer userId, @RequestBody User reqres) {
-        return ResponseEntity.ok(usersManagementService.updateUser(userId, reqres));
+    public ResponseEntity<AuthDTO> updateUser(@PathVariable Integer userId, @RequestBody User updatedUser,
+            HttpServletRequest request) {
+        AuthDTO response = usersManagementService.updateUser(request, userId, updatedUser);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/api/login-social")
@@ -73,8 +77,9 @@ public class AuthController {
     }
 
     @DeleteMapping("/api/admin/delete/{userId}")
-    public ResponseEntity<AuthDTO> deleteUSer(@PathVariable Integer userId) {
-        return ResponseEntity.ok(usersManagementService.deleteUser(userId));
+    public ResponseEntity<AuthDTO> deleteUser(@PathVariable Integer userId, HttpServletRequest request) {
+        AuthDTO response = usersManagementService.deleteUser(request, userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/api/send")

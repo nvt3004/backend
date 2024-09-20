@@ -30,15 +30,13 @@ public class Reply implements Serializable {
 	//bi-directional many-to-one association to Feedback
 	@ManyToOne
 	@JoinColumn(name="feedback_id")
-	@JsonBackReference
-
+	@JsonBackReference("feedback-replies")
 	private Feedback feedback;
 
 	//bi-directional many-to-one association to User
 	@ManyToOne
 	@JoinColumn(name="user_id")
-	@JsonBackReference
-
+	@JsonBackReference("user-replies")
 	private User user;
 
 	public Reply() {

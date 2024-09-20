@@ -4,71 +4,69 @@ import java.io.Serializable;
 import jakarta.persistence.*;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-
 
 /**
  * The persistent class for the permissions database table.
  * 
  */
 @Entity
-@Table(name="permissions")
-@NamedQuery(name="Permission.findAll", query="SELECT p FROM Permission p")
+@Table(name = "permissions")
+@NamedQuery(name = "Permission.findAll", query = "SELECT p FROM Permission p")
 public class Permission implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name="permission_id")
-	private int permissionId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "permission_id")
+    private int permissionId;
 
-	@Column(name="permission_name")
-	private String permissionName;
+    @Column(name = "permission_name")
+    private String permissionName;
 
-	//bi-directional many-to-one association to ManagePermission
-	@OneToMany(mappedBy="permission")
-	// @JsonIgnore
-	private List<ManagePermission> managePermissions;
+    //bi-directional many-to-one association to ManagePermission
+    @OneToMany(mappedBy = "permission")
+    @JsonManagedReference("permission-managePermissions") 
+    private List<ManagePermission> managePermissions;
 
-	public Permission() {
-	}
+    public Permission() {
+    }
 
-	public int getPermissionId() {
-		return this.permissionId;
-	}
+    public int getPermissionId() {
+        return this.permissionId;
+    }
 
-	public void setPermissionId(int permissionId) {
-		this.permissionId = permissionId;
-	}
+    public void setPermissionId(int permissionId) {
+        this.permissionId = permissionId;
+    }
 
-	public String getPermissionName() {
-		return this.permissionName;
-	}
+    public String getPermissionName() {
+        return this.permissionName;
+    }
 
-	public void setPermissionName(String permissionName) {
-		this.permissionName = permissionName;
-	}
+    public void setPermissionName(String permissionName) {
+        this.permissionName = permissionName;
+    }
 
-	public List<ManagePermission> getManagePermissions() {
-		return this.managePermissions;
-	}
+    public List<ManagePermission> getManagePermissions() {
+        return this.managePermissions;
+    }
 
-	public void setManagePermissions(List<ManagePermission> managePermissions) {
-		this.managePermissions = managePermissions;
-	}
+    public void setManagePermissions(List<ManagePermission> managePermissions) {
+        this.managePermissions = managePermissions;
+    }
 
-	public ManagePermission addManagePermission(ManagePermission managePermission) {
-		getManagePermissions().add(managePermission);
-		managePermission.setPermission(this);
+    public ManagePermission addManagePermission(ManagePermission managePermission) {
+        getManagePermissions().add(managePermission);
+        managePermission.setPermission(this);
 
-		return managePermission;
-	}
+        return managePermission;
+    }
 
-	public ManagePermission removeManagePermission(ManagePermission managePermission) {
-		getManagePermissions().remove(managePermission);
-		managePermission.setPermission(null);
+    public ManagePermission removeManagePermission(ManagePermission managePermission) {
+        getManagePermissions().remove(managePermission);
+        managePermission.setPermission(null);
 
-		return managePermission;
-	}
-
+        return managePermission;
+    }
 }

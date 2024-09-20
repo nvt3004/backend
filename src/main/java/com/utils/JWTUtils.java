@@ -1,13 +1,16 @@
 package com.utils;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.SignatureException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,9 +29,10 @@ public class JWTUtils {
         this.Key = new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
-    public String generateToken(UserDetails userDetails){
+    public String generateToken(UserDetails userDetails, String purpose){
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("purpose", purpose)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(Key)
@@ -60,6 +64,35 @@ public class JWTUtils {
     public  boolean isTokenExpired(String token){
         return extractClaims(token, Claims::getExpiration).before(new Date());
     }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        try {
+            return Jwts.parser()
+                       .verifyWith(Key)
+                       .build()           
+                       .parseSignedClaims(token) 
+                       .getPayload();        
+        } catch (ExpiredJwtException  e) {
+            throw new RuntimeException("Invalid JWT signature");
+        }
+    }
+    
+    public String extractPurpose(String token) {
+        return extractClaim(token, claims -> claims.get("purpose", String.class));
+    }
+    
+    public boolean isTokenValidBlack(String token, UserDetails userDetails) {
+        if (TokenBlacklist.isTokenBlacklisted(token)) {
+            return false;
+        }
+        return (extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+    
 
 
 }

@@ -29,8 +29,7 @@ public class OrderStatus implements Serializable {
 
 	//bi-directional many-to-one association to Order
 	@OneToMany(mappedBy="orderStatus")
-	@JsonManagedReference
-
+	@JsonManagedReference("orderStatus-orders")
 	private List<Order> orders;
 
 	public OrderStatus() {

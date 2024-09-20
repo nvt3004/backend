@@ -29,7 +29,7 @@ public class UserRole implements Serializable {
 	
 	@ManyToOne
 	@JoinColumn(name="user_id")
-	@JsonBackReference(value = "userReference")
+	@JsonBackReference("user-userRoles")
 	private User user;
 
 	public UserRole() {
