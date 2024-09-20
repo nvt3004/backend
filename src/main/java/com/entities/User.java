@@ -1,7 +1,6 @@
 package com.entities;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -55,10 +54,8 @@ public class User implements UserDetails, Serializable {
 
 	private String username;
 
-	private String resetToken;
-
-	@Column(name = "provider")
-	private String provider;
+    @Column(name = "provider")
+    private String provider;
 
 	// Bi-directional many-to-one association to Address
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -217,14 +214,6 @@ public class User implements UserDetails, Serializable {
 	// public String getUsername() {
 	// return username;
 	// }
-
-	public String getResetToken() {
-		return resetToken;
-	}
-
-	public void setResetToken(String resetToken) {
-		this.resetToken = resetToken;
-	}
 
 	public void setUsername(String username) {
 		this.username = username;

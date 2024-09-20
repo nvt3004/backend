@@ -1,8 +1,5 @@
 package com.controllers;
 
-import java.sql.Timestamp;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Optional;
 
@@ -23,8 +20,6 @@ import com.entities.User;
 import com.errors.ResponseAPI;
 import com.models.ReplyDTO;
 import com.repositories.FeedbackJPA;
-import com.repositories.ImageJPA;
-import com.responsedto.FeedbackResponseDTO;
 import com.responsedto.ReplyResponseDTO;
 import com.responsedto.UserResponseDTO;
 import com.services.AuthService;

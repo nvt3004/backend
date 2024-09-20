@@ -3,8 +3,6 @@ package com.entities;
 import java.io.Serializable;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,9 +37,7 @@ public class ReceiptDetail implements Serializable {
     @ManyToOne
     @JoinColumn(name = "receipt_id")
     @JsonBackReference("receipt-receipt_detail")
-    @JsonIgnore
     private Receipt receipt;
-
 
     public ReceiptDetail() {
     }

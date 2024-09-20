@@ -5,11 +5,15 @@ import com.models.EmailRequestDTO;
 import com.entities.User;
 import com.entities.Role;
 import com.entities.UserRole;
-import com.repositories.RoleRepo;
-import com.repositories.UsersRepo;
+import com.repositories.RoleJPA;
+import com.repositories.UsersJPA;
 import com.utils.DateTimeUtil;
 import com.utils.JWTUtils;
-import com.repositories.UserRoleRepo;
+import com.utils.TokenBlacklist;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import com.repositories.UserRoleJPA;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,8 +24,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestHeader;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -35,11 +39,11 @@ import java.util.stream.Collectors;
 public class AuthManagementService {
 
     @Autowired
-    private UsersRepo usersRepo;
+    private UsersJPA usersRepo;
     @Autowired
-    private UserRoleRepo userRoleRepo;
+    private UserRoleJPA userRoleRepo;
     @Autowired
-    private RoleRepo roleRepo;
+    private RoleJPA roleRepo;
     @Autowired
     private JWTUtils jwtUtils;
     @Autowired
@@ -51,10 +55,12 @@ public class AuthManagementService {
 
     Date datecurrent = DateTimeUtil.getCurrentDateInVietnam();
 
+    @Autowired
+    private CartService cartRepo;
+    
     public AuthDTO register(AuthDTO registrationRequest) {
         AuthDTO resp = new AuthDTO();
 
-        // Định nghĩa regex cho email, password, và số điện thoại
         String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
         String phoneRegex = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$";
         String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
@@ -63,29 +69,24 @@ public class AuthManagementService {
         try {
             String username = registrationRequest.getUsername();
 
-            // Kiểm tra và xác định đầu vào có phải là email hay số điện thoại
             if (username == null || username.isEmpty()) {
                 throw new IllegalArgumentException("Username cannot be empty");
             }
 
             if (username.matches(emailRegex)) {
-                // Trường hợp username là email
                 Optional<User> existingUser = usersRepo.findByEmailAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Email already exists with provider Guest");
                 }
             } else if (username.matches(phoneRegex)) {
-                // Trường hợp username là số điện thoại
                 Optional<User> existingUser = usersRepo.findByPhoneAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Phone number already exists with provider Guest");
                 }
             } else {
-                // Trường hợp không phải là email hoặc số điện thoại
                 throw new IllegalArgumentException("Invalid username format. Must be a valid email or phone number");
             }
 
-            // Validate password
             if (registrationRequest.getPassword() == null || registrationRequest.getPassword().isEmpty()) {
                 throw new IllegalArgumentException("Invalid password is empty");
             }
@@ -94,7 +95,6 @@ public class AuthManagementService {
                         "Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
             }
 
-            // Validate full name
             if (registrationRequest.getFullName() == null || registrationRequest.getFullName().isEmpty()) {
                 throw new IllegalArgumentException("Invalid full name is empty");
             }
@@ -102,7 +102,6 @@ public class AuthManagementService {
                 throw new IllegalArgumentException("Full name cannot contain special characters or numbers");
             }
 
-            // Tạo người dùng mới
             User ourUser = new User();
             ourUser.setEmail(username.matches(emailRegex) ? username : null);
             ourUser.setPhone(username.matches(phoneRegex) ? username : null);
@@ -110,11 +109,10 @@ public class AuthManagementService {
             ourUser.setUsername(username);
             ourUser.setCreateDate(datecurrent);
             ourUser.setProvider("Guest");
-            ourUser.setStatus((byte) (registrationRequest.getIsActive()));
+            ourUser.setStatus((byte) 1);
             ourUser.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
             User ourUsersResult = usersRepo.save(ourUser);
 
-            // Gán quyền cho người dùng
             List<String> roles = Collections.singletonList("User");
             List<UserRole> userRoles = roles.stream().map(roleName -> {
                 Role role = roleRepo.findByRoleName(roleName)
@@ -146,7 +144,6 @@ public class AuthManagementService {
     public ResponseEntity<AuthDTO> login(AuthDTO loginRequest) {
         AuthDTO response = new AuthDTO();
         try {
-            // Tìm kiếm người dùng dựa trên email và provider
             Optional<User> optionalUser = usersRepo.findByEmailAndProvider(loginRequest.getUsername(), "Guest");
 
             if (optionalUser.isEmpty()) {
@@ -157,15 +154,14 @@ public class AuthManagementService {
 
             User user = optionalUser.get();
 
-            // Xác thực người dùng
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-            // Tạo token và refresh token
-            String jwt = jwtUtils.generateToken(user);
+            String jwt = jwtUtils.generateToken(user, "login");
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-            // Cập nhật thông tin người dùng vào phản hồi
+            String tokenPurpose = jwtUtils.extractPurpose(jwt);
+
             response.setStatusCode(200);
             response.setToken(jwt);
             response.setRefreshToken(refreshToken);
@@ -224,15 +220,15 @@ public class AuthManagementService {
     public AuthDTO getAllUsers() {
         AuthDTO reqRes = new AuthDTO();
 
-        try {
-            List<User> result = usersRepo.findAll();
-            if (!result.isEmpty()) {
-                reqRes.setUserList(result);
-                reqRes.setStatusCode(200);
-                reqRes.setMessage("Successful");
-            } else {
-                reqRes.setStatusCode(404);
-                reqRes.setMessage("No users found");
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7);
+
+            String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+            if (!"login".equals(tokenPurpose)) {
+                reqRes.setStatusCode(403);
+                reqRes.setMessage("Invalid token purpose");
+                return reqRes;
             }
             return reqRes;
         } catch (Exception e) {
@@ -245,10 +241,25 @@ public class AuthManagementService {
     public AuthDTO getUsersById(Integer id) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            User usersById = usersRepo.findById(id).orElseThrow(() -> new RuntimeException("User Not found"));
-            reqRes.setListData(usersById);
-            reqRes.setStatusCode(200);
-            reqRes.setMessage("Users with id '" + id + "' found successfully");
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7); 
+                
+                String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+                if (!"login".equals(tokenPurpose)) {
+                    reqRes.setStatusCode(403);
+                    reqRes.setMessage("Invalid token purpose");
+                    return reqRes;
+                }
+    
+                User usersById = usersRepo.findById(id).orElseThrow(() -> new RuntimeException("User Not found"));
+                reqRes.setListData(usersById);
+                reqRes.setStatusCode(200);
+                reqRes.setMessage("Users with id '" + id + "' found successfully");
+            } else {
+                reqRes.setStatusCode(401);
+                reqRes.setMessage("Authorization header is missing or token is invalid");
+            }
         } catch (Exception e) {
             reqRes.setStatusCode(500);
             reqRes.setMessage("Error occurred: " + e.getMessage());
@@ -259,11 +270,26 @@ public class AuthManagementService {
     public AuthDTO deleteUser(Integer userId) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            Optional<User> userOptional = usersRepo.findById(userId);
-            if (userOptional.isPresent()) {
-                usersRepo.deleteById(userId);
-                reqRes.setStatusCode(200);
-                reqRes.setMessage("User deleted successfully");
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7); 
+                
+                String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+                if (!"login".equals(tokenPurpose)) {
+                    reqRes.setStatusCode(403);
+                    reqRes.setMessage("Invalid token purpose");
+                    return reqRes;
+                }
+    
+                Optional<User> userOptional = usersRepo.findById(userId);
+                if (userOptional.isPresent()) {
+                    usersRepo.deleteById(userId);
+                    reqRes.setStatusCode(200);
+                    reqRes.setMessage("User deleted successfully");
+                } else {
+                    reqRes.setStatusCode(404);
+                    reqRes.setMessage("User not found for deletion");
+                }
             } else {
                 reqRes.setStatusCode(404);
                 reqRes.setMessage("User not found for deletion");
@@ -278,15 +304,43 @@ public class AuthManagementService {
     public AuthDTO updateUser(Integer userId, User updatedUser) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            Optional<User> userOptional = usersRepo.findById(userId);
-            if (userOptional.isPresent()) {
-                User existingUser = userOptional.get();
-                // existingUser.setEmail(updatedUser.getEmail());
-                // existingUser.setFullName(updatedUser.getFullName());
-                // existingUser.setUsername(updatedUser.getEmail());
-                // existingUser.setPhone(updatedUser.getPhone());
-                // existingUser.setImage(updatedUser.getImage());
-                // existingUser.setStatus(updatedUser.getStatus());
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7); 
+                
+                String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+                if (!"login".equals(tokenPurpose)) {
+                    reqRes.setStatusCode(403);
+                    reqRes.setMessage("Invalid token purpose");
+                    return reqRes;
+                }
+    
+                Optional<User> userOptional = usersRepo.findById(userId);
+                if (userOptional.isPresent()) {
+                    User existingUser = userOptional.get();
+
+                    if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+                        existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                    }
+ 
+                    existingUser.setEmail(updatedUser.getEmail());
+                    existingUser.setFullName(updatedUser.getFullName());
+                    existingUser.setUsername(updatedUser.getEmail());
+                    existingUser.setPhone(updatedUser.getPhone());
+                    existingUser.setImage(updatedUser.getImage());
+                    existingUser.setStatus(updatedUser.getStatus());
+    
+                    User savedUser = usersRepo.save(existingUser);
+                    reqRes.setListData(savedUser);
+                    reqRes.setStatusCode(200);
+                    reqRes.setMessage("User updated successfully");
+                } else {
+                    reqRes.setStatusCode(404);
+                    reqRes.setMessage("User not found for update");
+                }
+            } else {
+                reqRes.setStatusCode(401);
+                reqRes.setMessage("Authorization header is missing or token is invalid");
 
                 // Check if password is present in the request
                 if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
@@ -312,7 +366,6 @@ public class AuthManagementService {
     public AuthDTO loginSocial(User newUser) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            // Kiểm tra xem user có tồn tại trong cơ sở dữ liệu không
             if (usersRepo.findByUsername(newUser.getUsername()).isPresent()
                     && newUser.getProvider().equalsIgnoreCase("facebook")) {
                 reqRes.setStatusCode(200);
@@ -327,7 +380,7 @@ public class AuthManagementService {
             }
             newUser.setStatus((byte) 1);
             newUser.setCreateDate(datecurrent);
-            // Lưu người dùng mới vào cơ sở dữ liệu
+
             User savedUser = usersRepo.save(newUser);
 
             List<String> roles = Collections.singletonList("User");
@@ -343,9 +396,8 @@ public class AuthManagementService {
 
             userRoleRepo.saveAll(userRoles);
 
-            // Tạo phản hồi thành công
             reqRes.setListData(savedUser);
-            reqRes.setStatusCode(201); // Mã trạng thái HTTP 201 cho việc tạo thành công
+            reqRes.setStatusCode(201); 
             reqRes.setMessage("User created successfully");
 
         } catch (Exception e) {
@@ -384,20 +436,19 @@ public class AuthManagementService {
 
     public ResponseEntity<String> sendResetPasswordEmail(EmailRequestDTO emailRequest) {
         String email = emailRequest.getTo();
-        Optional<User> userOptional = usersRepo.findByEmail(email);
+        Optional<User> userOptional = usersRepo.findByEmailAndProvider(email,"Guest");
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
+            String jwt = jwtUtils.generateToken(user, "reset-password");
 
             String jwt = jwtUtils.generateToken(user);
             user.setResetToken(jwt);
             user.setTokenExpiryDate(LocalDateTime.now().plusHours(1)); // Token hết hạn sau 1 giờ
             usersRepo.save(user);
 
-            // Tạo link reset password
             String resetLink = "http://localhost:3000/auth/reset-password?token=" + jwt;
 
-            // Gửi email
             mailService.sendEmail(email, "Reset Password", "Click the link to reset your password: " + resetLink);
 
             return ResponseEntity.ok("Reset password email sent successfully");
@@ -412,40 +463,67 @@ public class AuthManagementService {
 
         String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
 
-        // Kiểm tra token có được cung cấp không
         if (token == null) {
             return ResponseEntity.status(400).body("Token is required");
         }
 
-        // Xác thực token
         String username = jwtUtils.extractUsername(token);
         if (username == null || !jwtUtils.isTokenValid(token,
                 new org.springframework.security.core.userdetails.User(username, "", new ArrayList<>()))) {
             return ResponseEntity.status(400).body("Invalid or expired token");
         }
 
-        // Kiểm tra người dùng có tồn tại không
-        Optional<User> userOptional = usersRepo.findByEmail(username);
+        String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+        if (!"reset-password".equals(tokenPurpose)) {
+            return ResponseEntity.status(403).body("Invalid token purpose for password reset");
+        }
+
+        System.out.println("Chưa lỗi nè");
+
+        Optional<User> userOptional = usersRepo.findByEmailAndProvider(username,"Guest");
         if (userOptional.isEmpty()) {
             return ResponseEntity.status(404).body("User not found");
         }
 
-        // Kiểm tra mật khẩu mới có được cung cấp không
+        if (passwordEncoder.matches(newPassword, userOptional.get().getPassword())) {
+            return ResponseEntity.status(400).body("New password cannot be the same as the old password");
+        }
+
         if (newPassword == null || newPassword.isEmpty()) {
             return ResponseEntity.status(400).body("New password is required");
         }
 
-        // Kiểm tra định dạng mật khẩu mới
         if (!newPassword.matches(passwordRegex)) {
             return ResponseEntity.status(400).body(
                     "Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
         }
 
-        // Cập nhật mật khẩu mới cho người dùng
         User user = userOptional.get();
         user.setPassword(passwordEncoder.encode(newPassword));
         usersRepo.save(user);
         return ResponseEntity.ok("Password reset successfully");
     }
+
+    public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token) {
+        AuthDTO response = new AuthDTO();
+        try {
+
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            TokenBlacklist.blacklistToken(token);
+
+            response.setStatusCode(200);
+            response.setMessage("Đăng xuất thành công");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setMessage("Có lỗi xảy ra trong quá trình đăng xuất: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+
 
 }

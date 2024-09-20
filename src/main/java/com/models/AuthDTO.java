@@ -24,10 +24,12 @@ public class AuthDTO {
     private String email;
     private String password;
     private String image;
-    private byte isActive = 1;
+    // private byte isActive = 1;
     private User listData;
     private List<User> userList;
     private List<String> roles;  // Thêm trường roles vào đây
+    private String tokenType;
+    private List<String> permissions;
 
     // Thêm setter cho roles
     public void setRoles(List<String> roles) {

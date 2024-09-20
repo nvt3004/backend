@@ -1,8 +1,7 @@
 package com.services;
 
-
 import com.entities.User;
-import com.repositories.UsersRepo;
+import com.repositories.UsersJPA;
 
 import java.util.Optional;
 
@@ -16,11 +15,12 @@ import org.springframework.stereotype.Service;
 public class AuthDetailsService implements UserDetailsService {
 
     @Autowired
-    private UsersRepo usersRepo;
+    private UsersJPA usersRepo;
+
     @Override
-public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    Optional<User> user = usersRepo.findByUsername(username);
-    return user.orElseThrow(() -> new UsernameNotFoundException("Email not found with email: " + username));
-}
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<User> user = usersRepo.findByUsername(username);
+        return user.orElseThrow(() -> new UsernameNotFoundException("Email not found with email: " + username));
+    }
 
 }

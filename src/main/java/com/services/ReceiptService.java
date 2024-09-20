@@ -1,6 +1,5 @@
 package com.services;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +19,7 @@ import com.entities.ProductVersion;
 import com.entities.Receipt;
 import com.entities.ReceiptDetail;
 import com.entities.Supplier;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.models.ReceiptCreateDTO;
@@ -50,20 +50,18 @@ public class ReceiptService {
 	}
 
 	public Page<ReceiptDTO> getAllWarehouses(int page, int size) {
-	    Pageable pageable = PageRequest.of(page, size);
-	    Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
 
-	    List<ReceiptDTO> receiptDTOList = new ArrayList<>();
-	    
-	    for (Receipt receipt : receiptPage.getContent()) {
-	        ReceiptDTO receiptDTO = convertReceipt(receipt);
-	        receiptDTOList.add(receiptDTO);
-	    }
+		List<ReceiptDTO> receiptDTOList = new ArrayList<>();
 
-	    return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
+		for (Receipt receipt : receiptPage.getContent()) {
+			ReceiptDTO receiptDTO = convertReceipt(receipt);
+			receiptDTOList.add(receiptDTO);
+		}
+
+		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
 	}
-
-
 
 	public ReceiptDTO getWarehouseById(Integer id) {
 		Receipt receipt = receiptJpa.findById(id).orElse(null);
@@ -75,7 +73,6 @@ public class ReceiptService {
 
 	private ReceiptDTO convertReceipt(Receipt receipt) {
 		ReceiptDTO receiptDTO = new ReceiptDTO();
-		receiptDTO.setReceipt(receipt);
 
 		List<ReceiptDetail> receiptDetails = receipt.getReceiptDetails();
 		List<ReceiptDTO.ReceiptDetailDTO> receiptDetailDTOs = new ArrayList<>();
@@ -95,14 +92,17 @@ public class ReceiptService {
 			receiptDetailDTOs.add(dto);
 		}
 
+		receiptDTO.setReceiptId(receipt.getReceiptId());
+		receiptDTO.setReceiptDate(receipt.getReceiptDate());
 		receiptDTO.setReceiptDetailDTO(receiptDetailDTOs);
-		receiptDTO.setSupplier(receipt.getSupplier());
+		receiptDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+		receiptDTO.setUsername(receipt.getUser().getUsername());
 
 		return receiptDTO;
 	}
 
 	public List<FieldErrorDTO> validateWarehouse(ReceiptCreateDTO receiptCreateDTO, BindingResult errors) {
-	    List<FieldErrorDTO> fieldErrors = new ArrayList<>();
+		List<FieldErrorDTO> fieldErrors = new ArrayList<>();
 
 		if (errors.hasErrors()) {
 			for (ObjectError error : errors.getAllErrors()) {
@@ -112,20 +112,16 @@ public class ReceiptService {
 			}
 		}
 
-	    return fieldErrors;
+		return fieldErrors;
 	}
 
-
-	public ApiResponse<?> createReceipt(ReceiptCreateDTO dto) {
+	public ApiResponse<?> createReceipt(ReceiptCreateDTO dto, User user) {
 		ApiResponse<?> errorResponse = new ApiResponse<>();
-
 		Integer supplierId = dto.getSupplierId();
-		BigDecimal totalPrice = BigDecimal.ZERO;
-
 		Optional<Supplier> supp = supplierService.getSupplierById(supplierId);
 		if (!supp.isPresent()) {
 			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Supplier không tồn tại.");
+			errorResponse.setMessage("Supplier does not exist.");
 			return errorResponse;
 		}
 
@@ -134,41 +130,35 @@ public class ReceiptService {
 		Receipt receipt = new Receipt();
 		receipt.setSupplier(supplier);
 		receipt.setReceiptDate(LocalDateTime.now());
+		receipt.setUser(user);
+		receipt.setSupplierName(supplier.getSupplierName());
 		receiptJpa.save(receipt);
 
 		for (ReceiptCreateDTO.ProductVersionDTO pvDto : dto.getProductVersions()) {
 			Integer productVersionId = pvDto.getProductVersionId();
 			Integer quantity = pvDto.getQuantity();
-			BigDecimal importPrice;
 
 			ProductVersion prodVer = productVersionService.getProductVersionByID(productVersionId);
 			if (prodVer == null) {
 				errorResponse.setErrorCode(400);
-				errorResponse.setMessage("ProductVersion với ID " + productVersionId + " không tồn tại.");
+				errorResponse.setMessage("ProductVersion with ID " + productVersionId + " does not exist.");
 				return errorResponse;
 			}
 
-			// Tính tổng giá trị = giá nhập * số lượng
-			importPrice = prodVer.getImportPrice();
-			BigDecimal productTotalPrice = importPrice.multiply(BigDecimal.valueOf(quantity));
-			totalPrice = totalPrice.add(productTotalPrice); // Cộng dồn giá trị
-
-			// Xử lý cập nhật tồn kho cho sản phẩm
+			// Update product inventory
 			int inventoryProductVersion = prodVer.getQuantity();
 			prodVer.setQuantity(inventoryProductVersion + quantity);
 			productVersionService.updateProdVerSion(prodVer);
 
-			// Lưu chi tiết phiếu nhập
+			// Save receipt details
 			ReceiptDetail receiptDetail = new ReceiptDetail();
 			receiptDetail.setReceipt(receipt);
 			receiptDetail.setProductVersion(prodVer);
 			receiptDetail.setQuantity(quantity);
 			receiptDetailJpa.save(receiptDetail);
-
 		}
 
-		ApiResponse<?> response = new ApiResponse<>(200, "Warehouse created successfully, total value: " + totalPrice,
-				null);
+		ApiResponse<?> response = new ApiResponse<>(200, "Receipt created successfully", null);
 		return response;
 	}
 

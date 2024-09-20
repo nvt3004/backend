@@ -1,10 +1,7 @@
 package com.models;
 
+import java.time.LocalDateTime;
 import java.util.List;
-
-import com.entities.Receipt;
-import com.entities.Supplier;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,9 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReceiptDTO {
-	private Receipt receipt;
-    private Supplier supplier; 
+	
+	private Integer receiptId;
+    private LocalDateTime receiptDate;
+	private String supplierName;
     private List<ReceiptDetailDTO> receiptDetailDTO;
+    private String username;
     
     @Data
     @NoArgsConstructor
