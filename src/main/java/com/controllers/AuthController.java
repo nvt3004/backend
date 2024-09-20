@@ -91,4 +91,9 @@ public class AuthController {
     public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> payload) {
         return usersManagementService.resetPassword(payload);
     }
+
+    @PostMapping("/api/adminuser/logout")
+    public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token){
+        return usersManagementService.logout(token);
+    }
 }

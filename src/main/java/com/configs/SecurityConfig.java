@@ -1,6 +1,9 @@
 package com.configs;
 
+// import com.filters.CustomAuthorizationFilter;
 import com.services.AuthDetailsService;
+
+import org.hibernate.validator.internal.util.stereotypes.Lazy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,11 +36,11 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
-                                "/api/reset-password", "/api/auth/refresh","/api/user/feedback/**","/api/orders/**","/api/coupons/**")
+                                "/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "/api/orders/**",
+                                "/api/coupons/**")
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
                         .requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
-                        .requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
                         .requestMatchers("/api/user/**").hasAnyAuthority("User")
                         .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User")
                         .anyRequest().authenticated())

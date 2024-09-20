@@ -63,35 +63,35 @@ public class OrderService {
 	private OrderDetailService orderDetailService;
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword,
-	        String status, int page, int size) {
-		
-	    if (keyword == null) {
-	    	keyword = "";
-	    }
+				String status, int page, int size) {
+			
+			if (keyword == null) {
+				keyword = "";
+			}
 
-	    if (status == null) {
-	        status = "";
-	    }
+			if (status == null) {
+				status = "";
+			}
 
-	    if (page < 0) {
-	        return new ApiResponse<>(400, "Invalid page number. It must be greater than or equal to 0.", null);
-	    }
+			if (page < 0) {
+				return new ApiResponse<>(400, "Invalid page number. It must be greater than or equal to 0.", null);
+			}
 
-	    if (size < 1) {
-	        return new ApiResponse<>(400, "Invalid size. It must be greater than or equal to 1.", null);
-	    }
+			if (size < 1) {
+				return new ApiResponse<>(400, "Invalid size. It must be greater than or equal to 1.", null);
+			}
 
-	    Pageable pageable = PageRequest.of(page, size);
-	    Page<Order> ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, status, pageable);
+			Pageable pageable = PageRequest.of(page, size);
+			Page<Order> ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, status, pageable);
 
-	    if (ordersPage.isEmpty()) {
-	        return new ApiResponse<>(404, "No orders found", null);
-	    }
+			if (ordersPage.isEmpty()) {
+				return new ApiResponse<>(404, "No orders found", null);
+			}
 
-	    List<OrderDTO> orderDtos = ordersPage.stream().map(this::createOrderDTO).collect(Collectors.toList());
-	    PageImpl<OrderDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
-	    return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
-	}
+			List<OrderDTO> orderDtos = ordersPage.stream().map(this::createOrderDTO).collect(Collectors.toList());
+			PageImpl<OrderDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
+			return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
+		}
 
 
 	private OrderDTO createOrderDTO(Order order) {

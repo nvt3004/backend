@@ -55,8 +55,6 @@ public class User implements UserDetails, Serializable {
 
     private String username;
 
-    private String resetToken;
-
     @Column(name = "provider")
     private String provider;
 
@@ -206,14 +204,6 @@ public class User implements UserDetails, Serializable {
     // public String getUsername() {
     // return username;
     // }
-
-    public String getResetToken() {
-        return resetToken;
-    }
-    
-    public void setResetToken(String resetToken) {
-        this.resetToken = resetToken;
-    }
     
     public void setUsername(String username) {
         this.username = username;
