@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SupplierModel {
+public class SupplierDTO {
 
     @NotBlank(message = "Address cannot be blank")
     @Size(max = 255, message = "Address cannot be longer than 255 characters")

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.entities.Supplier;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
-import com.models.SupplierModel;
+import com.models.SupplierDTO;
 import com.services.SupplierService;
 import com.utils.ValidationUtil;
 
@@ -73,7 +73,7 @@ public class SupplierController {
 	}
 
 	@PostMapping
-	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierModel supplierDetails,
+	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierDTO supplierDetails,
 			BindingResult errors) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -91,7 +91,7 @@ public class SupplierController {
 
 	@PutMapping
 	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id, @Valid
-			@RequestBody SupplierModel supplierDetails, BindingResult errors) {
+			@RequestBody SupplierDTO supplierDetails, BindingResult errors) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);

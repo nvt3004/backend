@@ -15,31 +15,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import com.entities.Address;
-import com.entities.Coupon;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
-import com.entities.Payment;
-import com.entities.PaymentMethod;
 import com.entities.ProductVersion;
-import com.entities.User;
 import com.errors.ApiResponse;
 import com.models.OrderDTO;
-import com.models.OrderDetailCreateDTO;
 import com.models.OrderDetailDTO;
-import com.repositories.AddressJPA;
-import com.repositories.CouponJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
-import com.repositories.PaymentJPA;
-import com.repositories.PaymentMethodJPA;
 import com.repositories.ProductVersionJPA;
-import com.repositories.UserJPA;
 
 @Service
 public class OrderService {
@@ -61,25 +49,69 @@ public class OrderService {
 	@Autowired
 	private OrderDetailService orderDetailService;
 
-	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, String status, int page,
-			int size) {
+	@Autowired
+	private OrderStatusService orderStatusService;
+
+	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, Integer statusId,
+			Integer page, Integer size) {
 
 		if (keyword == null) {
 			keyword = "";
 		}
-
-		if (status == null) {
-			status = "";
-		}
-
+		
 		Pageable pageable = PageRequest.of(page, size);
-		Page<Order> ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, status, pageable);
+		Page<Order> ordersPage;
+
+		if (statusId == null) {
+			ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, null, pageable);
+		} else {
+			Optional<OrderStatus> optionalOrderStatus = orderStatusService.getOrderStatusById(statusId);
+			if (optionalOrderStatus.isPresent()) {
+				ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, statusId, pageable);
+			} else {
+				return new ApiResponse<>(404, "No order status found", null);
+			}
+		}
 
 		if (ordersPage.isEmpty()) {
 			return new ApiResponse<>(404, "No orders found", null);
 		}
 
 		List<OrderDTO> orderDtos = ordersPage.stream().map(this::createOrderDTO).collect(Collectors.toList());
+		PageImpl<OrderDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
+		return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
+	}
+
+	public ApiResponse<PageImpl<OrderDTO>> getOrdersByUsername(String username, String keyword, Integer statusId,
+			Integer page, Integer size) {
+
+		if (keyword == null) {
+			keyword = "";
+		}
+
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Order> ordersPage;
+
+		if (statusId == null) {
+			ordersPage = orderJpa.findOrdersByUsername(username, keyword, null, pageable);
+		} else {
+			Optional<OrderStatus> optionalOrderStatus = orderStatusService.getOrderStatusById(statusId);
+			if (optionalOrderStatus.isPresent()) {
+				ordersPage = orderJpa.findOrdersByUsername(username, keyword, statusId, pageable);
+			} else {
+				return new ApiResponse<>(404, "No order status found", null);
+			}
+		}
+
+		if (ordersPage.isEmpty()) {
+			return new ApiResponse<>(404, "No orders found", null);
+		}
+
+		List<OrderDTO> orderDtos = new ArrayList<>();
+		for (Order order : ordersPage) {
+			orderDtos.add(createOrderDTO(order));
+		}
+
 		PageImpl<OrderDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
 		return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
 	}
@@ -112,12 +144,12 @@ public class OrderService {
 
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
 		if (statusId == null) {
-			return new ApiResponse<>(400, "Status is required.",null);
+			return new ApiResponse<>(400, "Status is required.", null);
 		}
 
 		Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
 		if (newOrderStatus.isEmpty()) {
-			return new ApiResponse<>(400, "The provided status does not exist.",null);
+			return new ApiResponse<>(400, "The provided status does not exist.", null);
 		}
 
 		Optional<Order> updatedOrder = orderJpa.findById(orderId);
@@ -130,10 +162,9 @@ public class OrderService {
 			if ("Processed".equalsIgnoreCase(newOrderStatus.get().getStatusName())) {
 				Boolean isStockSufficient = updateProductVersionsForOrder(order.getOrderDetails());
 				if (!isStockSufficient) {
-					return new ApiResponse<>(400, "Not enough stock available for one or more products.",
-							null);
+					return new ApiResponse<>(400, "Not enough stock available for one or more products.", null);
 				}
-			} 
+			}
 			order.setOrderStatus(newOrderStatus.get());
 			orderJpa.save(order);
 		}
@@ -146,35 +177,37 @@ public class OrderService {
 	}
 
 	private Boolean updateProductVersionsForOrder(List<OrderDetail> orderDetailList) {
-	    for (OrderDetail orderDetail : orderDetailList) {
-	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-	            Integer orderDetailProductQuantity = orderDetail.getQuantity();
-	            ProductVersion productVersion = productVersionJpa
-	                    .findById(orderDetail.getProductVersionBean().getId())
-	                    .orElse(null);
+		for (OrderDetail orderDetail : orderDetailList) {
+			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+				Integer orderDetailProductQuantity = orderDetail.getQuantity();
+				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+						.orElse(null);
 
-	            if (productVersion != null) {
-	                Integer productVersionQuantity = productVersion.getQuantity();
-	                Integer totalQuantityProcessedOrders = productVersionJpa
-	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-	                Integer totalQuantityCancelledOrders = productVersionJpa
-	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+				if (productVersion != null) {
+					Integer productVersionQuantity = productVersion.getQuantity();
+					Integer totalQuantityProcessedOrders = productVersionJpa
+							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+					Integer totalQuantityCancelledOrders = productVersionJpa
+							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
 
-	                totalQuantityProcessedOrders = (totalQuantityProcessedOrders != null) ? totalQuantityProcessedOrders : 0;
-	                totalQuantityCancelledOrders = (totalQuantityCancelledOrders != null) ? totalQuantityCancelledOrders : 0;
+					totalQuantityProcessedOrders = (totalQuantityProcessedOrders != null) ? totalQuantityProcessedOrders
+							: 0;
+					totalQuantityCancelledOrders = (totalQuantityCancelledOrders != null) ? totalQuantityCancelledOrders
+							: 0;
 
-	                Integer totalQuantityProductVersionInOrder = totalQuantityProcessedOrders + totalQuantityCancelledOrders;
-	                Integer inventoryProductVersion = productVersionQuantity - totalQuantityProductVersionInOrder;
-	                System.out.println(inventoryProductVersion + " inventoryProductVersion");
-	                if (inventoryProductVersion < orderDetailProductQuantity) {
-	                    return false;  
-	                }
-	            } else {
-	                return false;  
-	            }
-	        }
-	    }
-	    return true; 
+					Integer totalQuantityProductVersionInOrder = totalQuantityProcessedOrders
+							+ totalQuantityCancelledOrders;
+					Integer inventoryProductVersion = productVersionQuantity - totalQuantityProductVersionInOrder;
+					System.out.println(inventoryProductVersion + " inventoryProductVersion");
+					if (inventoryProductVersion < orderDetailProductQuantity) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {

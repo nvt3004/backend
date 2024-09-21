@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.entities.Supplier;
-import com.models.SupplierModel;
+import com.models.SupplierDTO;
 import com.repositories.SupplierJPA;
 
 @Service
@@ -26,7 +26,7 @@ public class SupplierService {
         return supplierRepository.findById(id);
     }
 
-    public Supplier createSupplier(SupplierModel supplierDetails) {
+    public Supplier createSupplier(SupplierDTO supplierDetails) {
         Supplier supplier = new Supplier();
         supplier.setAddress(supplierDetails.getAddress());
         supplier.setContactName(supplierDetails.getContactName());
@@ -37,7 +37,7 @@ public class SupplierService {
         return supplierRepository.save(supplier);
     }
 
-    public Supplier updateSupplier(int id, SupplierModel supplierDetails) {
+    public Supplier updateSupplier(int id, SupplierDTO supplierDetails) {
         Supplier supplier = supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
         supplier.setAddress(supplierDetails.getAddress());
         supplier.setContactName(supplierDetails.getContactName());

@@ -16,10 +16,17 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("SELECT o FROM Order o " + "WHERE (:isAdminOrder IS NULL OR o.isAdminOrder = :isAdminOrder) AND "
 			+ "(:keyword IS NULL OR :keyword = '' OR (o.fullname LIKE CONCAT('%', :keyword, '%') "
 			+ "OR o.address LIKE CONCAT('%', :keyword, '%') " + "OR o.phone LIKE CONCAT('%', :keyword, '%'))) AND "
-			+ "(:status IS NULL OR :status = '' OR o.orderStatus.statusName = :status) "
+			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) "
 			+ "ORDER BY o.orderStatus.sortOrder ASC")
 	Page<Order> findOrdersByCriteria(@Param("isAdminOrder") Boolean isAdminOrder, @Param("keyword") String keyword,
-			@Param("status") String status, Pageable pageable);
+			@Param("statusId") Integer statusId, Pageable pageable);
+
+	@Query("SELECT o FROM Order o " + "WHERE (:username IS NULL OR o.user.username = :username) AND "
+			+ "(:keyword IS NULL OR :keyword = '' OR (o.fullname LIKE CONCAT('%', :keyword, '%') "
+			+ "OR o.address LIKE CONCAT('%', :keyword, '%') " + "OR o.phone LIKE CONCAT('%', :keyword, '%'))) AND "
+			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) " + "ORDER BY o.orderDate DESC")
+	Page<Order> findOrdersByUsername(@Param("username") String username, @Param("keyword") String keyword,
+			@Param("statusId") Integer statusId, Pageable pageable);
 
 	@Transactional
 	@Modifying
