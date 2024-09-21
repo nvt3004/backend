@@ -37,4 +37,9 @@ public class OrderStatusService {
 
         return orderStatusDTOList;
     }
+    
+    public OrderStatus findByName(String statusName) {
+        return orderStatusJpa.findByStatusName(statusName)
+                .orElseThrow(() -> new RuntimeException("Order status not found"));
+    }
 }

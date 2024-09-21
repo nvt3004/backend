@@ -24,6 +24,7 @@ import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.models.ReceiptCreateDTO;
 import com.models.ReceiptDTO;
+import com.models.ReceiptInfoDTO;
 import com.repositories.ReceiptDetailJPA;
 import com.repositories.ReceiptJPA;
 
@@ -49,18 +50,27 @@ public class ReceiptService {
 		return receiptJpa.findById(id);
 	}
 
-	public Page<ReceiptDTO> getAllWarehouses(int page, int size) {
+	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
 
-		List<ReceiptDTO> receiptDTOList = new ArrayList<>();
+		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
 
 		for (Receipt receipt : receiptPage.getContent()) {
-			ReceiptDTO receiptDTO = convertReceipt(receipt);
+			ReceiptInfoDTO receiptDTO = convertReceipt(receipt);
 			receiptDTOList.add(receiptDTO);
 		}
 
 		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
+	}
+
+	private ReceiptInfoDTO convertReceipt(Receipt receipt) {
+		ReceiptInfoDTO receiptInfoDTO = new ReceiptInfoDTO();
+		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
+		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
+		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
+		return receiptInfoDTO;
 	}
 
 	public ReceiptDTO getWarehouseById(Integer id) {
@@ -68,10 +78,10 @@ public class ReceiptService {
 		if (receipt == null) {
 			return null;
 		}
-		return convertReceipt(receipt);
+		return convertReceiptById(receipt);
 	}
 
-	private ReceiptDTO convertReceipt(Receipt receipt) {
+	private ReceiptDTO convertReceiptById(Receipt receipt) {
 		ReceiptDTO receiptDTO = new ReceiptDTO();
 
 		List<ReceiptDetail> receiptDetails = receipt.getReceiptDetails();

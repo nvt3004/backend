@@ -58,7 +58,7 @@ public class OrderService {
 		if (keyword == null) {
 			keyword = "";
 		}
-		
+
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Order> ordersPage;
 
@@ -220,7 +220,7 @@ public class OrderService {
 			Order order = optionalOrder.get();
 			String status = order.getOrderStatus().getStatusName();
 
-			List<String> restrictedStatuses = Arrays.asList("Processing", "Shipped", "Delivered", "Cancelled");
+			List<String> restrictedStatuses = Arrays.asList("Processed", "Shipped", "Delivered", "Cancelled");
 
 			if (restrictedStatuses.contains(status)) {
 				return new ApiResponse<>(400, "Cannot delete order details for an order with status " + status, null);
@@ -229,10 +229,27 @@ public class OrderService {
 			int rowsAffected = orderDetailJpa.deleteOrderDetailsByOrderDetailId(orderDetailId);
 
 			if (rowsAffected != 0) {
-				return new ApiResponse<>(200, "Product deleted successfully.", null);
+			    if (orderJpa.existsByOrderDetail(orderId)) {
+			        try {
+			            Optional<OrderStatus> cancelledStatusOpt = Optional.ofNullable(orderStatusService.findByName("Cancelled"));
+			            
+			            if (cancelledStatusOpt.isPresent()) {
+			                OrderStatus cancelledStatus = cancelledStatusOpt.get();
+			                order.setOrderStatus(cancelledStatus);
+			                orderJpa.save(order); 
+			            } else {
+			                return new ApiResponse<>(404, "Cancelled status not found.", null);
+			            }
+			        } catch (Exception e) {
+			            return new ApiResponse<>(500, "Failed to find 'Cancelled' status: " + e.getMessage(), null);
+			        }
+			    }
+
+			    return new ApiResponse<>(200, "Product deleted successfully.", null);
 			} else {
-				return new ApiResponse<>(404, "OrderDetail with ID " + orderDetailId + " not found.", null);
+			    return new ApiResponse<>(404, "OrderDetail with ID " + orderDetailId + " not found.", null);
 			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			return new ApiResponse<>(500, "An error occurred while deleting the OrderDetail. Please try again.", null);
