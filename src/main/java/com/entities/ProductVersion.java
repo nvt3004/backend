@@ -32,7 +32,7 @@ public class ProductVersion implements Serializable {
 	private String versionName;
 	
 	@Column(name = "status")
-	private boolean status;
+	private Boolean status;
 
 	@OneToMany( fetch = FetchType.EAGER,mappedBy = "productVersion")
 	@JsonManagedReference("productVersion-attributeOptionsVersions")
@@ -207,11 +207,11 @@ public class ProductVersion implements Serializable {
 	}
 
 
-	public boolean isStatus() {
+	public Boolean isStatus() {
 		return status;
 	}
 
-	public void setStatus(boolean status) {
+	public void setStatus(Boolean status) {
 		this.status = status;
 	}
 

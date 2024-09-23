@@ -1,30 +1,13 @@
 package com.controllers;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import com.responsedto.CartItemResponse;
-import com.responsedto.ProductCartResponse;
-import com.responsedto.ProductDTO;
-import com.services.AlgoliaProductService;
-import com.services.ProductInforService;
-import com.utils.GetURLImg;
-import com.utils.RemoveDiacritics;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-import com.algolia.search.models.indexing.Query;
-import com.algolia.search.models.indexing.SearchResult;
-import com.entities.AttributeOption;
-import com.entities.Category;
-import com.errors.ResponseAPI;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,9 +21,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.AttributeOptionsVersion;
+import com.entities.Category;
 import com.entities.Product;
-import com.entities.ProductCategory;
 import com.entities.User;
+import com.errors.ResponseAPI;
 import com.models.CategoryDTO;
 import com.models.OptionDTO;
 import com.models.VersionDTO;
