@@ -1,5 +1,7 @@
 package com.controllers;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +19,13 @@ import com.errors.ResponseAPI;
 import com.responsedto.PageCustom;
 import com.responsedto.ProductDetailResponse;
 import com.responsedto.ProductHomeResponse;
+import com.responsedto.Version;
 import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ProductService;
+import com.utils.GetURLImg;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("api/home")
@@ -34,7 +40,6 @@ public class ProductHomeController {
 
 	@Autowired
 	ProductService productService;
-
 
 	@GetMapping("/products")
 	public ResponseEntity<ResponseAPI<PageCustom<ProductHomeResponse>>> getAllProduct(
@@ -57,25 +62,32 @@ public class ProductHomeController {
 
 		return ResponseEntity.ok(response);
 	}
-	
+
 	@GetMapping("/product/{productId}")
-	public ResponseEntity<ResponseAPI<ProductDetailResponse>> getProductDetail(@PathVariable("productId") int productId){
+	public ResponseEntity<ResponseAPI<ProductDetailResponse>> getProductDetail(HttpServletRequest request,
+			@PathVariable("productId") int productId) {
 		ResponseAPI<ProductDetailResponse> response = new ResponseAPI<>();
 		Product product = productService.getProductById(productId);
-		
-		if(product == null) {
+
+		if (product == null) {
 			response.setCode(404);
-			response.setMessage("Product not found!");		
+			response.setMessage("Product not found!");
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
-		
+
 		ProductDetailResponse productDetail = productService.getProductDetail(productId);
-		
+		for (Version v : productDetail.getVersions()) {
+			if (v.getImages() != null && !v.getImages().isEmpty()) {
+				String img = v.getImages().get(0);
+				List<String> imgs = new ArrayList<>();
+				imgs.add(GetURLImg.getURLImg(request, img));
+				v.setImages(imgs);
+			}
+		}
 		response.setCode(200);
 		response.setMessage("Success");
 		response.setData(productDetail);
-		
+
 		return ResponseEntity.ok(response);
 	}
 }

@@ -75,7 +75,6 @@ public class ProductInforService {
 				ProductDTO productDTO = new ProductDTO();
 				productDTO.setId(String.valueOf(productCategory.getProduct().getProductId()));
 				productDTO.setName(productCategory.getProduct().getProductName());
-				productDTO.setImg(productCategory.getProduct().getProductImg());
 				BigDecimal minPrice = new BigDecimal("0.00");
 				BigDecimal maxPrice = new BigDecimal("0.00");
 				List<String> images = new ArrayList<>();
@@ -125,7 +124,11 @@ public class ProductInforService {
 	}
 
 	public List<Category> getListCategory() {
-		return categoryJPA.findAll();
+		List<Category> list = categoryJPA.findAll();
+		for (Category category : list) {
+			category.setProductCategories(null);
+		}
+		return list;
 	}
 
 	public List<ProductDTO> getALLProduct() {
@@ -141,7 +144,7 @@ public class ProductInforService {
 				ProductDTO productDTO = new ProductDTO();
 				productDTO.setId(String.valueOf(product.getProductId()));
 				productDTO.setName(product.getProductName());
-				productDTO.setImg(product.getProductImg());
+
 				BigDecimal minPrice = new BigDecimal("0.00");
 				BigDecimal maxPrice = new BigDecimal("0.00");
 				List<String> images = new ArrayList<>();
@@ -185,13 +188,11 @@ public class ProductInforService {
 				productDTO.setObjectID(String.valueOf(product.getProductId()));
 				productDTO.setId(String.valueOf(product.getProductId()));
 				productDTO.setName(product.getProductName());
-				productDTO.setImg(product.getProductImg());
 				productDTO.setDescription(product.getDescription());
-
 				// Xử lý rating từ feedbacks
 				List<Feedback> feedbacks = product.getFeedbacks();
-
 				if (feedbacks != null && !feedbacks.isEmpty()) {
+					productDTO.setReviewCount(feedbacks.size());
 					// Tính tổng điểm feedback
 					int totalRating = 0;
 					for (Feedback fd : feedbacks) {
@@ -201,6 +202,7 @@ public class ProductInforService {
 					productDTO.setRating(averageRating);
 				} else {
 					productDTO.setRating(0);
+					productDTO.setReviewCount(0);
 				}
 				// Set danh sách categories
 				List<String> categories = new ArrayList<>();
@@ -210,7 +212,7 @@ public class ProductInforService {
 				productDTO.setCategories(categories);
 
 				// Set phiên bản sản phẩm (versions), colors, sizes
-				List<ProductDTO.Version> versions = new ArrayList<>();
+				List<String> versionName = new ArrayList<>();
 				List<String> colors = new ArrayList<>();
 				List<String> sizes = new ArrayList<>();
 				List<String> images = new ArrayList<>();
@@ -219,9 +221,8 @@ public class ProductInforService {
 				BigDecimal maxPrice = new BigDecimal("0.00");
 
 				for (ProductVersion productVer : product.getProductVersions()) {
-					ProductDTO.Version version = new ProductDTO.Version();
-					version.setVersionName(productVer.getVersionName());
 
+					versionName.add(productVer.getVersionName());
 					// Xử lý thuộc tính màu sắc và kích thước
 					if (productVer.getAttributeOptionsVersions() != null
 							&& productVer.getAttributeOptionsVersions().size() >= 2) {
@@ -242,21 +243,12 @@ public class ProductInforService {
 									.getAttributeValue();
 						}
 
-						version.setColorName(color);
-						version.setSize(size);
 						colors.add(color);
 						sizes.add(size);
 					}
-
-					version.setQuantity(productVer.getQuantity());
-					version.setPrice(productVer.getRetailPrice());
-					versions.add(version);
-
-					// Xử lý danh sách hình ảnh
 					for (Image img : productVer.getImages()) {
 						images.add(img.getImageUrl());
 					}
-
 					// Cập nhật minPrice và maxPrice
 					if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
 						minPrice = productVer.getRetailPrice();
@@ -265,14 +257,13 @@ public class ProductInforService {
 						maxPrice = productVer.getRetailPrice();
 					}
 				}
-
-				productDTO.setVersions(versions);
+				productDTO.setImgName(images.get(0));
+				productDTO.setVersionName(versionName);
 				productDTO.setColors(colors);
 				productDTO.setSizes(sizes);
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
 				productDTO.setImages(images);
-
 				// Thêm productDTO vào danh sách
 				productDTOs.add(productDTO);
 			}

@@ -40,7 +40,7 @@ public class ProductRepository {
                 ProductDTO dto = new ProductDTO();
                 dto.setId(rs.getString("product_id"));
                 dto.setName(rs.getString("product_name"));
-                dto.setImg(rs.getString("product_img"));
+                dto.setImgName(rs.getString("product_img"));
                 dto.setMinPrice(rs.getBigDecimal("min_price"));
                 dto.setMaxPrice(rs.getBigDecimal("max_price"));
                 return dto;

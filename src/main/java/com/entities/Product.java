@@ -31,11 +31,11 @@ public class Product implements Serializable {
 
 	private boolean status;
 
-	@OneToMany(mappedBy = "product")
+	@OneToMany(fetch = FetchType.EAGER,mappedBy = "product")
 	@JsonManagedReference("product-feedbacks")
 	private List<Feedback> feedbacks;
 
-	@OneToMany(mappedBy = "product")
+	@OneToMany(fetch = FetchType.EAGER,mappedBy = "product")
 	@JsonManagedReference("product-productCategories")
 	private List<ProductCategory> productCategories;
 
@@ -43,7 +43,7 @@ public class Product implements Serializable {
 	@JsonManagedReference("product-productSales")
 	private List<ProductSale> productSales;
 
-	@OneToMany(mappedBy = "product")
+	@OneToMany(fetch = FetchType.EAGER,mappedBy = "product")
 	@JsonManagedReference("product-productVersions")
 	private List<ProductVersion> productVersions;
 
