@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.*;
 
-
+// image bỏ quan hệ pd với image, bỏ ảnh pd lớn
 /**
  * The persistent class for the product_categories database table.
  * 

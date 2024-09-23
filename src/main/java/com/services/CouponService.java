@@ -82,30 +82,30 @@ public class CouponService {
 
 	public Coupon updateCoupon(Integer id, CouponCreate couponCreate) throws InvalidException {
 
-	    Coupon existingCoupon = couponJpa.findById(id)
-	            .orElseThrow(() -> new InvalidException("Coupon with ID " + id + " not found"));
+		Coupon existingCoupon = couponJpa.findById(id)
+				.orElseThrow(() -> new InvalidException("Coupon with ID " + id + " not found"));
 
-	    boolean isCouponApplied = orderJpa.existsByCouponId(id);
+		boolean isCouponApplied = orderJpa.existsByCouponId(id);
 
-	    if (isCouponApplied) {
-	        if (!(existingCoupon.getQuantity() == (couponCreate.getQuantity()))) {
-	            throw new InvalidException("Cannot update quantity because the coupon has already been applied to an order.");
-	        }
-	    }
+		if (isCouponApplied) {
+			if (!(existingCoupon.getQuantity() == (couponCreate.getQuantity()))) {
+				throw new InvalidException(
+						"Cannot update quantity because the coupon has already been applied to an order.");
+			}
+		}
 
-	    existingCoupon.setDisPercent(couponCreate.getDisPercent());
-	    existingCoupon.setDisPrice(couponCreate.getDisPrice());
-	    existingCoupon.setDescription(couponCreate.getDescription());
-	    existingCoupon.setStartDate(couponCreate.getStartDate());
-	    existingCoupon.setEndDate(couponCreate.getEndDate());
+		existingCoupon.setDisPercent(couponCreate.getDisPercent());
+		existingCoupon.setDisPrice(couponCreate.getDisPrice());
+		existingCoupon.setDescription(couponCreate.getDescription());
+		existingCoupon.setStartDate(couponCreate.getStartDate());
+		existingCoupon.setEndDate(couponCreate.getEndDate());
 
-	    if (!isCouponApplied) {
-	        existingCoupon.setQuantity(couponCreate.getQuantity());
-	    }
+		if (!isCouponApplied) {
+			existingCoupon.setQuantity(couponCreate.getQuantity());
+		}
 
-	    return couponJpa.save(existingCoupon);
+		return couponJpa.save(existingCoupon);
 	}
-
 
 	public void deleteCoupon(Integer id) {
 		if (!couponJpa.existsById(id)) {
@@ -144,12 +144,11 @@ public class CouponService {
 		return new PageImpl<>(couponDTOs, pageable, couponPage.getTotalElements());
 	}
 
-
 	public Coupon getCouponByCode(String code) {
-		if(code == null) {
+		if (code == null) {
 			return null;
 		}
-		
+
 		return couponJpa.getCouponByCode(code);
 	}
 }

@@ -57,6 +57,8 @@ public class Coupon implements Serializable {
 	@Column(name = "start_date")
 	private LocalDateTime startDate;
 	
+	private boolean status;
+	
 	@OneToMany(mappedBy="coupon")
 	@JsonManagedReference("coupon-userCoupons")
 	private List<UserCoupon> userCoupons;
@@ -149,5 +151,22 @@ public class Coupon implements Serializable {
 
 		return userCoupon;
 	}
+
+	public List<Order> getOrders() {
+		return orders;
+	}
+
+	public void setOrders(List<Order> orders) {
+		this.orders = orders;
+	}
+
+	public boolean isStatus() {
+		return status;
+	}
+
+	public void setStatus(boolean status) {
+		this.status = status;
+	}
+	
 
 }

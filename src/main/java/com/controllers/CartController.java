@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +35,8 @@ import com.models.CartItemModel;
 import com.models.CartOrderDetailModel;
 import com.models.CartOrderModel;
 import com.models.ProductCartModel;
+import com.repositories.CartProductJPA;
+import com.repositories.UserCouponJPA;
 import com.responsedto.CartItemResponse;
 import com.responsedto.CartOrderResponse;
 import com.responsedto.ProductCartResponse;
@@ -93,13 +96,18 @@ public class CartController {
 
 	@Autowired
 	UserCouponService userCouponService;
+	
+	@Autowired
+	CartProductJPA cartProductJPA;
+	
+	@Autowired
+	UserCouponJPA userCouponJPA;
 
 	// @RequestHeader("Authorization") Optional<String> authHeader
 	@PostMapping("/add")
-	public ResponseEntity<ResponseAPI<ProductCartResponse>> addCart(
-			@RequestHeader("Authorization") Optional<String> authHeader,
+	public ResponseEntity<ResponseAPI<Boolean>> addCart(@RequestHeader("Authorization") Optional<String> authHeader,
 			@RequestBody ProductCartModel productCartModel) {
-		ResponseAPI<ProductCartResponse> response = new ResponseAPI<>();
+		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
 
 		try {
@@ -167,10 +175,10 @@ public class CartController {
 		cartProductEntity.setQuantity(productCartModel.getQuantity());
 		cartProductEntity.setAddedDate(new Date());
 
-		ProductCartResponse productCartResponse = cartProductService.addProductToCart(cartProductEntity);
+		cartProductService.addProductToCart(cartProductEntity);
 		response.setCode(200);
 		response.setMessage("Success");
-		response.setData(productCartResponse);
+		response.setData(true);
 
 		return ResponseEntity.ok(response);
 	}
@@ -212,7 +220,7 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
-		
+
 		List<CartItemResponse> items = cartService.getAllCartItemByUser(user.getUserId());
 
 		response.setCode(200);
@@ -400,15 +408,21 @@ public class CartController {
 		orderEntity.setAddress(orderModel.getAddress());
 		if (coupon != null) {
 			orderEntity.setCoupon(coupon);
-			orderEntity.setDisPrice(coupon.getDisPrice());
+			if(coupon.getDisPercent() != null) {
+				orderEntity.setDisPercent(coupon.getDisPercent());
+			}else {
+				orderEntity.setDisPrice(coupon.getDisPrice());
+			}
 		}
+		
 		orderEntity.setOrderDate(new Date());
 		orderEntity.setDeliveryDate(new Date());
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
-		
+		orderEntity.setCoupon(coupon);
+
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);
 
@@ -416,11 +430,19 @@ public class CartController {
 		Order orderSaved = orderService.createOrderCart(orderEntity);
 
 		if (coupon != null) {
-			UserCoupon userCoupon = new UserCoupon();
-			userCoupon.setUser(user);
-			userCoupon.setCoupon(coupon);
+			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId());
+			
+			if(temp != null) {
+				temp.setStatus(false);
+				userCouponService.createUserCoupon(temp);
+			}else {
+				UserCoupon userCoupon = new UserCoupon();
+				userCoupon.setUser(user);
+				userCoupon.setCoupon(coupon);
+				userCoupon.setStatus(false);
 
-			userCouponService.createUserCoupon(userCoupon);
+				userCouponService.createUserCoupon(userCoupon);
+			}
 		}
 
 		// Save order details
@@ -443,7 +465,7 @@ public class CartController {
 		// save payment
 		Payment paymentEntity = new Payment();
 		PaymentMethod paymentMethod = new PaymentMethod();
-		//Than toán khi nhận hàng
+		// Than toán khi nhận hàng
 		paymentMethod.setPaymentMethodId(2);
 
 		paymentEntity.setOrder(orderSaved);
@@ -452,6 +474,16 @@ public class CartController {
 		paymentEntity.setAmount(BigDecimal.ZERO);
 
 		Payment paymentSaved = paymentService.createPayment(paymentEntity);
+		
+		//Mua xong xóa khỏi giỏ hàng
+		for(CartProduct crd : user.getCarts().get(0).getCartProducts()) {
+			for(CartOrderDetailModel md: orderModel.getOrderDetails()) {
+				if(crd.getProductVersionBean().getId()==md.getIdVersion()) {
+					cartProductService.removeCartItem(crd);
+					break;
+				}
+			}
+		}
 
 		// Respone result
 		CartOrderResponse orderResponse = new CartOrderResponse();
@@ -512,7 +544,7 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
-		
+
 		if (cartItemModel.getQuantity() <= 0) {
 			response.setCode(422);
 			response.setMessage("Quantity cannot be negative or zero");
@@ -544,6 +576,98 @@ public class CartController {
 
 		cartItem.setQuantity(cartItemModel.getQuantity());
 		cartProductService.updateCartItem(cartItem);
+
+		response.setCode(200);
+		response.setMessage("Success");
+		response.setData(cartItemModel);
+
+		return ResponseEntity.ok(response);
+	}
+	
+	@PutMapping("/update-item")
+	public ResponseEntity<ResponseAPI<CartItemModel>> updateCatrtItem(@RequestBody CartItemModel cartItemModel,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+		ResponseAPI<CartItemModel> response = new ResponseAPI<>();
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			response.setCode(400);
+			response.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+		}
+
+		if (jwtService.isTokenExpired(token)) {
+			response.setCode(401);
+			response.setMessage("Token expired");
+
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+		}
+
+		String username = jwtService.extractUsername(token);
+		User user = userService.getUserByUsername(username);
+		if (user == null) {
+			response.setCode(404);
+			response.setMessage("Account not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		if (user.getStatus() == 0) {
+			response.setCode(403);
+			response.setMessage("Account locked");
+
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+		}
+
+
+		CartProduct cartItem = cartProductService.getCartItemById(cartItemModel.getCartItemId());
+		if (cartItem == null) {
+			response.setCode(404);
+			response.setMessage("Cart item not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		if (!cartProductService.isValidItem(user, cartItem.getCartPrdId())) {
+			response.setCode(404);
+			response.setMessage("Cart item not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		if (!cartItem.getProductVersionBean().getProduct().isStatus()) {
+			response.setCode(404);
+			response.setMessage("Product version not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		ProductVersion version = new ProductVersion();
+		version.setId(cartItemModel.getVersionId());
+		
+		CartProduct cartProductTemp = cartProductJPA.getVersionInCartByUser(cartItemModel.getVersionId(), user.getUserId());
+
+		if (cartProductTemp != null) {
+			cartProductTemp.setQuantity(cartProductTemp.getQuantity()+cartItem.getQuantity());
+		CartProduct saved =	cartProductService.updateCartItem(cartProductTemp);
+			
+			cartProductService.removeCartItem(cartItem);
+			
+			cartItemModel.setQuantity(saved.getQuantity());
+
+			response.setCode(200);
+			response.setMessage("Success");
+			response.setData(cartItemModel);
+
+			return ResponseEntity.ok(response);
+		}
+		
+		cartItem.setProductVersionBean(version);
+		cartProductService.updateCartItem(cartItem);
+				
+		cartItemModel.setQuantity(cartItem.getQuantity());
 
 		response.setCode(200);
 		response.setMessage("Success");

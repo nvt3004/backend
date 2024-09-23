@@ -19,6 +19,7 @@ public class CartOrderModel {
 	private String address;
 	private String couponCode;
 	private Integer paymentMethodId;
+	private BigDecimal fee;
 	private List<CartOrderDetailModel> orderDetails;
 	private VnpayDTO vnpay;
 }
