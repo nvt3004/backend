@@ -149,24 +149,37 @@ public class AuthManagementService {
     public ResponseEntity<AuthDTO> login(AuthDTO loginRequest) {
         AuthDTO response = new AuthDTO();
         try {
-            Optional<User> optionalUser = usersRepo.findByEmailAndProvider(loginRequest.getUsername(), "Guest");
-
+            System.out.println("Login attempt for username: " + loginRequest.getUsername());
+    
+            // Kiểm tra người dùng
+            Optional<User> optionalUser = usersRepo.findByUsernameAndProvider(loginRequest.getUsername(), "Guest");
             if (optionalUser.isEmpty()) {
                 response.setStatusCode(401);
                 response.setError("Login fail: username or password incorrect");
+                System.out.println("User not found: " + loginRequest.getUsername());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-
+    
             User user = optionalUser.get();
-
-            authenticationManager.authenticate(
+    
+            // Xác thực
+            try {
+                authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
-            String jwt = jwtUtils.generateToken(user, "login");
+                System.out.println("Authentication successful for user: " + user.getEmail());
+            } catch (BadCredentialsException e) {
+                response.setStatusCode(401);
+                response.setError("Login fail: Invalid credentials");
+                System.out.println("Authentication failed: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+    
+            // Tạo JWT token
+            long expirationTime = 30 * 60 * 1000; 
+            String jwt = jwtUtils.generateToken(user, "login",expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
-
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
-
+    
             response.setStatusCode(200);
             response.setToken(jwt);
             response.setRefreshToken(refreshToken);
@@ -178,16 +191,10 @@ public class AuthManagementService {
                     .map(Role::getRoleName)
                     .collect(Collectors.toList()));
             response.setTokenType(tokenPurpose);
+            
+            System.out.println("Login successful for user: " + user.getEmail());
             return ResponseEntity.ok(response);
-
-        } catch (BadCredentialsException e) {
-            response.setStatusCode(401);
-            response.setError("Login fail");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        } catch (AuthenticationException e) {
-            response.setStatusCode(401);
-            response.setError("Invalid credentials");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            
         } catch (Exception e) {
             System.out.println("Username: " + loginRequest.getUsername());
             System.out.println("An error occurred: " + e.getMessage());
@@ -197,6 +204,7 @@ public class AuthManagementService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
 
     public AuthDTO refreshToken(AuthDTO refreshTokenReqiest) {
         AuthDTO response = new AuthDTO();
@@ -204,7 +212,8 @@ public class AuthManagementService {
             String ourEmail = jwtUtils.extractUsername(refreshTokenReqiest.getToken());
             User users = usersRepo.findByEmail(ourEmail).orElseThrow();
             if (jwtUtils.isTokenValid(refreshTokenReqiest.getToken(), users)) {
-                var jwt = jwtUtils.generateToken(users, "login");
+                long expirationTime = 7 * 24 * 60 * 60 * 1000; 
+                var jwt = jwtUtils.generateToken(users, "login",expirationTime);
                 response.setStatusCode(200);
                 response.setToken(jwt);
                 response.setRefreshToken(refreshTokenReqiest.getToken());
@@ -417,14 +426,14 @@ public class AuthManagementService {
         return reqRes;
     }
 
-    public AuthDTO getMyInfo(String email) {
+    public AuthDTO getMyInfo(String username) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            Optional<User> userOptional = usersRepo.findByEmail(email);
+            Optional<User> userOptional = usersRepo.findByUsername(username);
             if (userOptional.isPresent()) {
                 System.out.println(userOptional.get().getEmail());
             } else {
-                System.out.println("Không tìm thấy email: " + email);
+                System.out.println("Không tìm thấy email: " + username);
             }
             if (userOptional.isPresent()) {
                 reqRes.setListData(userOptional.get());
@@ -450,7 +459,8 @@ public class AuthManagementService {
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            String jwt = jwtUtils.generateToken(user, "reset-password");
+            long expirationTime = 2 * 60 * 1000;
+            String jwt = jwtUtils.generateToken(user, "reset-password", expirationTime);
 
             usersRepo.save(user);
 

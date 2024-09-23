@@ -16,4 +16,8 @@ public interface UsersJPA extends JpaRepository<User, Integer> {
 
     Optional<User> findByEmailAndProvider(String email, String provider);
 
+    Optional<User> findByUsernameAndProvider(String username, String provider);
+
+    
+
 }

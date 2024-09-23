@@ -29,15 +29,16 @@ public class JWTUtils {
         this.Key = new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
-    public String generateToken(UserDetails userDetails, String purpose){
+    public String generateToken(UserDetails userDetails, String purpose, long expirationTime) {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .claim("purpose", purpose)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .expiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(Key)
                 .compact();
     }
+    
     public  String generateRefreshToken(HashMap<String, Object> claims, UserDetails userDetails){
         return Jwts.builder()
                 .claims(claims)
