@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.entities.Supplier;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
-import com.models.SupplierModel;
+import com.models.SupplierDTO;
 import com.services.SupplierService;
 import com.utils.ValidationUtil;
 
@@ -73,7 +73,7 @@ public class SupplierController {
 	}
 
 	@PostMapping
-	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierModel supplierDetails,
+	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierDTO supplierDetails,
 			BindingResult errors) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -91,7 +91,7 @@ public class SupplierController {
 
 	@PutMapping
 	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id, @Valid
-			@RequestBody SupplierModel supplierDetails, BindingResult errors) {
+			@RequestBody SupplierDTO supplierDetails, BindingResult errors) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
@@ -107,12 +107,14 @@ public class SupplierController {
 	}
 
 	@DeleteMapping
-	public ResponseEntity<ApiResponse<Void>> deleteSupplier(@RequestParam Integer id) {
-		supplierService.deleteSupplier(id);
+	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id) {
+	    ApiResponse<?> response = supplierService.deleteSupplier(id);
 
-		ApiResponse<Void> response = new ApiResponse<>(200, "Supplier deleted successfully", null);
+	    if (response.getErrorCode() != 200) {
+	        return ResponseEntity.status(response.getErrorCode()).body(response);
+	    }
 
-		return ResponseEntity.ok(response);
+	    return ResponseEntity.ok(response);
 	}
 
 }

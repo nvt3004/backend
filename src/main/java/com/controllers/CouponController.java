@@ -27,7 +27,7 @@ import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.errors.InvalidException;
-import com.models.CouponCreate;
+import com.models.CouponCreateDTO;
 import com.models.CouponDTO;
 import com.services.AuthService;
 import com.services.CouponService;
@@ -54,7 +54,7 @@ public class CouponController {
 	private UserService userService;
 
 	@PostMapping
-	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreate couponCreate,
+	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -102,7 +102,7 @@ public class CouponController {
 		}
 
 		try {
-			Coupon savedCoupon = couponService.saveCoupon(couponCreate);
+			Coupon savedCoupon = couponService.saveCoupon(couponCreateDTO);
 			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", savedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
@@ -114,7 +114,7 @@ public class CouponController {
 
 	@PutMapping
 	public ResponseEntity<ApiResponse<?>> updateCoupon(@RequestParam("id") Integer id,
-			@Valid @RequestBody CouponCreate couponCreate, BindingResult errors,
+			@Valid @RequestBody CouponCreateDTO couponCreateDTO, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -155,7 +155,7 @@ public class CouponController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
 		}
 
-		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreate, errors);
+		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreateDTO, errors);
 
 		if (!fieldErrors.isEmpty()) {
 			errorResponse = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "Validation failed", fieldErrors);
@@ -163,7 +163,7 @@ public class CouponController {
 		}
 
 		try {
-			Coupon updatedCoupon = couponService.updateCoupon(id, couponCreate);
+			Coupon updatedCoupon = couponService.updateCoupon(id, couponCreateDTO);
 			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", updatedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (InvalidException e) {

@@ -21,4 +21,5 @@ public interface OrderDetailJPA extends JpaRepository<OrderDetail, Integer> {
 	@Query("DELETE FROM OrderDetail od WHERE od.orderDetailId = :orderDetailId")
 	int deleteOrderDetailsByOrderDetailId(@Param("orderDetailId") int orderDetailId);
 
+
 }

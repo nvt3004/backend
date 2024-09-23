@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class CouponCreate {
+public class CouponCreateDTO {
 
     @DecimalMin(value = "5.0", message = "Discount percentage must be at least 5%.")
     @DecimalMax(value = "50.0", message = "Discount percentage cannot exceed 50%.")

@@ -19,7 +19,7 @@ public class OrderStatus implements Serializable {
 
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name="status_id")
-	private int statusId;
+	private Integer statusId;
 
 	@Column(name="sort_order")
 	private Integer sortOrder;
@@ -35,11 +35,11 @@ public class OrderStatus implements Serializable {
 	public OrderStatus() {
 	}
 
-	public int getStatusId() {
+	public Integer getStatusId() {
 		return this.statusId;
 	}
 
-	public void setStatusId(int statusId) {
+	public void setStatusId(Integer statusId) {
 		this.statusId = statusId;
 	}
 

@@ -22,6 +22,7 @@ import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.models.ReceiptCreateDTO;
 import com.models.ReceiptDTO;
+import com.models.ReceiptInfoDTO;
 import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ReceiptService;
@@ -89,14 +90,14 @@ public class ReceiptController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
 		}
 
-		Page<ReceiptDTO> receiptDTOPage = warehouseService.getAllWarehouses(page, size);
+		Page<ReceiptInfoDTO> receiptDTOPage = warehouseService.getAllWarehouses(page, size);
 
 		if (receiptDTOPage.isEmpty()) {
 			ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "No receipts found", null);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		PageImpl<ReceiptDTO> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(), receiptDTOPage.getPageable(),
+		PageImpl<ReceiptInfoDTO> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(), receiptDTOPage.getPageable(),
 				receiptDTOPage.getTotalElements());
 
 		ApiResponse<?> response = new ApiResponse<>(200, "Success", receiptDTOList);
