@@ -1,7 +1,12 @@
 package com.errors;
 
 public class InvalidException extends RuntimeException {
-    public InvalidException(String message) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public InvalidException(String message) {
         super(message);
     }
 }

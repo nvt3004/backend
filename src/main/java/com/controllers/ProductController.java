@@ -1,13 +1,30 @@
 package com.controllers;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.responsedto.CartItemResponse;
+import com.responsedto.ProductCartResponse;
+import com.responsedto.ProductDTO;
+import com.services.AlgoliaProductService;
+import com.services.ProductInforService;
+import com.utils.GetURLImg;
+import com.utils.RemoveDiacritics;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import com.algolia.search.models.indexing.Query;
+import com.algolia.search.models.indexing.SearchResult;
+import com.entities.AttributeOption;
+import com.entities.Category;
+import com.errors.ResponseAPI;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,14 +38,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.AttributeOptionsVersion;
-import com.entities.Category;
 import com.entities.Product;
 import com.entities.ProductCategory;
 import com.entities.User;
-import com.errors.ResponseAPI;
 import com.models.CategoryDTO;
 import com.models.OptionDTO;
-import com.models.ProductDTO;
 import com.models.VersionDTO;
 import com.responsedto.ProductResponse;
 import com.services.AttributesOptionVersionService;
@@ -70,7 +84,7 @@ public class ProductController {
 
 	@PostMapping("/add")
 	public ResponseEntity<ResponseAPI<Boolean>> addProduct(@RequestHeader("Authorization") Optional<String> authHeader,
-			@RequestBody ProductDTO productModel) {
+			@RequestBody com.models.ProductDTO productModel) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String token = authService.readTokenFromHeader(authHeader);
@@ -126,7 +140,7 @@ public class ProductController {
 
 	@PutMapping("/update")
 	public ResponseEntity<ResponseAPI<Boolean>> updateProduct(
-			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody ProductDTO productModel) {
+			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody com.models.ProductDTO productModel) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String token = authService.readTokenFromHeader(authHeader);
@@ -292,7 +306,7 @@ public class ProductController {
 		return ResponseEntity.ok(response);
 	}
 
-	public ResponseAPI<Boolean> validProduct(ProductDTO product) {
+	public ResponseAPI<Boolean> validProduct(com.models.ProductDTO product) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		BigDecimal oneThousand = new BigDecimal(1000);
 		BigDecimal fiveHundred = new BigDecimal(500);
@@ -409,5 +423,4 @@ public class ProductController {
 
 		return -1;
 	}
-
 }

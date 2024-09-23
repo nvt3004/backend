@@ -4,66 +4,51 @@ import java.io.Serializable;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
-
-/**
- * The persistent class for the products database table.
- * 
- */
 @Entity
-@Table(name="products")
-@NamedQuery(name="Product.findAll", query="SELECT p FROM Product p")
+@Table(name = "products")
+@NamedQuery(name = "Product.findAll", query = "SELECT p FROM Product p")
 public class Product implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name="product_id")
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "product_id")
 	private int productId;
 
 	@Lob
 	private String description;
 
-	@Column(name="product_img")
+	@Column(name = "product_img")
 	private String productImg;
 
-	@Column(name="product_name")
+	@Column(name = "product_name")
 	private String productName;
 
-	@Column(name="product_price")
+	@Column(name = "product_price")
 	private BigDecimal productPrice;
 
 	private boolean status;
 
-	//bi-directional many-to-one association to Feedback
-	@OneToMany(mappedBy="product")
-	@JsonManagedReference
-
+	@OneToMany(mappedBy = "product")
+	@JsonManagedReference("product-feedbacks")
 	private List<Feedback> feedbacks;
 
-	//bi-directional many-to-one association to ProductCategory
-	@OneToMany(mappedBy="product") 
-	@JsonManagedReference
-
+	@OneToMany(mappedBy = "product")
+	@JsonManagedReference("product-productCategories")
 	private List<ProductCategory> productCategories;
 
-	//bi-directional many-to-one association to ProductSale
-	@OneToMany(mappedBy="product")
-	@JsonManagedReference
-
+	@OneToMany(mappedBy = "product")
+	@JsonManagedReference("product-productSales")
 	private List<ProductSale> productSales;
 
-	//bi-directional many-to-one association to ProductVersion
-	@OneToMany(mappedBy="product")
-	@JsonManagedReference
-
+	@OneToMany(mappedBy = "product")
+	@JsonManagedReference("product-productVersions")
 	private List<ProductVersion> productVersions;
 
-	//bi-directional many-to-one association to Wishlist
-	@OneToMany(mappedBy="product")
-	@JsonManagedReference
-
+	@OneToMany(mappedBy = "product")
+	@JsonManagedReference("product-wishlists")
 	private List<Wishlist> wishlists;
 
 	public Product() {

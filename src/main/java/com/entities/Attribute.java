@@ -25,7 +25,7 @@ public class Attribute implements Serializable {
 
 	//bi-directional many-to-one association to AttributeOption
 	@OneToMany(mappedBy="attribute")
-	@JsonManagedReference
+	@JsonManagedReference("attribute-attributeOptions")
 	private List<AttributeOption> attributeOptions;
 
 	public Attribute() {

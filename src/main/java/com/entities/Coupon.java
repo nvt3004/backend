@@ -37,8 +37,7 @@ public class Coupon implements Serializable {
 	@Column(name = "coupon_code")
 	private String couponCode;
 	@OneToMany(mappedBy = "coupon", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
-
+	@JsonManagedReference("coupon-orders")
 	private List<Order> orders;
 
 	@Lob
@@ -61,7 +60,7 @@ public class Coupon implements Serializable {
 	private boolean status;
 	
 	@OneToMany(mappedBy="coupon")
-	@JsonManagedReference
+	@JsonManagedReference("coupon-userCoupons")
 	private List<UserCoupon> userCoupons;
 
 	public Coupon() {

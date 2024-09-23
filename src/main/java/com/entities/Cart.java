@@ -24,15 +24,13 @@ public class Cart implements Serializable {
 
 	//bi-directional many-to-one association to CartProduct
 	@OneToMany(mappedBy="cart")
-	@JsonManagedReference
-
+	@JsonManagedReference("cart-cartProducts")
 	private List<CartProduct> cartProducts;
 
 	//bi-directional many-to-one association to User
 	@ManyToOne
 	@JoinColumn(name="user_id")
-	@JsonBackReference
-
+	@JsonBackReference("user-carts")
 	private User user;
 
 	public Cart() {

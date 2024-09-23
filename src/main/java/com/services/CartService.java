@@ -10,7 +10,6 @@ import com.entities.AttributeOptionsVersion;
 import com.entities.Cart;
 import com.entities.CartProduct;
 import com.entities.Image;
-import com.entities.User;
 import com.repositories.CartJPA;
 import com.repositories.UserJPA;
 import com.responsedto.Attribute;

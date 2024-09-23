@@ -18,7 +18,6 @@ import com.entities.User;
 import com.entities.Wishlist;
 import com.errors.ResponseAPI;
 import com.models.WishlistModel;
-import com.responsedto.ProfileResponse;
 import com.responsedto.WishlistResponse;
 import com.services.AuthService;
 import com.services.JWTService;
