@@ -17,7 +17,7 @@ import org.springframework.validation.ObjectError;
 import com.entities.Coupon;
 import com.errors.FieldErrorDTO;
 import com.errors.InvalidException;
-import com.models.CouponCreate;
+import com.models.CouponCreateDTO;
 import com.models.CouponDTO;
 import com.repositories.CouponJPA;
 import com.repositories.OrderJPA;
@@ -40,7 +40,7 @@ public class CouponService {
 		return couponJpa.existsByCouponCode(couponCode);
 	}
 
-	public List<FieldErrorDTO> validateCoupon(CouponCreate couponCreate, BindingResult errors) {
+	public List<FieldErrorDTO> validateCoupon(CouponCreateDTO couponCreateDTO, BindingResult errors) {
 		List<FieldErrorDTO> fieldErrors = new ArrayList<>();
 
 		if (errors.hasErrors()) {
@@ -51,10 +51,10 @@ public class CouponService {
 			}
 		}
 
-		if (!couponCreate.isDatesValid()) {
+		if (!couponCreateDTO.isDatesValid()) {
 			fieldErrors.add(new FieldErrorDTO("startDate", "Start date must be before the end date."));
 		}
-		if (!couponCreate.isDiscountValid()) {
+		if (!couponCreateDTO.isDiscountValid()) {
 			fieldErrors
 					.add(new FieldErrorDTO("discount", "Only one discount type (percentage or price) can be applied."));
 		}
@@ -62,7 +62,7 @@ public class CouponService {
 		return fieldErrors;
 	}
 
-	public Coupon saveCoupon(CouponCreate couponCreate) {
+	public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
 		Coupon coupon = new Coupon();
 		String couponCode;
 		do {
@@ -70,17 +70,17 @@ public class CouponService {
 		} while (couponJpa.existsByCouponCode(couponCode));
 		coupon.setCouponCode(couponCode);
 
-		coupon.setDisPercent(couponCreate.getDisPercent());
-		coupon.setDisPrice(couponCreate.getDisPrice());
-		coupon.setDescription(couponCreate.getDescription());
-		coupon.setStartDate(couponCreate.getStartDate());
-		coupon.setEndDate(couponCreate.getEndDate());
-		coupon.setQuantity(couponCreate.getQuantity());
+		coupon.setDisPercent(couponCreateDTO.getDisPercent());
+		coupon.setDisPrice(couponCreateDTO.getDisPrice());
+		coupon.setDescription(couponCreateDTO.getDescription());
+		coupon.setStartDate(couponCreateDTO.getStartDate());
+		coupon.setEndDate(couponCreateDTO.getEndDate());
+		coupon.setQuantity(couponCreateDTO.getQuantity());
 
 		return couponJpa.save(coupon);
 	}
 
-	public Coupon updateCoupon(Integer id, CouponCreate couponCreate) throws InvalidException {
+	public Coupon updateCoupon(Integer id, CouponCreateDTO couponCreateDTO) throws InvalidException {
 
 	    Coupon existingCoupon = couponJpa.findById(id)
 	            .orElseThrow(() -> new InvalidException("Coupon with ID " + id + " not found"));
@@ -88,19 +88,19 @@ public class CouponService {
 	    boolean isCouponApplied = orderJpa.existsByCouponId(id);
 
 	    if (isCouponApplied) {
-	        if (!(existingCoupon.getQuantity() == (couponCreate.getQuantity()))) {
+	        if (!(existingCoupon.getQuantity() == (couponCreateDTO.getQuantity()))) {
 	            throw new InvalidException("Cannot update quantity because the coupon has already been applied to an order.");
 	        }
 	    }
 
-	    existingCoupon.setDisPercent(couponCreate.getDisPercent());
-	    existingCoupon.setDisPrice(couponCreate.getDisPrice());
-	    existingCoupon.setDescription(couponCreate.getDescription());
-	    existingCoupon.setStartDate(couponCreate.getStartDate());
-	    existingCoupon.setEndDate(couponCreate.getEndDate());
+	    existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
+	    existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
+	    existingCoupon.setDescription(couponCreateDTO.getDescription());
+	    existingCoupon.setStartDate(couponCreateDTO.getStartDate());
+	    existingCoupon.setEndDate(couponCreateDTO.getEndDate());
 
 	    if (!isCouponApplied) {
-	        existingCoupon.setQuantity(couponCreate.getQuantity());
+	        existingCoupon.setQuantity(couponCreateDTO.getQuantity());
 	    }
 
 	    return couponJpa.save(existingCoupon);

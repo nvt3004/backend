@@ -107,12 +107,14 @@ public class SupplierController {
 	}
 
 	@DeleteMapping
-	public ResponseEntity<ApiResponse<Void>> deleteSupplier(@RequestParam Integer id) {
-		supplierService.deleteSupplier(id);
+	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id) {
+	    ApiResponse<?> response = supplierService.deleteSupplier(id);
 
-		ApiResponse<Void> response = new ApiResponse<>(200, "Supplier deleted successfully", null);
+	    if (response.getErrorCode() != 200) {
+	        return ResponseEntity.status(response.getErrorCode()).body(response);
+	    }
 
-		return ResponseEntity.ok(response);
+	    return ResponseEntity.ok(response);
 	}
 
 }
