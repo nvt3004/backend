@@ -1,5 +1,7 @@
 package com.utils;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,6 +9,9 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.List;
 
+import javax.imageio.ImageIO;
+
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,13 +63,36 @@ public class UploadService {
 
 		for (MultipartFile file : files) {
 			boolean isEmptyFile = file.isEmpty();
-			
-			if(isEmptyFile) {
+
+			if (isEmptyFile) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	public byte[] converImageBase64ToImage(String base64) {
+		return Base64.decodeBase64(base64);
+	}
+
+	public String save(String base64, String folder) {
+		byte[] bytes = converImageBase64ToImage(base64);
+		Path root = Paths.get(String.format("static/%s", folder));
+		String fileName = String.valueOf(new Date().getTime()) + ".jpg";
+
+		try {
+			Files.createDirectories(root);
+
+			Path filePath = root.resolve(fileName);
+			Files.write(filePath, bytes);
+
+			return fileName;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 }

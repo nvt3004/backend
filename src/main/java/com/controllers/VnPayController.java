@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.configs.ConfigVNPay;
+import com.entities.CartProduct;
 import com.entities.Coupon;
 import com.entities.Order;
 import com.entities.OrderDetail;
@@ -42,6 +43,7 @@ import com.errors.ResponseAPI;
 import com.models.CartOrderDetailModel;
 import com.models.CartOrderModel;
 import com.repositories.OrderJPA;
+import com.repositories.UserCouponJPA;
 import com.responsedto.CartOrderResponse;
 import com.responsedto.VnpayDTO;
 import com.services.AuthService;
@@ -103,6 +105,9 @@ public class VnPayController {
 
 	@Autowired
 	UserCouponService userCouponService;
+	
+	@Autowired
+	UserCouponJPA userCouponJPA;
 
 	@PostMapping("/create-payment")
 	public ResponseEntity<ResponseAPI<String>> createPayment(
@@ -167,7 +172,7 @@ public class VnPayController {
 		vnp_Params.put("vnp_Version", vnp_Version);
 		vnp_Params.put("vnp_Command", vnp_Command);
 		vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
-		vnp_Params.put("vnp_Amount", String.valueOf(amount));
+		vnp_Params.put("vnp_Amount", String.valueOf(amount*100));
 		vnp_Params.put("vnp_CurrCode", "VND");
 
 		if (bankCode != null && !bankCode.isEmpty()) {
@@ -240,13 +245,27 @@ public class VnPayController {
 		if (vpnResponseCode.equals("24")) {
 			removeOrder(order);		
 			System.out.println("Hủy giao dịch");
+			res.sendRedirect("http://localhost:3000/pm-cancel");
 		} else if (vpnResponseCode.equals("00")) {
 			OrderStatus status = new OrderStatus();
 			status.setStatusId(1);
 			order.setOrderStatus(status);
 
 			orderService.createOrderCart(order);
+			
+			//Mua xong xóa khỏi giỏ hàng
+			User user = userService.getUserByUsername(order.getUser().getUsername());
+			for(CartProduct crd : user.getCarts().get(0).getCartProducts()) {
+				for(OrderDetail md: order.getOrderDetails()) {
+					if(crd.getProductVersionBean().getId()==md.getProductVersionBean().getId()) {
+						cartProductService.removeCartItem(crd);
+						break;
+					}
+				}
+			}
+			
 			System.out.println("Giao dịch thành công!");
+			res.sendRedirect("http://localhost:3000/pm-success");
 		} else {
 			removeOrder(order);	
 			System.out.println("Lỗi máy chủ");
@@ -269,15 +288,26 @@ public class VnPayController {
 	}
 
 	private long getAmountByOrderDetail(CartOrderModel orderModel) {
-		BigDecimal amount = BigDecimal.ZERO;
+	    BigDecimal totalAmount = BigDecimal.ZERO;
+	    Coupon coupon = couponService.getCouponByCode(orderModel.getCouponCode());
 
-		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
-			ProductVersion product = versionService.getProductVersionById(detail.getIdVersion());
+	    for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
+	        ProductVersion product = versionService.getProductVersionById(detail.getIdVersion());
+	        BigDecimal productTotal = product.getRetailPrice().multiply(new BigDecimal(detail.getQuantity()));
+	        totalAmount = totalAmount.add(productTotal);
+	    }
 
-			amount = amount.add(product.getRetailPrice().multiply(new BigDecimal(detail.getQuantity())));
-		}
 
-		return amount.longValue();
+	    if (coupon != null) {
+	        if (coupon.getDisPercent() != null) {
+	            double discount = coupon.getDisPercent().doubleValue() / 100;
+	            totalAmount = totalAmount.multiply(BigDecimal.valueOf(1 - discount));
+	        } else {
+	            totalAmount = totalAmount.subtract(coupon.getDisPrice());
+	        }
+	    }
+
+	    return totalAmount.add(orderModel.getFee()).longValue();
 	}
 
 	private ResponseAPI<CartOrderResponse> createOder(CartOrderModel orderModel, User user) {
@@ -346,7 +376,11 @@ public class VnPayController {
 		orderEntity.setAddress(orderModel.getAddress());
 		if (coupon != null) {
 			orderEntity.setCoupon(coupon);
-			orderEntity.setDisPrice(coupon.getDisPrice());
+			if(coupon.getDisPercent() != null) {
+				orderEntity.setDisPercent(coupon.getDisPercent());
+			}else {
+				orderEntity.setDisPrice(coupon.getDisPrice());
+			}
 		}
 
 		orderEntity.setOrderDate(new Date());
@@ -362,12 +396,22 @@ public class VnPayController {
 		Order orderSaved = orderService.createOrderCart(orderEntity);
 
 		if (coupon != null) {
-			UserCoupon userCoupon = new UserCoupon();
-			userCoupon.setUser(user);
-			userCoupon.setCoupon(coupon);
+			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId());
+			
+			if(temp != null) {
+				temp.setStatus(false);
+				userCouponService.createUserCoupon(temp);
+			}else {
+				UserCoupon userCoupon = new UserCoupon();
+				userCoupon.setUser(user);
+				userCoupon.setCoupon(coupon);
+				userCoupon.setStatus(false);
 
-			userCouponService.createUserCoupon(userCoupon);
+				userCouponService.createUserCoupon(userCoupon);
+			}
 		}
+		
+		
 
 		// Save order details
 		int totalProduct = 0;

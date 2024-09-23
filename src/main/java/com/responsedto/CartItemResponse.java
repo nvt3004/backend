@@ -20,6 +20,7 @@ public class CartItemResponse {
 	private BigDecimal price;
 	private int quantity;
 	private List<Attribute> attributes;
+	private ProductDetailResponse productDetail;
 	
 	public CartItemResponse(int catrItemId, int versionId, boolean statusVersion, int inventory, String versionName,
 			BigDecimal price, int quantity) {

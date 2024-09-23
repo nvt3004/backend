@@ -19,6 +19,10 @@ public class AttributesOptionVersionService {
 		return attributeOptionsVersionJpa.findById(id); 
 	}
 	
+	public AttributeOptionsVersion getById(int id) {
+		return attributeOptionsVersionJpa.findById(id).orElse(null);
+	}
+	
     public AttributeOptionsVersion saveAttributeOptionsVersion(AttributeOptionsVersion attributeOptionsVersion) {
         return attributeOptionsVersionJpa.save(attributeOptionsVersion);
     }

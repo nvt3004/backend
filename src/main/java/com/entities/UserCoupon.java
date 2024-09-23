@@ -36,6 +36,8 @@ public class UserCoupon implements Serializable {
 	@JsonBackReference
 
 	private Coupon coupon;
+	
+	private Boolean status;
 
 	//bi-directional many-to-one association to User
 	@ManyToOne
@@ -81,4 +83,13 @@ public class UserCoupon implements Serializable {
     public void setRetrievalDate(LocalDateTime retrievalDate) {
         this.retrievalDate = retrievalDate;
     }
+
+	public Boolean isStatus() {
+		return status;
+	}
+
+	public void setStatus(Boolean status) {
+		this.status = status;
+	}
+    
 }

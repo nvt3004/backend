@@ -31,6 +31,9 @@ public class ProductVersion implements Serializable {
 	
 	@Column(name = "version_name")
 	private String versionName;
+	
+	@Column(name = "status")
+	private boolean status;
 
 	//bi-directional many-to-one association to AttributeOptionsVersion
 	@OneToMany(mappedBy="productVersion")
@@ -229,7 +232,13 @@ public class ProductVersion implements Serializable {
 	public void setVersionName(String versionName) {
 		this.versionName = versionName;
 	}
-	
-	
+
+	public boolean isStatus() {
+		return status;
+	}
+
+	public void setStatus(boolean status) {
+		this.status = status;
+	}
 
 }

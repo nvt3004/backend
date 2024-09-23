@@ -14,7 +14,9 @@ import com.entities.User;
 import com.repositories.CartJPA;
 import com.repositories.UserJPA;
 import com.responsedto.Attribute;
+import com.responsedto.AttributeProductResponse;
 import com.responsedto.CartItemResponse;
+import com.responsedto.ProductDetailResponse;
 import com.utils.UploadService;
 
 @Service
@@ -27,6 +29,9 @@ public class CartService {
 
 	@Autowired
 	UploadService uploadService;
+	
+	@Autowired
+	ProductService productService;
 
 	public Cart addCart(Cart cart) {
 		Cart cartTemp = cartJPA.getCartByUser(cart.getUser().getUserId());
@@ -49,6 +54,10 @@ public class CartService {
 					cart.getProductVersionBean().getProduct().isStatus(), cart.getProductVersionBean().getQuantity(),
 					cart.getProductVersionBean().getProduct().getProductName(), cart.getProductVersionBean().getRetailPrice(),
 					cart.getQuantity());
+			
+			ProductDetailResponse productDetail = productService.getProductDetail(cart.getProductVersionBean().getProduct().getProductId());
+			productDetail.setProduct(null);
+			item.setProductDetail(productDetail);
 			
 			List<AttributeOptionsVersion> optionVersions = cart.getProductVersionBean().getAttributeOptionsVersions();
 			optionVersions.stream().forEach(optionVersion -> {

@@ -70,7 +70,6 @@ public class Order implements Serializable {
 	// bi-directional many-to-one association to Payment
 	@OneToMany(mappedBy = "order")
 	@JsonManagedReference
-
 	private List<Payment> payments;
 
 	@ManyToOne

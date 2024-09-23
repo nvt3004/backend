@@ -62,7 +62,7 @@ public class User implements UserDetails, Serializable {
     private LocalDateTime tokenExpiryDate;
 
     // Bi-directional many-to-one association to Address
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "user")
     private List<Address> addresses;
 
     // Bi-directional many-to-one association to Cart

@@ -31,18 +31,18 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(request -> request
-                        .requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
-                                "/api/reset-password", "/api/auth/refresh","/api/user/feedback/**")
-                        .permitAll()
-                        .requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
-                        .requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
-                        .requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
-                        .requestMatchers("/api/user/**").hasAnyAuthority("User")
-                        .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User")
-                        .anyRequest().authenticated())
-                .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
+//                .authorizeHttpRequests(request -> request
+//                        .requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
+//                                "/api/reset-password", "/api/auth/refresh","/api/user/feedback/**","/api/user/product/**")
+//                        .permitAll()
+//                        .requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
+//                        .requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
+//                        .requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
+//                        .requestMatchers("/api/user/**").hasAnyAuthority("User")
+//                        .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User")
+//                        .anyRequest().authenticated())
+//                .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }

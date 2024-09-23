@@ -22,7 +22,7 @@ public class OrderStatus implements Serializable {
 	private int statusId;
 
 	@Column(name="sort_order")
-	private int sortOrder;
+	private Integer sortOrder;
 
 	@Column(name="status_name")
 	private String statusName;
@@ -44,11 +44,11 @@ public class OrderStatus implements Serializable {
 		this.statusId = statusId;
 	}
 
-	public int getSortOrder() {
+	public Integer getSortOrder() {
 		return this.sortOrder;
 	}
 
-	public void setSortOrder(int sortOrder) {
+	public void setSortOrder(Integer sortOrder) {
 		this.sortOrder = sortOrder;
 	}
 
