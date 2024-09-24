@@ -50,11 +50,10 @@ public class OrderDetailService {
 
 		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(),
 				orderDetail.getOrder().getCoupon().getCouponId(), orderDetail.getOrder().getDeliveryDate(), disPercent,
-				disPrice, orderDetail.getOrder().getFullname(), orderDetail.getOrder().getOrderDate(), true,
+				disPrice, orderDetail.getOrder().getFullname(), orderDetail.getOrder().getOrderDate(),
 				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getOrderStatus().getStatusName(),
 				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()),
-				orderDetail.getOrder().getPayments().stream().findFirst()
-						.map(payment -> payment.getPaymentMethod().getMethodName()).orElse("N/A"),
+				orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName(),
 				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getUser().getEmail(), productDetails);
 	}
 

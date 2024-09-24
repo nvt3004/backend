@@ -39,7 +39,6 @@ public class Order implements Serializable {
 	private String fullname;
 
 	@Temporal(TemporalType.TIMESTAMP)
-//	 DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 	@Column(name = "order_date", nullable = false, updatable = false, insertable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
 	private Date orderDate;
 
@@ -65,9 +64,9 @@ public class Order implements Serializable {
 	private Coupon coupon;
 
 	// bi-directional many-to-one association to Payment
-	@OneToMany(mappedBy = "order")
-	@JsonManagedReference("order-payments")
-	private List<Payment> payments;
+	@OneToOne(mappedBy = "order")
+    @JsonManagedReference("order-payment")
+    private Payment payment;
 
 	@ManyToOne
 	@JoinColumn(name = "user_id")
@@ -195,26 +194,12 @@ public class Order implements Serializable {
 		this.orderStatus = orderStatus;
 	}
 
-	public List<Payment> getPayments() {
-		return this.payments;
+	public Payment getPayments() {
+		return this.payment;
 	}
 
-	public void setPayments(List<Payment> payments) {
-		this.payments = payments;
-	}
-
-	public Payment addPayment(Payment payment) {
-		getPayments().add(payment);
-		payment.setOrder(this);
-
-		return payment;
-	}
-
-	public Payment removePayment(Payment payment) {
-		getPayments().remove(payment);
-		payment.setOrder(null);
-
-		return payment;
+	public void setPayments(Payment payment) {
+		this.payment = payment;
 	}
 
 }

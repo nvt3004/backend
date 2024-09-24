@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.entities.Coupon;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
@@ -117,15 +118,31 @@ public class OrderService {
 	}
 
 	private OrderDTO createOrderDTO(Order order) {
-		BigDecimal total = orderUtilsService.calculateOrderTotal(order);
-		String paymentMethod = orderUtilsService.getPaymentMethod(order);
+	    BigDecimal total = orderUtilsService.calculateOrderTotal(order);
 
-		String statusName = order.getOrderStatus().getStatusName();
-		Integer couponId = (order.getCoupon() != null) ? order.getCoupon().getCouponId() : null;
+	    String statusName = order.getOrderStatus().getStatusName();
+	    Integer couponId = Optional.ofNullable(order.getCoupon())
+	                               .map(Coupon::getCouponId)
+	                               .orElse(null);
 
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, order.getDeliveryDate(),
-				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethod);
+	    String paymentMethodName = Optional.ofNullable(order.getPayments())
+	                                       .map(payment -> payment.getPaymentMethod().getMethodName())
+	                                       .orElse(null);
+
+	    return new OrderDTO(
+	        order.getOrderId(),
+	        order.getAddress(),
+	        couponId,
+	        order.getDeliveryDate(),
+	        order.getFullname(),
+	        order.getOrderDate(),
+	        order.getPhone(),
+	        statusName,
+	        total,
+	        paymentMethodName
+	    );
 	}
+
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
 		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
@@ -198,7 +215,6 @@ public class OrderService {
 					Integer totalQuantityProductVersionInOrder = totalQuantityProcessedOrders
 							+ totalQuantityCancelledOrders;
 					Integer inventoryProductVersion = productVersionQuantity - totalQuantityProductVersionInOrder;
-					System.out.println(inventoryProductVersion + " inventoryProductVersion");
 					if (inventoryProductVersion < orderDetailProductQuantity) {
 						return false;
 					}
@@ -229,25 +245,26 @@ public class OrderService {
 			int rowsAffected = orderDetailJpa.deleteOrderDetailsByOrderDetailId(orderDetailId);
 
 			if (rowsAffected != 0) {
-			    if (orderJpa.existsByOrderDetail(orderId)) {
-			        try {
-			            Optional<OrderStatus> cancelledStatusOpt = Optional.ofNullable(orderStatusService.findByName("Cancelled"));
-			            
-			            if (cancelledStatusOpt.isPresent()) {
-			                OrderStatus cancelledStatus = cancelledStatusOpt.get();
-			                order.setOrderStatus(cancelledStatus);
-			                orderJpa.save(order); 
-			            } else {
-			                return new ApiResponse<>(404, "Cancelled status not found.", null);
-			            }
-			        } catch (Exception e) {
-			            return new ApiResponse<>(500, "Failed to find 'Cancelled' status: " + e.getMessage(), null);
-			        }
-			    }
+				if (orderJpa.existsByOrderDetail(orderId)) {
+					try {
+						Optional<OrderStatus> cancelledStatusOpt = Optional
+								.ofNullable(orderStatusService.findByName("Cancelled"));
 
-			    return new ApiResponse<>(200, "Product deleted successfully.", null);
+						if (cancelledStatusOpt.isPresent()) {
+							OrderStatus cancelledStatus = cancelledStatusOpt.get();
+							order.setOrderStatus(cancelledStatus);
+							orderJpa.save(order);
+						} else {
+							return new ApiResponse<>(404, "Cancelled status not found.", null);
+						}
+					} catch (Exception e) {
+						return new ApiResponse<>(500, "Failed to find 'Cancelled' status: " + e.getMessage(), null);
+					}
+				}
+
+				return new ApiResponse<>(200, "Product deleted successfully.", null);
 			} else {
-			    return new ApiResponse<>(404, "OrderDetail with ID " + orderDetailId + " not found.", null);
+				return new ApiResponse<>(404, "OrderDetail with ID " + orderDetailId + " not found.", null);
 			}
 
 		} catch (Exception e) {

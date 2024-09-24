@@ -16,7 +16,6 @@ public class OrderDetailDTO {
 	private String disPrice;
 	private String fullname;
 	private Date orderDate;
-	private boolean paymentStatus;
 	private String phone;
 	private String statusName;
 	private BigDecimal total;
@@ -26,7 +25,7 @@ public class OrderDetailDTO {
 	private List<OrderDetailProductDetailsDTO> productDetails;
 
 	public OrderDetailDTO(int orderId, String address, Integer couponId, Date deliveryDate, String disPercent,
-			String disPrice, String fullname, Date orderDate, boolean paymentStatus, String phone,
+			String disPrice, String fullname, Date orderDate, String phone,
 			String statusName, BigDecimal total, String paymentMethod, String phoneNumber,
 			String email, List<OrderDetailProductDetailsDTO> productDetails) {
 		this.orderId = orderId;
@@ -37,7 +36,6 @@ public class OrderDetailDTO {
 		this.disPrice = disPrice;
 		this.fullname = fullname;
 		this.orderDate = orderDate;
-		this.paymentStatus = paymentStatus;
 		this.phone = phone;
 		this.statusName = statusName;
 		this.total = total;

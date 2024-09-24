@@ -275,7 +275,7 @@ public class VnPayController {
 		if(order == null ) return;
 		
 		Coupon coupon = order.getCoupon();
-		Payment payment = order.getPayments().get(0);
+		Payment payment = order.getPayments();
 
 		if (coupon != null) {
 			userCouponService.deleteUserCoupon(coupon.getUserCoupons().get(0));

@@ -19,15 +19,15 @@ public class OrderUtilsService {
         }
         return total;
     }
-
-    public String getPaymentMethod(Order order) {
-        return order.getPayments().stream()
-                .map(payment -> payment.getPaymentMethod().getMethodName())
-                .findFirst()
-                .orElse("N/A");
-    }
-
-    public String getPhoneNumber(Order order) {
-        return order.getPhone();
-    }
+//
+//    public String getPaymentMethod(Order order) {
+//        return order.getPayments().stream()
+//                .map(payment -> payment.getPaymentMethod().getMethodName())
+//                .findFirst()
+//                .orElse("N/A");
+//    }
+//
+//    public String getPhoneNumber(Order order) {
+//        return order.getPhone();
+//    }
 }
