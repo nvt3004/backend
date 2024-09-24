@@ -29,7 +29,7 @@ import com.utils.ValidationUtil;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/suppliers")
+@RequestMapping("/api/staff/suppliers")
 public class SupplierController {
 
 	@Autowired

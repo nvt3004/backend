@@ -32,7 +32,7 @@ import com.utils.ValidationUtil;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/receipt")
+@RequestMapping("/api/staff/receipt")
 public class ReceiptController {
 
 	@Autowired

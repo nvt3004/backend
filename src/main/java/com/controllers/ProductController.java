@@ -39,7 +39,7 @@ import com.services.UserService;
 import com.utils.UploadService;
 
 @RestController
-@RequestMapping("/api/admin/product")
+@RequestMapping("/api/staff/product")
 @CrossOrigin("*")
 public class ProductController {
 	@Autowired
@@ -104,14 +104,14 @@ public class ProductController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		ResponseAPI<Boolean> responseValid = validProduct(productModel);
+		// ResponseAPI<Boolean> responseValid = validProduct(productModel);
 
-		if (!responseValid.getData()) {
-			response.setCode(responseValid.getCode());
-			response.setMessage(responseValid.getMessage());
+		// if (!responseValid.getData()) {
+		// 	response.setCode(responseValid.getCode());
+		// 	response.setMessage(responseValid.getMessage());
 
-			return ResponseEntity.status(responseValid.getCode()).body(response);
-		}
+		// 	return ResponseEntity.status(responseValid.getCode()).body(response);
+		// }
 
 		Product productSaved = productService.createProduct(productModel);
 

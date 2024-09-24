@@ -39,7 +39,7 @@ public class SecurityConfig {
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
-						.requestMatchers("/api/user/**").hasAnyAuthority("User")
+						.requestMatchers("/api/user/**").hasAnyAuthority("User","Admin","Staff")
                         .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest().authenticated())
 				.sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())

@@ -30,7 +30,7 @@ import com.services.OrderStatusService;
 import com.services.UserService;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/staff/orders")
 public class OrderController {
 
 	@Autowired

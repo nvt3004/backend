@@ -38,7 +38,7 @@ import com.utils.ValidationUtil;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/coupons")
+@RequestMapping("/api/staff/coupons")
 public class CouponController {
 
 	@Autowired
