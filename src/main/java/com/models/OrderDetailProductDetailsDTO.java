@@ -3,7 +3,10 @@ package com.models;
 import java.math.BigDecimal;
 import java.util.List;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 
 @Data
 public class OrderDetailProductDetailsDTO {
@@ -15,11 +18,11 @@ public class OrderDetailProductDetailsDTO {
 	private String description;
 	private BigDecimal total;
 	private Integer orderDetailId;
-	private AttributeDTO attributeProductVersion;
+	private AttributeProductVersionDTO attributeProductVersion;
 	private List<AttributeDTO> attributeProducts;
 
 	public OrderDetailProductDetailsDTO(Integer productId, Integer productVersionId, BigDecimal price, Integer quantity,
-			String imageUrl, String description, BigDecimal total, Integer orderDetailId,AttributeDTO attributeProductVersion,
+			String imageUrl, String description, BigDecimal total, Integer orderDetailId,AttributeProductVersionDTO attributeProductVersion,
 			List<AttributeDTO> attributeProducts) {
 		this.productId = productId;
 		this.productVersionId = productVersionId;

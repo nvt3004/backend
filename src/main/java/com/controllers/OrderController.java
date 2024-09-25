@@ -20,6 +20,7 @@ import com.entities.OrderDetail;
 import com.entities.OrderStatus;
 import com.entities.User;
 import com.errors.ApiResponse;
+import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
 import com.models.OrderStatusDTO;
 import com.services.AuthService;
@@ -174,7 +175,7 @@ public class OrderController {
 		}
 
 		try {
-			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getOrdersByUsername(username, keyword,
+			ApiResponse<PageImpl<OrderByUserDTO>> successResponse = orderService.getOrdersByUsername(username, keyword,
 					statusId, page, size);
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {

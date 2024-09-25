@@ -17,18 +17,21 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.entities.AttributeOptionsVersion;
 import com.entities.Coupon;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
 import com.entities.ProductVersion;
 import com.errors.ApiResponse;
+import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
 import com.models.OrderDetailDTO;
 import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
+import com.utils.UploadService;
 
 @Service
 public class OrderService {
@@ -52,6 +55,10 @@ public class OrderService {
 
 	@Autowired
 	private OrderStatusService orderStatusService;
+	
+	@Autowired
+	private UploadService uploadService;
+	
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, Integer statusId,
 			Integer page, Integer size) {
@@ -83,7 +90,7 @@ public class OrderService {
 		return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
 	}
 
-	public ApiResponse<PageImpl<OrderDTO>> getOrdersByUsername(String username, String keyword, Integer statusId,
+	public ApiResponse<PageImpl<OrderByUserDTO>> getOrdersByUsername(String username, String keyword, Integer statusId,
 			Integer page, Integer size) {
 
 		if (keyword == null) {
@@ -108,39 +115,81 @@ public class OrderService {
 			return new ApiResponse<>(404, "No orders found", null);
 		}
 
-		List<OrderDTO> orderDtos = new ArrayList<>();
+		List<OrderByUserDTO> orderDtos = new ArrayList<>();
 		for (Order order : ordersPage) {
-			orderDtos.add(createOrderDTO(order));
+			orderDtos.add(createOrderByUserDTO(order));
 		}
 
-		PageImpl<OrderDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
+		PageImpl<OrderByUserDTO> resultPage = new PageImpl<>(orderDtos, pageable, ordersPage.getTotalElements());
 		return new ApiResponse<>(200, "Orders fetched successfully", resultPage);
 	}
 
-	private OrderDTO createOrderDTO(Order order) {
-	    BigDecimal total = orderUtilsService.calculateOrderTotal(order);
+	private OrderByUserDTO createOrderByUserDTO(Order order) {
+	    BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
+	    BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
 
-	    String statusName = order.getOrderStatus().getStatusName();
-	    Integer couponId = Optional.ofNullable(order.getCoupon())
-	                               .map(Coupon::getCouponId)
-	                               .orElse(null);
+	    List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream()
+	        .map(orderDetail -> {
+	            String variant = getVariantFromOrderDetail(orderDetail);
+	            return new OrderByUserDTO.ProductDTO(
+	                orderDetail.getProductVersionBean().getProduct().getProductName(),
+	                uploadService.getUrlImage(orderDetail.getProductVersionBean().getProduct().getProductImg()),
+	                variant,
+	                orderDetail.getQuantity(),
+	                orderDetail.getPrice()
+	            );
+	        })
+	        .collect(Collectors.toList());
 
-	    String paymentMethodName = Optional.ofNullable(order.getPayments())
-	                                       .map(payment -> payment.getPaymentMethod().getMethodName())
-	                                       .orElse(null);
-
-	    return new OrderDTO(
-	        order.getOrderId(),
-	        order.getAddress(),
-	        couponId,
-	        order.getDeliveryDate(),
-	        order.getFullname(),
-	        order.getOrderDate(),
-	        order.getPhone(),
-	        statusName,
-	        total,
-	        paymentMethodName
+	    return new OrderByUserDTO(
+	        order.getOrderId(), 
+	        order.getOrderDate(), 
+	        order.getOrderStatus().getStatusName(), 
+	        totalPrice, 
+	        discountedPrice, 
+	        products
 	    );
+	}
+
+
+
+	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
+	    String color = null;
+	    String size = null;
+	    
+	    for (AttributeOptionsVersion aov : orderDetail.getProductVersionBean().getAttributeOptionsVersions()) {
+	        String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	        String attributeValue = aov.getAttributeOption().getAttributeValue();
+	        if ("Color".equalsIgnoreCase(attributeName)) {
+	            color = attributeValue;
+	        } else if ("Size".equalsIgnoreCase(attributeName)) {
+	            size = attributeValue;
+	        }
+	    }
+
+	    if (color != null && size != null) {
+	        return color + ", " + size;
+	    } else if (color != null) {
+	        return color; 
+	    } else if (size != null) {
+	        return size; 
+	    }
+
+	    return "";
+	}
+
+
+	private OrderDTO createOrderDTO(Order order) {
+		BigDecimal total = orderUtilsService.calculateOrderTotal(order);
+
+		String statusName = order.getOrderStatus().getStatusName();
+		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+
+		String paymentMethodName = Optional.ofNullable(order.getPayments())
+				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
+
+		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, order.getDeliveryDate(),
+				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethodName);
 	}
 
 

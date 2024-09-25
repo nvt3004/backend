@@ -2,40 +2,31 @@ package com.models;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderByUserDTO {
-	private int orderId;
-	private String fullname;
-	private String phone;
-	private String address;
-	private Integer couponId;
-	private Date deliveryDate;
-	private Date orderDate;
-	private String statusName;
-	private BigDecimal total;
-	private String paymentMethod;
-	
+    private int orderId;
+    private Date orderDate;
+    private String statusName;
+    private BigDecimal totalPrice; // total price of the order (before discount)
+    private BigDecimal discountedPrice; // total price after applying discounts
+    private List<ProductDTO> products; // list of products in the order
 
-	public OrderByUserDTO(int orderId, String address, Integer couponId, Date deliveryDate, String fullname, Date orderDate,
-			String phone, String statusName, BigDecimal total, String paymentMethod) {
-		this.orderId = orderId;
-		this.address = address;
-		this.couponId = couponId;
-		this.deliveryDate = deliveryDate;
-		this.fullname = fullname;
-		this.orderDate = orderDate;
-		this.phone = phone;
-		this.statusName = statusName;
-		this.total = total;
-		this.paymentMethod = paymentMethod;
-	}
-	
-//	@Data
-//	public class OrderDetailByUserDTO {
-//		private Integer 
-//	}
-
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ProductDTO {
+        private String productName;
+        private String imageUrl;
+        private String variant; // combination of color and size
+        private Integer quantity;
+        private BigDecimal price; // price of individual product
+    }
 }
