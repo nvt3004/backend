@@ -193,7 +193,7 @@ public class ProductService {
 
 		productParrent.setId(product.getProductId());
 		productParrent.setProductName(product.getProductName());
-		productParrent.setPrice(product.getProductPrice());
+//		productParrent.setMinPrice(null);
 		productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
 		productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
 

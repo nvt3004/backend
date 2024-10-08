@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 public class ProductHomeResponse {
 	private long id;
 	private String productName;
-	private BigDecimal price;
 	private String image;
 	private double discount;
+	private BigDecimal minPrice;
+	private BigDecimal maxPrice;
 }

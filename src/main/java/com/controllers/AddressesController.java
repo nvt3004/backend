@@ -2,6 +2,7 @@ package com.controllers;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ import com.entities.User;
 import com.errors.ResponseAPI;
 import com.models.AddressDTO;
 import com.repositories.AddressJPA;
+import com.repositories.UserJPA;
 import com.services.AddressService;
 import com.services.AuthService;
 import com.services.JWTService;
@@ -48,6 +50,9 @@ public class AddressesController {
 
 	@Autowired
 	AddressJPA addressJPA;
+
+	@Autowired
+	UserJPA userJPA;
 
 	@GetMapping("/get-all")
 	public ResponseEntity<ResponseAPI<List<AddressDTO>>> addAddress(
@@ -103,7 +108,7 @@ public class AddressesController {
 		response.setData(false);
 		String token = authService.readTokenFromHeader(authHeader);
 		System.out.println(token);
-		
+
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
@@ -135,46 +140,29 @@ public class AddressesController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		if (addressModel.getProvince().isBlank() 
-			|| 
-			addressModel.getProvince().isEmpty()
-			|| 
-			addressModel.getProvince() == null) 
-		{
+		if (addressModel.getProvince().isBlank() || addressModel.getProvince().isEmpty()
+				|| addressModel.getProvince() == null) {
 			response.setCode(422);
 			response.setMessage("Province invalid format");
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
-		if (addressModel.getDistrict().isBlank() 
-			|| 
-			addressModel.getDistrict().isEmpty() 
-			|| 
-			addressModel.getDistrict() == null) 
-		{
-			
+		if (addressModel.getDistrict().isBlank() || addressModel.getDistrict().isEmpty()
+				|| addressModel.getDistrict() == null) {
+
 			response.setCode(422);
 			response.setMessage("District invalid format");
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
-		if (addressModel.getWard().isBlank() 
-			|| 
-			addressModel.getWard().isEmpty() 
-			||
-			addressModel.getWard() == null) 
-		{
+		if (addressModel.getWard().isBlank() || addressModel.getWard().isEmpty() || addressModel.getWard() == null) {
 			response.setCode(422);
 			response.setMessage("Ward id invalid format");
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
-		if (addressModel.getDetailAddress().isBlank() 
-			|| 
-			addressModel.getDetailAddress().isEmpty()
-			|| 
-			addressModel.getDetailAddress() == null) 
-		{
+		if (addressModel.getDetailAddress().isBlank() || addressModel.getDetailAddress().isEmpty()
+				|| addressModel.getDetailAddress() == null) {
 
 			response.setCode(422);
 			response.setMessage("Detail address invalid format");
@@ -235,58 +223,37 @@ public class AddressesController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 		}
 
-		if (addressModel.getProvince().isBlank() 
-				|| 
-				addressModel.getProvince().isEmpty()
-				|| 
-				addressModel.getProvince() == null) 
-			{
-				response.setCode(422);
-				response.setMessage("Province invalid format");
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
+		if (addressModel.getProvince().isBlank() || addressModel.getProvince().isEmpty()
+				|| addressModel.getProvince() == null) {
+			response.setCode(422);
+			response.setMessage("Province invalid format");
+			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		}
 
-			if (addressModel.getDistrict().isBlank() 
-				|| 
-				addressModel.getDistrict().isEmpty() 
-				|| 
-				addressModel.getDistrict() == null) 
-			{
-				
-				response.setCode(422);
-				response.setMessage("District invalid format");
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
+		if (addressModel.getDistrict().isBlank() || addressModel.getDistrict().isEmpty()
+				|| addressModel.getDistrict() == null) {
 
-			if (addressModel.getWard().isBlank() 
-				|| 
-				addressModel.getWard().isEmpty() 
-				||
-				addressModel.getWard() == null) 
-			{
-				response.setCode(422);
-				response.setMessage("Ward id invalid format");
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
+			response.setCode(422);
+			response.setMessage("District invalid format");
+			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		}
 
-			if (addressModel.getDetailAddress().isBlank() 
-				|| 
-				addressModel.getDetailAddress().isEmpty()
-				|| 
-				addressModel.getDetailAddress() == null) 
-			{
+		if (addressModel.getWard().isBlank() || addressModel.getWard().isEmpty() || addressModel.getWard() == null) {
+			response.setCode(422);
+			response.setMessage("Ward id invalid format");
+			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		}
 
-				response.setCode(422);
-				response.setMessage("Detail address invalid format");
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
+		if (addressModel.getDetailAddress().isBlank() || addressModel.getDetailAddress().isEmpty()
+				|| addressModel.getDetailAddress() == null) {
 
-		if (addressModel.getDetailAddress().isBlank() 
-			|| 
-			addressModel.getDetailAddress().isEmpty()
-			|| 
-			addressModel.getDetailAddress() == null) 
-		{
+			response.setCode(422);
+			response.setMessage("Detail address invalid format");
+			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		}
+
+		if (addressModel.getDetailAddress().isBlank() || addressModel.getDetailAddress().isEmpty()
+				|| addressModel.getDetailAddress() == null) {
 
 			response.setCode(422);
 			response.setMessage("Detail address invalid format");
@@ -334,6 +301,7 @@ public class AddressesController {
 
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
+		
 		if (user == null) {
 			response.setCode(404);
 			response.setMessage("Account not found");
@@ -354,8 +322,10 @@ public class AddressesController {
 			response.setMessage(String.format("Address id %d not found!", addressId));
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
+		
+		user.removeAddress(address);
 
-		addressService.removeAddress(addressId);
+		userJPA.save(user);
 
 		response.setCode(200);
 		response.setData(true);

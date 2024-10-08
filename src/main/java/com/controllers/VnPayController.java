@@ -63,7 +63,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@RequestMapping("/api/vnp/")
+@RequestMapping("/api/vnp")
 public class VnPayController {
 
 	@Autowired

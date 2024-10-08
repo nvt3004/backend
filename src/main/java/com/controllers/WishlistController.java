@@ -43,6 +43,7 @@ public class WishlistController {
 
 	@Autowired
 	ProductService productService;
+	
 
 	@PostMapping("api/user/wishlist/add")
 	public ResponseEntity<ResponseAPI<WishlistResponse>> addWishlist(
