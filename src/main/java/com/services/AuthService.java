@@ -46,10 +46,10 @@ public class AuthService {
 
 	        return user;
 
-	    } catch (JwtException e) {
+	    }catch (JwtException e) {
 	        throw new InvalidException("Invalid token: " + e.getMessage());
-	    } catch (UserServiceException e) {
-	        throw new UserServiceException("Error with user service: " + e.getMessage());
+	    } catch (InvalidException | UserServiceException e) {
+	        throw e;
 	    } catch (Exception e) {
 	        throw new Exception("An unexpected error occurred: " + e.getMessage());
 	    }

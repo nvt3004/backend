@@ -15,14 +15,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.Supplier;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
+import com.errors.InvalidException;
+import com.errors.UserServiceException;
 import com.models.SupplierDTO;
+import com.services.AuthService;
+import com.services.JWTService;
 import com.services.SupplierService;
 import com.utils.ValidationUtil;
 
@@ -35,19 +41,56 @@ public class SupplierController {
 	@Autowired
 	private SupplierService supplierService;
 
-	@GetMapping
-	public ResponseEntity<ApiResponse<Page<Supplier>>> getAllSuppliers(
-			@RequestParam(value = "page", defaultValue = "0") int page,
-			@RequestParam(value = "size", defaultValue = "10") int size) {
+	@Autowired
+	private AuthService authService;
 
-		if (page < 0) {
-			return ResponseEntity.badRequest()
-					.body(new ApiResponse<>(400, "Invalid page number. It must be greater than or equal to 0.", null));
+	@Autowired
+	private JWTService jwtService;
+
+	@GetMapping
+	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+
+		ApiResponse<String> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
 		}
 
-		if (size < 1) {
-			return ResponseEntity.badRequest()
-					.body(new ApiResponse<>(400, "Invalid size. It must be greater than or equal to 1.", null));
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
+		if (page < 0 || size < 1) {
+			return ResponseEntity.badRequest().body(new ApiResponse<>(400,
+					"Invalid page number or size. Page must be greater than or equal to 0 and size must be greater than or equal to 1.",
+					null));
 		}
 
 		Pageable pageable = PageRequest.of(page, size);
@@ -59,7 +102,44 @@ public class SupplierController {
 	}
 
 	@GetMapping("/supplier-detail")
-	public ResponseEntity<ApiResponse<Supplier>> getSupplierById(@RequestParam Integer id) {
+	public ResponseEntity<ApiResponse<?>> getSupplierById(@RequestParam Integer id,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+
+		ApiResponse<String> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		
 		Optional<Supplier> optionalSupplier = supplierService.getSupplierById(id);
 
 		if (optionalSupplier.isPresent()) {
@@ -74,9 +154,44 @@ public class SupplierController {
 
 	@PostMapping
 	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierDTO supplierDetails,
-			BindingResult errors) {
+			BindingResult errors,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
 		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
 		if (!validationErrors.isEmpty()) {
 			errorResponse = new ApiResponse<>(400, "Validation failed.", validationErrors);
@@ -90,10 +205,45 @@ public class SupplierController {
 	}
 
 	@PutMapping
-	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id, @Valid
-			@RequestBody SupplierDTO supplierDetails, BindingResult errors) {
+	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id,
+			@Valid @RequestBody SupplierDTO supplierDetails, BindingResult errors,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		
 		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
 		if (!validationErrors.isEmpty()) {
 			errorResponse = new ApiResponse<>(400, "Validation failed.", validationErrors);
@@ -107,14 +257,51 @@ public class SupplierController {
 	}
 
 	@DeleteMapping
-	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id) {
-	    ApiResponse<?> response = supplierService.deleteSupplier(id);
+	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
-	    if (response.getErrorCode() != 200) {
-	        return ResponseEntity.status(response.getErrorCode()).body(response);
-	    }
+		ApiResponse<?> errorResponse = new ApiResponse<>();
 
-	    return ResponseEntity.ok(response);
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		
+		errorResponse = supplierService.deleteSupplier(id);
+
+		if (errorResponse.getErrorCode() != 200) {
+			return ResponseEntity.status(errorResponse.getErrorCode()).body(errorResponse);
+		}
+
+		return ResponseEntity.ok(errorResponse);
 	}
 
 }
