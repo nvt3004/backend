@@ -29,7 +29,7 @@ public class ProductUpdateScheduler {
 	public void updateProductsToAlgolia() {
 		try {
 			// Lấy danh sách tất cả các sản phẩm từ dịch vụ
-			List<ProductDTO> products = inforService.getALLInforProduct();
+			List<ProductDTO> products = inforService.getALLInforProduct(null);
 			// Thêm hoặc cập nhật tất cả sản phẩm vào Algolia
 			for (ProductDTO product : products) {
 				algoliaProductService.addProduct(product);
