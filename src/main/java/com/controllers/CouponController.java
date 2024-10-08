@@ -27,6 +27,7 @@ import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.errors.InvalidException;
+import com.errors.UserServiceException;
 import com.models.CouponCreateDTO;
 import com.models.CouponDTO;
 import com.services.AuthService;
@@ -50,9 +51,6 @@ public class CouponController {
 	@Autowired
 	private JWTService jwtService;
 
-	@Autowired
-	private UserService userService;
-
 	@PostMapping
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
@@ -60,40 +58,37 @@ public class CouponController {
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Authorization header is missing");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Authorization header is missing");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		String token = authService.readTokenFromHeader(authHeader);
+	    String token = authService.readTokenFromHeader(authHeader);
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	    try {
+	        jwtService.extractUsername(token);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Invalid token format");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		if (jwtService.isTokenExpired(token)) {
-			errorResponse.setErrorCode(401);
-			errorResponse.setMessage("Token expired");
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-		}
-
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			errorResponse.setErrorCode(404);
-			errorResponse.setMessage("Account not found");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-		}
-
-		if (user.getStatus() == 0) {
-			errorResponse.setErrorCode(403);
-			errorResponse.setMessage("Account locked");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-		}
+	    User user;
+	    try {
+	        user = authService.validateTokenAndGetUsername(token);
+	    } catch (InvalidException e) {
+	        errorResponse.setErrorCode(401);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	    } catch (UserServiceException e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(500);
+	        errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
 
 		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
 		if (!validationErrors.isEmpty()) {
@@ -120,40 +115,37 @@ public class CouponController {
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Authorization header is missing");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Authorization header is missing");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		String token = authService.readTokenFromHeader(authHeader);
+	    String token = authService.readTokenFromHeader(authHeader);
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	    try {
+	        jwtService.extractUsername(token);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Invalid token format");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		if (jwtService.isTokenExpired(token)) {
-			errorResponse.setErrorCode(401);
-			errorResponse.setMessage("Token expired");
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-		}
-
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			errorResponse.setErrorCode(404);
-			errorResponse.setMessage("Account not found");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-		}
-
-		if (user.getStatus() == 0) {
-			errorResponse.setErrorCode(403);
-			errorResponse.setMessage("Account locked");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-		}
+	    User user;
+	    try {
+	        user = authService.validateTokenAndGetUsername(token);
+	    } catch (InvalidException e) {
+	        errorResponse.setErrorCode(401);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	    } catch (UserServiceException e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(500);
+	        errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
 
 		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreateDTO, errors);
 
@@ -183,40 +175,38 @@ public class CouponController {
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Authorization header is missing");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Authorization header is missing");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		String token = authService.readTokenFromHeader(authHeader);
+	    String token = authService.readTokenFromHeader(authHeader);
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	    try {
+	        jwtService.extractUsername(token);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Invalid token format");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		if (jwtService.isTokenExpired(token)) {
-			errorResponse.setErrorCode(401);
-			errorResponse.setMessage("Token expired");
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-		}
-
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			errorResponse.setErrorCode(404);
-			errorResponse.setMessage("Account not found");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-		}
-
-		if (user.getStatus() == 0) {
-			errorResponse.setErrorCode(403);
-			errorResponse.setMessage("Account locked");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-		}
+	    User user;
+	    try {
+	        user = authService.validateTokenAndGetUsername(token);
+	    } catch (InvalidException e) {
+	        errorResponse.setErrorCode(401);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	    } catch (UserServiceException e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(500);
+	        errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
+	    
 		try {
 			couponService.deleteCoupon(id);
 			ApiResponse<String> response = new ApiResponse<>(HttpStatus.OK.value(), "Coupon deleted successfully",
@@ -243,40 +233,37 @@ public class CouponController {
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Authorization header is missing");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Authorization header is missing");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		String token = authService.readTokenFromHeader(authHeader);
+	    String token = authService.readTokenFromHeader(authHeader);
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-		}
+	    try {
+	        jwtService.extractUsername(token);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Invalid token format");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
 
-		if (jwtService.isTokenExpired(token)) {
-			errorResponse.setErrorCode(401);
-			errorResponse.setMessage("Token expired");
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-		}
-
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			errorResponse.setErrorCode(404);
-			errorResponse.setMessage("Account not found");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-		}
-
-		if (user.getStatus() == 0) {
-			errorResponse.setErrorCode(403);
-			errorResponse.setMessage("Account locked");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-		}
+	    User user;
+	    try {
+	        user = authService.validateTokenAndGetUsername(token);
+	    } catch (InvalidException e) {
+	        errorResponse.setErrorCode(401);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	    } catch (UserServiceException e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(500);
+	        errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
 
 		try {
 			Pageable pageable = PageRequest.of(page, size);

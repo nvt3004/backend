@@ -15,6 +15,7 @@ import com.entities.OrderDetail;
 import com.entities.ProductVersion;
 import com.errors.ApiResponse;
 import com.models.AttributeDTO;
+import com.models.AttributeProductVersionDTO;
 import com.models.ColorDTO;
 import com.models.OrderDetailDTO;
 import com.models.OrderDetailProductDetailsDTO;
@@ -50,11 +51,10 @@ public class OrderDetailService {
 
 		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(),
 				orderDetail.getOrder().getCoupon().getCouponId(), orderDetail.getOrder().getDeliveryDate(), disPercent,
-				disPrice, orderDetail.getOrder().getFullname(), orderDetail.getOrder().getOrderDate(), true,
+				disPrice, orderDetail.getOrder().getFullname(), orderDetail.getOrder().getOrderDate(),
 				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getOrderStatus().getStatusName(),
 				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()),
-				orderDetail.getOrder().getPayments().stream().findFirst()
-						.map(payment -> payment.getPaymentMethod().getMethodName()).orElse("N/A"),
+				orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName(),
 				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getUser().getEmail(), productDetails);
 	}
 
@@ -78,7 +78,7 @@ public class OrderDetailService {
 				}
 			}
 
-			AttributeDTO attributeProductVersion = new AttributeDTO(color, size);
+			AttributeProductVersionDTO attributeProductVersion = new AttributeProductVersionDTO(color, size);
 
 			List<AttributeDTO> attributesProducts = createAttributeListByProductId(
 					item.getProductVersionBean().getProduct().getProductId());
@@ -138,27 +138,12 @@ public class OrderDetailService {
 		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;
 	}
 
-	public static String formatNumber(BigDecimal number) {
-		if (number == null) {
-			return null;
-		}
-
-		String str = number.toString();
-
-		if (str.indexOf('.') > 0) {
-			str = str.replaceAll("0*$", "");
-			str = str.replaceAll("\\.$", "");
-		}
-
-		return str;
-	}
 
 	public Optional<OrderDetail> findOrderDetailById(Integer orderDetailId) {
 		return orderDetailJpa.findById(orderDetailId);
 	}
 
 	public boolean isValidOrderStatus(String status) {
-		System.out.println(status + " status");
 		return "Pending".equalsIgnoreCase(status);
 	}
 

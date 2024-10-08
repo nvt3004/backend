@@ -1,6 +1,7 @@
 package com.services;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 
 import org.springframework.stereotype.Service;
 
@@ -10,24 +11,30 @@ import com.entities.OrderDetail;
 @Service
 public class OrderUtilsService {
 
-    public BigDecimal calculateOrderTotal(Order order) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (OrderDetail orderDetail : order.getOrderDetails()) {
-            BigDecimal retailPrice = orderDetail.getPrice();
-            BigDecimal quantity = new BigDecimal(orderDetail.getQuantity());
-            total = total.add(retailPrice.multiply(quantity));
-        }
-        return total;
-    }
+	 private static final DecimalFormat decimalFormat = new DecimalFormat("#,##0.00");
 
-    public String getPaymentMethod(Order order) {
-        return order.getPayments().stream()
-                .map(payment -> payment.getPaymentMethod().getMethodName())
-                .findFirst()
-                .orElse("N/A");
-    }
+	    public BigDecimal calculateOrderTotal(Order order) {
+	        BigDecimal total = BigDecimal.ZERO;
+	        for (OrderDetail orderDetail : order.getOrderDetails()) {
+	            BigDecimal retailPrice = orderDetail.getPrice();
+	            BigDecimal quantity = new BigDecimal(orderDetail.getQuantity());
+	            total = total.add(retailPrice.multiply(quantity));
+	        }
+	        return new BigDecimal(decimalFormat.format(total));
+	    }
 
-    public String getPhoneNumber(Order order) {
-        return order.getPhone();
-    }
+	    public BigDecimal calculateDiscountedPrice(Order order) {
+	        BigDecimal total = calculateOrderTotal(order); 
+
+	        BigDecimal discountedPrice = total;
+	        if (order.getDisPrice() != null) {
+	            discountedPrice = total.subtract(order.getDisPrice());
+	        } else if (order.getDisPercent() != null) {
+	            BigDecimal discount = total.multiply(order.getDisPercent().divide(BigDecimal.valueOf(100)));
+	            discountedPrice = total.subtract(discount);
+	        }
+
+	        return new BigDecimal(decimalFormat.format(discountedPrice.max(BigDecimal.ZERO)));
+	    }
+
 }
