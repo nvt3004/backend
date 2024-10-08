@@ -19,11 +19,24 @@ public class ProductCustomJPA {
 	@Autowired
 	private EntityManager entityManager;
 
-	private final String SQL_GET_ALL_PRODUCT = "SELECT pd.product_id AS id, pd.product_name AS productName, pd.product_price AS price,"
-			+ " pd.product_img AS image, IFNULL(discount,0) AS discount" 
-			+ " FROM products pd"
-			+ " LEFT JOIN product_sales sale" 
-			+ " ON pd.product_id  = sale.product_id WHERE pd.status = true";
+	private final String SQL_GET_ALL_PRODUCT = "SELECT pd.product_id AS id, \r\n"
+			+ "       pd.product_name AS productName, \r\n"
+			+ "       pd.product_img AS image, \r\n"
+			+ "       IFNULL(discount, 0) AS discount , \r\n"
+			+ "       MIN(vs.retail_price) AS minPrice,\r\n"
+			+ "       MAX(vs.retail_price) AS maxPrice\r\n"
+			+ "FROM products pd \r\n"
+			+ "LEFT JOIN product_sales sale ON pd.product_id = sale.product_id \r\n"
+			+ "INNER JOIN product_version vs ON pd.product_id = vs.product_id\r\n"
+			+ "WHERE \r\n"
+			+ "	pd.status = true \r\n"
+			+ "    AND \r\n"
+			+ "    vs.status = true\r\n"
+			+ "GROUP BY pd.product_id, \r\n"
+			+ "		 pd.product_name, \r\n"
+			+ "         pd.product_price, \r\n"
+			+ "         pd.product_img,discount, \r\n"
+			+ "         vs.product_id;";
 
 	private final String SQL_GET_ALL_PRODUCT_BY_CATEGORY = "SELECT pd.product_id AS id, pd.product_name AS productName, pd.product_price AS price,"
 			+ " pd.product_img AS image, IFNULL(discount,0) AS discount" + " FROM products pd"

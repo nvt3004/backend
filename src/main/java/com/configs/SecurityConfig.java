@@ -35,11 +35,11 @@ public class SecurityConfig {
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**")
+								"api/getImage/**","/api/home/**", "/api/vnp/result-vnpay")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
-						.requestMatchers("/api/user/**").hasAnyAuthority("User","Admin","Staff")
+						.requestMatchers("/api/user/**","/api/vnp/**").hasAnyAuthority("User","Admin","Staff")
                         .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest().authenticated())
 				.sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())
