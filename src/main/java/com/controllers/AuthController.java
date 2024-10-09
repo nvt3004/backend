@@ -3,6 +3,7 @@ package com.controllers;
 import com.models.EmailRequestDTO;
 import com.models.AuthDTO;
 import com.entities.User;
+import com.errors.ApiResponse;
 import com.services.AuthManagementService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -83,12 +84,12 @@ public class AuthController {
     }
 
     @PostMapping("/api/send")
-    public ResponseEntity<String> sendResetPasswordEmail(@RequestBody EmailRequestDTO emailRequest) {
+    public ResponseEntity<ApiResponse<User>> sendResetPasswordEmail(@RequestBody EmailRequestDTO emailRequest) {
         return usersManagementService.sendResetPasswordEmail(emailRequest);
     }
 
     @PostMapping("/api/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<ApiResponse<User>> resetPassword(@RequestBody Map<String, String> payload) {
         return usersManagementService.resetPassword(payload);
     }
 
