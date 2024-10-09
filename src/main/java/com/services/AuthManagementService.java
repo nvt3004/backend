@@ -350,17 +350,13 @@ public class AuthManagementService {
                 Optional<User> userOptional = usersRepo.findById(userId);
                 if (userOptional.isPresent()) {
                     User existingUser = userOptional.get();
-
-                    if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-                        existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
-                    }
  
                     existingUser.setEmail(updatedUser.getEmail());
                     existingUser.setFullName(updatedUser.getFullName());
-                    existingUser.setUsername(updatedUser.getEmail());
                     existingUser.setPhone(updatedUser.getPhone());
                     existingUser.setImage(updatedUser.getImage());
-                    existingUser.setStatus(updatedUser.getStatus());
+                    existingUser.setGender(updatedUser.getGender());
+                    existingUser.setBirthday(updatedUser.getBirthday());
     
                     User savedUser = usersRepo.save(existingUser);
                     reqRes.setListData(savedUser);

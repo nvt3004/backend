@@ -55,7 +55,7 @@ public class AuthController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PutMapping("/api/admin/update/{userId}")
+    @PutMapping("/api/adminuser/update/{userId}")
     public ResponseEntity<AuthDTO> updateUser(@PathVariable Integer userId, @RequestBody User updatedUser,
             HttpServletRequest request) {
         AuthDTO response = usersManagementService.updateUser(request, userId, updatedUser);
