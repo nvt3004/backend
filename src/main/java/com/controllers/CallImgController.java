@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("api")
-@CrossOrigin("*")
 public class CallImgController {
 
 	@RequestMapping(value = "/getImage/{photo}", method = RequestMethod.GET)

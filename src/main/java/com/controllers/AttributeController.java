@@ -29,7 +29,6 @@ import com.services.UserService;
 
 @RestController
 @RequestMapping("api/admin/attribute")
-@CrossOrigin("*")
 public class AttributeController {
 	@Autowired
 	AttributeService attributeService;

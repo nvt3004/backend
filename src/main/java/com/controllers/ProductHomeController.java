@@ -29,7 +29,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("api/home")
-@CrossOrigin("*")
 public class ProductHomeController {
 
 	@Autowired

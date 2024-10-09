@@ -33,7 +33,6 @@ import com.services.UserService;
 
 @RestController
 @RequestMapping("api/user/address")
-@CrossOrigin("*")
 public class AddressesController {
 
 	@Autowired

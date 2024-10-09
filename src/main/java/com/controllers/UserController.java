@@ -25,7 +25,6 @@ import com.services.UserService;
 import com.utils.UploadService;
 
 @RestController
-@CrossOrigin("*")
 public class UserController {
 	@Autowired
 	AuthService authService;

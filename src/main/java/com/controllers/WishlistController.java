@@ -26,7 +26,6 @@ import com.services.UserService;
 import com.services.WishlistService;
 
 @RestController
-@CrossOrigin("*")
 public class WishlistController {
 
 	@Autowired

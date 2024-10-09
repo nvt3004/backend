@@ -16,7 +16,6 @@ import com.services.ImageSearchService;
 
 @RestController
 @RequestMapping("/api/images")
-@CrossOrigin("*")
 public class ImageController {
 
     @Autowired

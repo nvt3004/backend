@@ -35,7 +35,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("api/product")
-@CrossOrigin("*")
 public class ProductClientController {
 	@Autowired
 	AuthService authService;

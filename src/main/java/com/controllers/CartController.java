@@ -56,7 +56,6 @@ import com.services.UserService;
 
 @RestController
 @RequestMapping("api/user/cart")
-@CrossOrigin("*")
 public class CartController {
 	@Autowired
 	AuthService authService;
