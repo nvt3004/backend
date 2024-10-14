@@ -44,9 +44,9 @@ public class WishlistController {
 	ProductService productService;
 	
 
-	@PostMapping("api/user/wishlist/add")
+	@PostMapping("api/user/wishlist/add/{wishlistId}")
 	public ResponseEntity<ResponseAPI<WishlistResponse>> addWishlist(
-			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody WishlistModel wishlistModel) {
+			@RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("wishlistId") Integer wishlistId) {
 		String token = authService.readTokenFromHeader(authHeader);
 		ResponseAPI<WishlistResponse> response = new ResponseAPI<>();
 
@@ -81,14 +81,14 @@ public class WishlistController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		if (wishlistModel.getProductId() == null) {
+		if (wishlistId == null) {
 			response.setCode(422);
 			response.setMessage("Product id can't null");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
-		Product product = productService.getProductById(wishlistModel.getProductId());
+		Product product = productService.getProductById(wishlistId);
 
 		if (product == null) {
 			response.setCode(404);
@@ -97,7 +97,7 @@ public class WishlistController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 		
-		if(wishlistService.isFavorited(user, wishlistModel.getProductId())) {
+		if(wishlistService.isFavorited(user, wishlistId)) {
 			response.setCode(409);
 			response.setMessage("This product has been liked by user!");
 
