@@ -42,11 +42,10 @@ public class WishlistController {
 
 	@Autowired
 	ProductService productService;
-	
 
-	@PostMapping("api/user/wishlist/add/{wishlistId}")
+	@PostMapping("api/user/wishlist/add")
 	public ResponseEntity<ResponseAPI<WishlistResponse>> addWishlist(
-			@RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("wishlistId") Integer wishlistId) {
+			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody WishlistModel wishlistModel) {
 		String token = authService.readTokenFromHeader(authHeader);
 		ResponseAPI<WishlistResponse> response = new ResponseAPI<>();
 
@@ -81,14 +80,14 @@ public class WishlistController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		if (wishlistId == null) {
+		if (wishlistModel.getProductId() == null) {
 			response.setCode(422);
 			response.setMessage("Product id can't null");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
-		Product product = productService.getProductById(wishlistId);
+		Product product = productService.getProductById(wishlistModel.getProductId());
 
 		if (product == null) {
 			response.setCode(404);
@@ -96,8 +95,8 @@ public class WishlistController {
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
-		if(wishlistService.isFavorited(user, wishlistId)) {
+
+		if (wishlistService.isFavorited(user, wishlistModel.getProductId())) {
 			response.setCode(409);
 			response.setMessage("This product has been liked by user!");
 
@@ -160,14 +159,36 @@ public class WishlistController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		if (!wishlistService.validWishlist(user, wishlistId)) {
+		// Là id product
+		Product product = productService.getProductById(wishlistId);
+		boolean check = false;
+		int idRemove = 0;
+
+		if (product == null) {
+			response.setCode(404);
+			response.setMessage("Product not found!");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		if (!product.getWishlists().isEmpty() && product.getWishlists() != null) {
+			for (Wishlist wl : product.getWishlists()) {
+				if (wl.getUser().getUserId() == user.getUserId()) {
+					check = true;
+					idRemove = wl.getId();
+					break;
+				}
+			}
+		}
+
+		if (!check) {
 			response.setCode(404);
 			response.setMessage("Wishtlist not found!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		boolean isDeleteSuccess = wishlistService.removeWishlist(wishlistId);
+		boolean isDeleteSuccess = wishlistService.removeWishlist(idRemove);
 
 		response.setCode(200);
 		response.setMessage("Success");
