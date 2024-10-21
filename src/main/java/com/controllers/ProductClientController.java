@@ -26,7 +26,7 @@ import com.responsedto.ProductDTO;
 import com.services.AlgoliaProductService;
 import com.services.AuthService;
 import com.services.JWTService;
-import com.services.ProductInforService;
+import com.services.ProductClientService;
 import com.services.UserService;
 import com.utils.GetURLImg;
 import com.utils.RemoveDiacritics;
@@ -38,13 +38,14 @@ import jakarta.servlet.http.HttpServletRequest;
 public class ProductClientController {
 	@Autowired
 	AuthService authService;
+	
 	@Autowired
 	JWTService jwtService;
 
 	@Autowired
 	UserService userService;
 	@Autowired
-	ProductInforService inforService;
+	ProductClientService inforService;
 
 	private final AlgoliaProductService algoliaProductService;
 
@@ -62,7 +63,9 @@ public class ProductClientController {
 			List<ProductDTO> items = algoliaProductService.getTopProducts();
 			for (ProductDTO productDTO : items) {
 				String img = productDTO.getImgName();
-				productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				}
 			}
 			if (items.isEmpty()) {
 				response.setCode(204); // 204 No Content
@@ -207,7 +210,9 @@ public class ProductClientController {
 
 			for (ProductDTO productDTO : products) {
 				String img = productDTO.getImgName();
-				productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				}
 			}
 
 			if (products.isEmpty()) {

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.responsedto.ProductDTO;
 import com.services.AlgoliaProductService;
-import com.services.ProductInforService;
+import com.services.ProductClientService;
 
 @Component
 public class ProductUpdateScheduler {
@@ -20,7 +20,7 @@ public class ProductUpdateScheduler {
 	private AlgoliaProductService algoliaProductService;
 
 	@Autowired
-	private ProductInforService inforService;
+	private ProductClientService inforService;
 
 	//@Scheduled(cron = "*/10 * * * * ?") // 10s
 	// Lên lịch thực hiện mỗi ngày vào lúc 23:55
@@ -29,7 +29,7 @@ public class ProductUpdateScheduler {
 	public void updateProductsToAlgolia() {
 		try {
 			// Lấy danh sách tất cả các sản phẩm từ dịch vụ
-			List<ProductDTO> products = inforService.getALLInforProduct(null);
+			List<ProductDTO> products = inforService.getALLProduct(null);
 			// Thêm hoặc cập nhật tất cả sản phẩm vào Algolia
 			for (ProductDTO product : products) {
 				algoliaProductService.addProduct(product);

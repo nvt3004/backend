@@ -1,5 +1,6 @@
 package com.controllers;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,12 +20,17 @@ import com.entities.User;
 import com.entities.Wishlist;
 import com.errors.ResponseAPI;
 import com.models.WishlistModel;
+import com.responsedto.ProductDTO;
 import com.responsedto.WishlistResponse;
 import com.services.AuthService;
 import com.services.JWTService;
+import com.services.ProductClientService;
 import com.services.ProductService;
 import com.services.UserService;
 import com.services.WishlistService;
+import com.utils.GetURLImg;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 public class WishlistController {
@@ -42,6 +49,80 @@ public class WishlistController {
 
 	@Autowired
 	ProductService productService;
+
+	@Autowired
+	ProductClientService inforService;
+
+	@GetMapping("api/user/wishlist/getproductwish")
+	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getProductWish(HttpServletRequest request,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+
+		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
+		try {
+			if (authHeader.isEmpty()) {
+				response.setCode(400); // 400 Bad Request
+				response.setMessage("Authorization header is missing");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			}
+
+			String token = authService.readTokenFromHeader(authHeader);
+			if (token == null || token.isEmpty()) {
+				response.setCode(401); // 401 Unauthorized
+				response.setMessage("Token is missing or empty");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+			}
+
+			if (jwtService.isTokenExpired(token)) {
+				response.setCode(401); // 401 Unauthorized
+				response.setMessage("Token expired");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+			}
+
+			String username = jwtService.extractUsername(token);
+			if (username == null || username.isEmpty()) {
+				response.setCode(400); // 400 Bad Request
+				response.setMessage("Username extraction from token failed");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			}
+
+			User user = userService.getUserByUsername(username);
+			if (user == null) {
+				response.setCode(404); // 404 Not Found
+				response.setMessage("User not found");
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			}
+			if (user.getStatus() == 0) {
+				response.setCode(403);
+				response.setMessage("Account locked");
+
+				return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			}
+			List<ProductDTO> items = inforService.getProductWish(user);
+			if (items == null || items.isEmpty()) {
+				response.setCode(204); // 204 No Content
+				response.setMessage("No products found");
+				return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+			}
+
+			for (ProductDTO productDTO : items) {
+				String img = productDTO.getImgName();
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				}
+			}
+			response.setCode(200); // 200 OK
+			response.setMessage("Success");
+			response.setData(items);
+			return ResponseEntity.ok(response);
+
+		} catch (Exception e) {
+			response.setCode(500); // 500 Internal Server Error
+			response.setMessage("An error occurred while fetching products: " + e.getMessage());
+			response.setData(null);
+			e.printStackTrace(); // Log ngoại lệ chi tiết
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+		}
+	}
 
 	@PostMapping("api/user/wishlist/add")
 	public ResponseEntity<ResponseAPI<WishlistResponse>> addWishlist(

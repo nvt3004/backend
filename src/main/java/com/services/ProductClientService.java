@@ -33,7 +33,7 @@ import com.repositories.UserJPA;
 import com.responsedto.ProductDTO;
 
 @Service
-public class ProductInforService {
+public class ProductClientService {
 	@Autowired
 	ProductJPA productJPA;
 	@Autowired
@@ -42,6 +42,8 @@ public class ProductInforService {
 	CategoryJPA categoryJPA;
 	@Autowired
 	AttributeOptionJPA attributeOptionJPA;
+	@Autowired
+	WishlistService wishlistService;
 
 	public Page<ProductDTO> getFilteredProducts(User user, String categoryName, BigDecimal minPrice,
 			BigDecimal maxPrice, String color, String size, String sort, int page, int pageSize) {
@@ -77,24 +79,20 @@ public class ProductInforService {
 		}
 	}
 
-	public List<ProductDTO> getListProductByCategoryId(int id) {
-		if (id == -1) {
-			return getALLProduct();
-		}
-		Optional<Category> category = categoryJPA.findById(id);
+	public List<ProductDTO> getProductWish(User user) {
+		List<Wishlist> wls = wishlistService.getAllWisListByUser(user);
 
 		List<ProductDTO> productDTOs = new ArrayList<>();
-		if (category != null) {
-			List<ProductCategory> list = category.get().getProductCategories();
-			for (ProductCategory productCategory : list) {
-
+	
+			for (Wishlist wishlist : wls) {
+				
 				ProductDTO productDTO = new ProductDTO();
-				productDTO.setId(String.valueOf(productCategory.getProduct().getProductId()));
-				productDTO.setName(productCategory.getProduct().getProductName());
+				productDTO.setId(String.valueOf(wishlist.getProduct().getProductId()));
+				productDTO.setName(wishlist.getProduct().getProductName());
 				BigDecimal minPrice = null;
 				BigDecimal maxPrice = new BigDecimal("0.00");
 				List<String> images = new ArrayList<>();
-				for (ProductVersion productVer : productCategory.getProduct().getProductVersions()) {
+				for (ProductVersion productVer : wishlist.getProduct().getProductVersions()) {
 
 					// Cập nhật minPrice và maxPrice
 					if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
@@ -108,19 +106,20 @@ public class ProductInforService {
 						images.add(img.getImageUrl());
 					}
 				}
+				productDTO.setImgName(images.get(0));
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
 				productDTO.setImages(images);
+				productDTO.setLike(true);
 				// Thêm productDTO vào danh sách
 				productDTOs.add(productDTO);
 			}
 			return productDTOs;
-		}
-		return productDTOs;
+		
 
 	}
 
-	public List<AttributeOption> getListByAttributeName(String attributeName) {
+	public List<AttributeOption> getListByAttributeNameProduct(String attributeName) {
 		List<AttributeOption> attributeOptions = new ArrayList<>();
 		for (AttributeOption attOp : attributeOptionJPA.findAll()) {
 			if (attOp.getAttribute().getAttributeName().equalsIgnoreCase(attributeName)) {
@@ -132,11 +131,11 @@ public class ProductInforService {
 	}
 
 	public List<AttributeOption> getListColor() {
-		return getListByAttributeName("color");
+		return getListByAttributeNameProduct("color");
 	}
 
 	public List<AttributeOption> getListSize() {
-		return getListByAttributeName("size");
+		return getListByAttributeNameProduct("size");
 	}
 
 	public List<Category> getListCategory() {
@@ -146,7 +145,7 @@ public class ProductInforService {
 		}
 		return list;
 	}
-
+	 // còn sử dụng
 	public List<ProductDTO> getALLProduct() {
 		List<ProductDTO> productDTOs = new ArrayList<>();
 		try {
@@ -190,8 +189,8 @@ public class ProductInforService {
 			return productDTOs;
 		}
 	}
-
-	public List<ProductDTO> getALLInforProduct(User user) {
+   // còn sử dụng
+	public List<ProductDTO> getALLProduct(User user) {
 		List<ProductDTO> productDTOs = new ArrayList<>();
 		try {
 			List<Product> products = productJPA.findAll();
