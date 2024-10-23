@@ -171,7 +171,7 @@ public class OrderController {
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {
 			errorResponse.setErrorCode(500);
-			errorResponse.setMessage("An error occurred while retrieving orders");
+			errorResponse.setMessage("An error occurred while retrieving orders"+e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 	}

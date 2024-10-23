@@ -24,6 +24,7 @@ import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ProductService;
 import com.utils.GetURLImg;
+import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -39,6 +40,9 @@ public class ProductHomeController {
 
 	@Autowired
 	ProductService productService;
+	
+	@Autowired
+	UploadService uploadService;
 
 	@GetMapping("/products")
 	public ResponseEntity<ResponseAPI<PageCustom<ProductHomeResponse>>> getAllProduct(
@@ -79,7 +83,7 @@ public class ProductHomeController {
 			if (v.getImages() != null && !v.getImages().isEmpty()) {
 				String img = v.getImages().get(0);
 				List<String> imgs = new ArrayList<>();
-				imgs.add(GetURLImg.getURLImg(request, img));
+				imgs.add(uploadService.getUrlImage(img));
 				v.setImages(imgs);
 			}
 		}

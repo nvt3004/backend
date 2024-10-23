@@ -49,7 +49,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
 						"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-						"api/getImage/**","/api/home/**", "/api/vnp/result-vnpay", "/api/reset-password", "api/login-social").permitAll()
+						"/images/**","/api/home/**", "/api/vnp/result-vnpay", "/api/reset-password", "api/login-social").permitAll()
 						.requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin")
 						.anyRequest().authenticated())

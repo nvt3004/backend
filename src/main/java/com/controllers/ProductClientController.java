@@ -30,6 +30,7 @@ import com.services.ProductClientService;
 import com.services.UserService;
 import com.utils.GetURLImg;
 import com.utils.RemoveDiacritics;
+import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -46,6 +47,9 @@ public class ProductClientController {
 	UserService userService;
 	@Autowired
 	ProductClientService inforService;
+	
+	@Autowired
+	UploadService uploadService;
 
 	private final AlgoliaProductService algoliaProductService;
 
@@ -55,18 +59,44 @@ public class ProductClientController {
 	}
 
 	@GetMapping("/getTopProducts")
-	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getTopProducts(HttpServletRequest request) {
+	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getTopProducts(HttpServletRequest request,@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
 		try {
-			// Lấy danh sách sản phẩm từ service
-			List<ProductDTO> items = algoliaProductService.getTopProducts();
-			for (ProductDTO productDTO : items) {
-				String img = productDTO.getImgName();
-				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+			String token = authService.readTokenFromHeader(authHeader);
+			String username = null;
+
+			User user = null;
+			if (!(token == null || token.isEmpty())) {
+				if (jwtService.isTokenExpired(token)) {
+					response.setCode(401);
+					response.setMessage("Token expired");
+				} else {
+					username = jwtService.extractUsername(token);
+					user = userService.getUserByUsername(username);
 				}
 			}
+			
+			// Lấy danh sách sản phẩm từ service
+			List<ProductDTO> items = algoliaProductService.getTopProducts();
+			List<Wishlist> wishlist = (user != null) ? user.getWishlists() : null;
+			for (ProductDTO productDTO : items) {
+				
+				if (wishlist != null) {
+					for (Wishlist wishlistItem : wishlist) {
+						if (String.valueOf(wishlistItem.getProduct().getProductId())
+								.equalsIgnoreCase(productDTO.getId())) {
+							productDTO.setLike(true);
+			 				break;
+						}
+					}
+				}
+				String img = productDTO.getImgName();
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(uploadService.getUrlImage(img));
+				}
+			}
+
 			if (items.isEmpty()) {
 				response.setCode(204); // 204 No Content
 				response.setMessage("No products found");
@@ -120,12 +150,14 @@ public class ProductClientController {
 						if (String.valueOf(wishlistItem.getProduct().getProductId())
 								.equalsIgnoreCase(productDTO.getId())) {
 							productDTO.setLike(true);
-							break;
+			 				break;
 						}
 					}
 				}
 				String img = productDTO.getImgName();
-				productDTO.setImgName(GetURLImg.getURLImg(request, img));
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(uploadService.getUrlImage(img));
+				}
 			}
 
 			// Kiểm tra nếu không có sản phẩm nào
@@ -211,7 +243,7 @@ public class ProductClientController {
 			for (ProductDTO productDTO : products) {
 				String img = productDTO.getImgName();
 				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
 			}
 

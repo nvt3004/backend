@@ -29,6 +29,7 @@ import com.services.ProductService;
 import com.services.UserService;
 import com.services.WishlistService;
 import com.utils.GetURLImg;
+import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -52,6 +53,9 @@ public class WishlistController {
 
 	@Autowired
 	ProductClientService inforService;
+	
+	@Autowired
+	UploadService uploadService;
 
 	@GetMapping("api/user/wishlist/getproductwish")
 	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getProductWish(HttpServletRequest request,
@@ -107,7 +111,7 @@ public class WishlistController {
 			for (ProductDTO productDTO : items) {
 				String img = productDTO.getImgName();
 				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(GetURLImg.getURLImg(request, img));
+					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
 			}
 			response.setCode(200); // 200 OK
