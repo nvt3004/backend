@@ -23,6 +23,7 @@ import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
 import com.entities.ProductVersion;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
@@ -209,38 +210,63 @@ public class OrderService {
 	}
 
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
-		if (statusId == null) {
-			return new ApiResponse<>(400, "Status is required.", null);
-		}
+	    if (statusId == null) {
+	        return new ApiResponse<>(400, "Status is required.", null);
+	    }
 
-		Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
-		if (newOrderStatus.isEmpty()) {
-			return new ApiResponse<>(400, "The provided status does not exist.", null);
-		}
+	    Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
+	    if (newOrderStatus.isEmpty()) {
+	        return new ApiResponse<>(400, "The provided status does not exist.", null);
+	    }
 
-		Optional<Order> updatedOrder = orderJpa.findById(orderId);
-		if (updatedOrder.isEmpty()) {
-			return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
-		}
+	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
+	    if (updatedOrder.isEmpty()) {
+	        return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
+	    }
 
-		Order order = updatedOrder.get();
-		if (isOrderStatusChanged(order, newOrderStatus.get().getStatusName())) {
-			if ("Processed".equalsIgnoreCase(newOrderStatus.get().getStatusName())) {
-				Boolean isStockSufficient = updateProductVersionsForOrder(order.getOrderDetails());
-				if (!isStockSufficient) {
-					return new ApiResponse<>(400, "Not enough stock available for one or more products.", null);
-				}
-			}
-			order.setOrderStatus(newOrderStatus.get());
-			orderJpa.save(order);
-		}
+	    Order order = updatedOrder.get();
+	    String currentStatus = order.getOrderStatus().getStatusName();
+	    String newStatus = newOrderStatus.get().getStatusName();
 
-		return new ApiResponse<>(200, "Order status updated successfully", null);
+	    if (!isValidStatusTransition(currentStatus, newStatus)) {
+	        return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
+	    }
+
+	    if (isOrderStatusChanged(order, newStatus)) {
+	        if ("Processed".equalsIgnoreCase(newStatus)) {
+	            Boolean isStockSufficient = updateProductVersionsForOrder(order.getOrderDetails());
+	            if (!isStockSufficient) {
+	                return new ApiResponse<>(400, "Not enough stock available for one or more products.", null);
+	            }
+	        }
+	        order.setOrderStatus(newOrderStatus.get());
+	        orderJpa.save(order);
+	    }
+
+	    return new ApiResponse<>(200, "Order status updated successfully", null);
 	}
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
-		return !statusName.equalsIgnoreCase(order.getOrderStatus().getStatusName());
+	    return !statusName.equalsIgnoreCase(order.getOrderStatus().getStatusName());
 	}
+
+	private boolean isValidStatusTransition(String currentStatus, String newStatus) {
+	    switch (currentStatus.toLowerCase()) {
+	        case "pending":
+	            return "processed".equalsIgnoreCase(newStatus);
+	        case "processed":
+	            return "shipped".equalsIgnoreCase(newStatus);
+	        case "shipped":
+	            return "delivered".equalsIgnoreCase(newStatus);
+	        case "delivered":
+	            return false;
+	        case "cancelled":
+	            return false;
+	        default:
+	            return false;
+	    }
+	}
+
 
 	private Boolean updateProductVersionsForOrder(List<OrderDetail> orderDetailList) {
 		for (OrderDetail orderDetail : orderDetailList) {
@@ -351,4 +377,42 @@ public class OrderService {
 
 		return total;
 	}
+	
+	public ApiResponse<?> cancelOrder(Integer orderId, User currentUser) {
+	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
+	    if (updatedOrder.isEmpty()) {
+	        return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
+	    }
+
+	    Order order = updatedOrder.get();
+
+	    if (!(order.getUser().getUserId() == currentUser.getUserId())) {
+	        return new ApiResponse<>(403, "You do not have permission to cancel this order.", null);
+	    }
+	    
+	    String currentStatus = order.getOrderStatus().getStatusName();
+
+	    if ("Cancelled".equalsIgnoreCase(currentStatus)) {
+	        return new ApiResponse<>(400, "The order is already cancelled.", null);
+	    }
+
+	    if (!isCancellable(currentStatus)) {
+	        return new ApiResponse<>(400, "The order cannot be cancelled from the current status: " + currentStatus, null);
+	    }
+
+	    Optional<OrderStatus> cancelledStatus = orderStatusJpa.findByStatusNameIgnoreCase("Cancelled");
+	    if (cancelledStatus.isEmpty()) {
+	        return new ApiResponse<>(500, "Cancellation status is not configured in the system.", null);
+	    }
+
+	    order.setOrderStatus(cancelledStatus.get());
+	    orderJpa.save(order);
+
+	    return new ApiResponse<>(200, "Order cancelled successfully", null);
+	}
+
+	private boolean isCancellable(String currentStatus) {
+	    return "pending".equalsIgnoreCase(currentStatus);
+	}
+
 }

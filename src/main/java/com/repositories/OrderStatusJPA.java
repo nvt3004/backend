@@ -12,13 +12,17 @@ import org.springframework.transaction.annotation.Transactional;
 import com.entities.OrderStatus;
 
 public interface OrderStatusJPA extends JpaRepository<OrderStatus, Integer> {
+
 	@Transactional
 	@Modifying
 	@Query("UPDATE Order o SET o.orderStatus = :newOrderStatus WHERE o.orderId = :orderId")
 	int updateOrderStatus(@Param("orderId") int orderId, @Param("newOrderStatus") OrderStatus newOrderStatus);
-	
+
 	Optional<OrderStatus> findByStatusName(String statusName);
-	
-    @Query("SELECT s.statusName FROM OrderStatus s ORDER BY s.sortOrder ASC")
-    List<String> getStatusOrder();
+
+	@Query("SELECT s.statusName FROM OrderStatus s ORDER BY s.sortOrder ASC")
+	List<String> getStatusOrder();
+
+	@Query("SELECT os FROM OrderStatus os WHERE LOWER(os.statusName) = LOWER(:statusName)")
+	Optional<OrderStatus> findByStatusNameIgnoreCase(@Param("statusName") String statusName);
 }
