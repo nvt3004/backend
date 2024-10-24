@@ -1,16 +1,11 @@
 package com.configs;
 
-import com.entities.User;
-import com.repositories.UsersJPA;
-import com.services.AuthDetailsService;
-// import com.services.PermissionCheckService;
-import com.services.PermissionService;
-import com.utils.JWTUtils;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,13 +16,19 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.utils.TokenBlacklist; 
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.entities.User;
+import com.repositories.UserJPA;
+import com.services.AuthDetailsService;
+// import com.services.PermissionCheckService;
+import com.services.PermissionService;
+import com.utils.JWTUtils;
+import com.utils.TokenBlacklist;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JWTAuthFilter extends OncePerRequestFilter {
@@ -39,7 +40,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     private AuthDetailsService ourUserDetailsService;
 
     @Autowired
-    private UsersJPA usersJPA;
+    private UserJPA userJPA;
 
     @Autowired
     @Lazy
@@ -127,7 +128,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
     private int getUserIdFromAuthentication(Authentication authentication) {
         String email = authentication.getName();
-        Optional<User> userOptional = usersJPA.findByEmailAndProvider(email,"Guest");
+        Optional<User> userOptional = userJPA.findByEmailAndProvider(email,"Guest");
         System.out.println("userid la: " + userOptional.get().getUserId());
         return userOptional.get().getUserId();
     }
