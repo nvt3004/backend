@@ -1,6 +1,7 @@
 package com.controllers;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public class ProductClientController {
 	@Autowired
 	AuthService authService;
-	
+
 	@Autowired
 	JWTService jwtService;
 
@@ -47,7 +48,7 @@ public class ProductClientController {
 	UserService userService;
 	@Autowired
 	ProductClientService inforService;
-	
+
 	@Autowired
 	UploadService uploadService;
 
@@ -59,44 +60,48 @@ public class ProductClientController {
 	}
 
 	@GetMapping("/getTopProducts")
-	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getTopProducts(HttpServletRequest request,@RequestHeader("Authorization") Optional<String> authHeader) {
+	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getTopProducts(HttpServletRequest request,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
-		try {
-			String token = authService.readTokenFromHeader(authHeader);
-			String username = null;
+		List<ProductDTO> items;
+		List<Wishlist> wishlist = new ArrayList<>(); // Khởi tạo danh sách wishlist mặc định
+		User user = null;
 
-			User user = null;
-			if (!(token == null || token.isEmpty())) {
-				if (jwtService.isTokenExpired(token)) {
-					response.setCode(401);
-					response.setMessage("Token expired");
-				} else {
-					username = jwtService.extractUsername(token);
+		try {
+			// Nếu có token, kiểm tra tính hợp lệ và lấy thông tin người dùng
+			if (authHeader.isPresent() && !authHeader.get().isEmpty()) {
+				String token = authService.readTokenFromHeader(authHeader);
+
+				if (token != null && !token.isEmpty() && !jwtService.isTokenExpired(token)) {
+					String username = jwtService.extractUsername(token);
 					user = userService.getUserByUsername(username);
+					wishlist = user != null ? user.getWishlists() : new ArrayList<>();
 				}
 			}
-			
+
 			// Lấy danh sách sản phẩm từ service
-			List<ProductDTO> items = algoliaProductService.getTopProducts();
-			List<Wishlist> wishlist = (user != null) ? user.getWishlists() : null;
+			items = algoliaProductService.getTopProducts();
+
+			// Cập nhật trạng thái "like" và URL hình ảnh cho các sản phẩm
 			for (ProductDTO productDTO : items) {
-				
-				if (wishlist != null) {
+				if (user != null) { // Chỉ kiểm tra wishlist nếu có user
 					for (Wishlist wishlistItem : wishlist) {
 						if (String.valueOf(wishlistItem.getProduct().getProductId())
 								.equalsIgnoreCase(productDTO.getId())) {
 							productDTO.setLike(true);
-			 				break;
+							break;
 						}
 					}
 				}
+
 				String img = productDTO.getImgName();
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
 			}
 
+			// Kiểm tra kết quả sản phẩm
 			if (items.isEmpty()) {
 				response.setCode(204); // 204 No Content
 				response.setMessage("No products found");
@@ -105,6 +110,7 @@ public class ProductClientController {
 				response.setMessage("Success");
 				response.setData(items);
 			}
+
 		} catch (Exception e) {
 			// Xử lý ngoại lệ
 			response.setCode(500); // 500 Internal Server Error
@@ -112,70 +118,7 @@ public class ProductClientController {
 			response.setData(null);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
-		return ResponseEntity.ok(response);
-	}
 
-	@GetMapping("/filtered")
-	public ResponseEntity<ResponseAPI<Page<ProductDTO>>> getFilteredProducts(HttpServletRequest request,
-			@RequestHeader("Authorization") Optional<String> authHeader,
-			@RequestParam(required = false) String categoryName, @RequestParam(required = false) BigDecimal minPrice,
-			@RequestParam(required = false) BigDecimal maxPrice, @RequestParam(required = false) String color,
-			@RequestParam(required = false) String size, @RequestParam(defaultValue = "ASC") String sortPrice,
-			@RequestParam(defaultValue = "0") int page, // Số trang, mặc định là 0 (trang đầu tiên)
-			@RequestParam(defaultValue = "5") int pageSize // Kích thước trang, mặc định là 10 sản phẩm mỗi trang
-	) {
-		ResponseAPI<Page<ProductDTO>> response = new ResponseAPI<>();
-		try {
-			String token = authService.readTokenFromHeader(authHeader);
-			String username = null;
-
-			User user = null;
-			if (!(token == null || token.isEmpty())) {
-				if (jwtService.isTokenExpired(token)) {
-					response.setCode(401);
-					response.setMessage("Token expired");
-				} else {
-					username = jwtService.extractUsername(token);
-					user = userService.getUserByUsername(username);
-				}
-			}
-			List<Wishlist> wishlist = (user != null) ? user.getWishlists() : null;
-
-			Page<ProductDTO> pagedItems = inforService.getFilteredProducts(user, categoryName, minPrice, maxPrice,
-					color, size, sortPrice, page, pageSize);
-			// Cập nhật URL hình ảnh cho từng sản phẩm
-			for (ProductDTO productDTO : pagedItems.getContent()) {
-				if (wishlist != null) {
-					for (Wishlist wishlistItem : wishlist) {
-						if (String.valueOf(wishlistItem.getProduct().getProductId())
-								.equalsIgnoreCase(productDTO.getId())) {
-							productDTO.setLike(true);
-			 				break;
-						}
-					}
-				}
-				String img = productDTO.getImgName();
-				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(uploadService.getUrlImage(img));
-				}
-			}
-
-			// Kiểm tra nếu không có sản phẩm nào
-			if (pagedItems.isEmpty()) {
-				response.setCode(204); // 204 No Content
-				response.setMessage("No products found");
-			} else {
-				response.setCode(200); // 200 OK
-				response.setMessage("Success");
-				response.setData(pagedItems);
-			}
-		} catch (Exception e) {
-			// Xử lý ngoại lệ
-			response.setCode(500); // 500 Internal Server Error
-			response.setMessage("An error occurred while fetching products: " + e.getMessage());
-			response.setData(null);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-		}
 		return ResponseEntity.ok(response);
 	}
 
@@ -212,55 +155,85 @@ public class ProductClientController {
 		return ResponseEntity.ok(response);
 	}
 
-	@GetMapping("/search")
-	public ResponseEntity<ResponseAPI<List<ProductDTO>>> searchProducts(
-			@RequestHeader("Authorization") Optional<String> authHeader, HttpServletRequest request,
-			@RequestParam(required = false) String query, @RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "5") int pageSize) {
+	@GetMapping("/getProds")
+	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getProds(
+			@RequestHeader("Authorization") Optional<String> authHeader, @RequestParam(required = false) String query,
+			@RequestParam(required = false) String categoryName, @RequestParam(required = false) BigDecimal minPrice,
+			@RequestParam(required = false) BigDecimal maxPrice, @RequestParam(required = false) String color,
+			@RequestParam(required = false) String size, @RequestParam(defaultValue = "ASC") String sortPrice,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int pageSize,
+			@RequestParam(defaultValue = "0") int action) {
+
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
+		List<ProductDTO> products = null;
+		List<Wishlist> wishlist = new ArrayList<>();
+
 		try {
-			String token = authService.readTokenFromHeader(authHeader);
-			String username = null;
-
 			User user = null;
-			if (!(token == null || token.isEmpty())) {
-				if (jwtService.isTokenExpired(token)) {
-					response.setCode(401);
-					response.setMessage("Token expired");
-				} else {
-					username = jwtService.extractUsername(token);
+
+			// Nếu có token, tiến hành xác thực và lấy wishlist
+			if (authHeader.isPresent() && !authHeader.get().isEmpty()) {
+				String token = authService.readTokenFromHeader(authHeader);
+
+				if (token != null && !token.isEmpty() && !jwtService.isTokenExpired(token)) {
+					String username = jwtService.extractUsername(token);
 					user = userService.getUserByUsername(username);
+					wishlist = (user != null) ? user.getWishlists() : new ArrayList<>();
 				}
 			}
 
-			RemoveDiacritics diacritics = new RemoveDiacritics();
-			Query algoliaQuery = new Query(query).setPage(page) // Thiết lập trang hiện tại
-					.setHitsPerPage(pageSize); // Thiết lập số sản phẩm mỗi trang
+			// Lựa chọn hành động
+			if (action == 1) {
+				Query algoliaQuery = new Query(query).setPage(page).setHitsPerPage(pageSize);
+				products = algoliaProductService.searchProducts(algoliaQuery);
+			} else if (action == 0) {
+				Page<ProductDTO> prods = inforService.getFilteredProducts(user, categoryName, minPrice, maxPrice, color,
+						size, sortPrice, page, pageSize);
+				products = prods != null ? prods.getContent() : new ArrayList<>();
+			} else {
+				response.setCode(400);
+				response.setMessage("Invalid action value");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			}
 
-			// Tìm kiếm sản phẩm từ Algolia với phân trang
-			List<ProductDTO> products = algoliaProductService.searchProducts(algoliaQuery);
-
-			for (ProductDTO productDTO : products) {
-				String img = productDTO.getImgName();
-				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(uploadService.getUrlImage(img));
+			// Xử lý sản phẩm với wishlist và URL hình ảnh
+			if (products != null && !products.isEmpty()) {
+				for (ProductDTO productDTO : products) {
+					// Nếu có user và wishlist, gán trạng thái "like" cho sản phẩm
+					if (user != null) {
+						for (Wishlist wishlistItem : wishlist) {
+							if (String.valueOf(wishlistItem.getProduct().getProductId())
+									.equalsIgnoreCase(productDTO.getId())) {
+								productDTO.setLike(true);
+								break;
+							}
+						}
+					}
+					// Thiết lập URL hình ảnh
+					String img = productDTO.getImgName();
+					if (img != null && !img.isEmpty()) {
+						productDTO.setImgName(uploadService.getUrlImage(img));
+					}
 				}
 			}
 
-			if (products.isEmpty()) {
+			// Kiểm tra kết quả sản phẩm
+			if (products == null || products.isEmpty()) {
 				response.setCode(204);
-				response.setMessage("No products found for the search query: " + query);
+				response.setMessage("No products found");
 			} else {
 				response.setCode(200);
 				response.setMessage("Success");
 				response.setData(products);
 			}
+
 		} catch (Exception e) {
 			response.setCode(500);
 			response.setMessage("An error occurred during product search: " + e.getMessage());
 			response.setData(null);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
+
 		return ResponseEntity.ok(response);
 	}
 
