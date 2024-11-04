@@ -23,6 +23,7 @@ import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
 import com.entities.ProductVersion;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
@@ -31,6 +32,7 @@ import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
+import com.repositories.UserJPA;
 import com.utils.UploadService;
 
 @Service
@@ -48,6 +50,9 @@ public class OrderService {
 	private OrderDetailJPA orderDetailJpa;
 
 	@Autowired
+	private UserJPA userJpa;
+
+	@Autowired
 	private OrderUtilsService orderUtilsService;
 
 	@Autowired
@@ -55,10 +60,9 @@ public class OrderService {
 
 	@Autowired
 	private OrderStatusService orderStatusService;
-	
+
 	@Autowired
 	private UploadService uploadService;
-	
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, Integer statusId,
 			Integer page, Integer size) {
@@ -125,59 +129,44 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
-	    BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
-	    BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
 
-	    List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream()
-	        .map(orderDetail -> {
-	            String variant = getVariantFromOrderDetail(orderDetail);
-	            return new OrderByUserDTO.ProductDTO(
-	                orderDetail.getProductVersionBean().getProduct().getProductName(),
-	                uploadService.getUrlImage(orderDetail.getProductVersionBean().getProduct().getProductImg()),
-	                variant,
-	                orderDetail.getQuantity(),
-	                orderDetail.getPrice()
-	            );
-	        })
-	        .collect(Collectors.toList());
+		List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
+			String variant = getVariantFromOrderDetail(orderDetail);
+			return new OrderByUserDTO.ProductDTO(orderDetail.getProductVersionBean().getProduct().getProductName(),
+					uploadService.getUrlImage(orderDetail.getProductVersionBean().getProduct().getProductImg()),
+					variant, orderDetail.getQuantity(), orderDetail.getPrice());
+		}).collect(Collectors.toList());
 
-	    return new OrderByUserDTO(
-	        order.getOrderId(), 
-	        order.getOrderDate(), 
-	        order.getOrderStatus().getStatusName(), 
-	        totalPrice, 
-	        discountedPrice, 
-	        products
-	    );
+		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
+				totalPrice, discountedPrice, products);
 	}
-
-
 
 	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
-	    String color = null;
-	    String size = null;
-	    
-	    for (AttributeOptionsVersion aov : orderDetail.getProductVersionBean().getAttributeOptionsVersions()) {
-	        String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-	        String attributeValue = aov.getAttributeOption().getAttributeValue();
-	        if ("Color".equalsIgnoreCase(attributeName)) {
-	            color = attributeValue;
-	        } else if ("Size".equalsIgnoreCase(attributeName)) {
-	            size = attributeValue;
-	        }
-	    }
+		String color = null;
+		String size = null;
 
-	    if (color != null && size != null) {
-	        return color + ", " + size;
-	    } else if (color != null) {
-	        return color; 
-	    } else if (size != null) {
-	        return size; 
-	    }
+		for (AttributeOptionsVersion aov : orderDetail.getProductVersionBean().getAttributeOptionsVersions()) {
+			String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+			String attributeValue = aov.getAttributeOption().getAttributeValue();
+			if ("Color".equalsIgnoreCase(attributeName)) {
+				color = attributeValue;
+			} else if ("Size".equalsIgnoreCase(attributeName)) {
+				size = attributeValue;
+			}
+		}
 
-	    return "";
+		if (color != null && size != null) {
+			return color + ", " + size;
+		} else if (color != null) {
+			return color;
+		} else if (size != null) {
+			return size;
+		}
+
+		return "";
 	}
-
 
 	private OrderDTO createOrderDTO(Order order) {
 		BigDecimal total = orderUtilsService.calculateOrderTotal(order);
@@ -191,7 +180,6 @@ public class OrderService {
 		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, order.getDeliveryDate(),
 				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethodName);
 	}
-
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
 		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
@@ -224,8 +212,15 @@ public class OrderService {
 		}
 
 		Order order = updatedOrder.get();
-		if (isOrderStatusChanged(order, newOrderStatus.get().getStatusName())) {
-			if ("Processed".equalsIgnoreCase(newOrderStatus.get().getStatusName())) {
+		String currentStatus = order.getOrderStatus().getStatusName();
+		String newStatus = newOrderStatus.get().getStatusName();
+
+		if (!isValidStatusTransition(currentStatus, newStatus)) {
+			return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
+		}
+
+		if (isOrderStatusChanged(order, newStatus)) {
+			if ("Processed".equalsIgnoreCase(newStatus)) {
 				Boolean isStockSufficient = updateProductVersionsForOrder(order.getOrderDetails());
 				if (!isStockSufficient) {
 					return new ApiResponse<>(400, "Not enough stock available for one or more products.", null);
@@ -240,6 +235,23 @@ public class OrderService {
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
 		return !statusName.equalsIgnoreCase(order.getOrderStatus().getStatusName());
+	}
+
+	private boolean isValidStatusTransition(String currentStatus, String newStatus) {
+		switch (currentStatus.toLowerCase()) {
+		case "pending":
+			return "processed".equalsIgnoreCase(newStatus);
+		case "processed":
+			return "shipped".equalsIgnoreCase(newStatus);
+		case "shipped":
+			return "delivered".equalsIgnoreCase(newStatus);
+		case "delivered":
+			return false;
+		case "cancelled":
+			return false;
+		default:
+			return false;
+		}
 	}
 
 	private Boolean updateProductVersionsForOrder(List<OrderDetail> orderDetailList) {
@@ -351,4 +363,56 @@ public class OrderService {
 
 		return total;
 	}
+
+	public ApiResponse<?> cancelOrder(Integer orderId, User currentUser) {
+		Optional<Order> updatedOrder = orderJpa.findById(orderId);
+		if (updatedOrder.isEmpty()) {
+			return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
+		}
+
+		Order order = updatedOrder.get();
+
+		if (!isUserAuthorized(order, currentUser)) {
+			return new ApiResponse<>(403, "You do not have permission to cancel this order.", null);
+		}
+
+		String currentStatus = order.getOrderStatus().getStatusName();
+
+		if (!isCancellable(currentStatus)) {
+			return new ApiResponse<>(400, "The order cannot be cancelled from the current status: " + currentStatus,
+					null);
+		}
+
+		Optional<OrderStatus> cancelledStatus = orderStatusJpa.findByStatusNameIgnoreCase("Cancelled");
+		if (cancelledStatus.isEmpty()) {
+			return new ApiResponse<>(500, "Cancellation status is not configured in the system.", null);
+		}
+
+		order.setOrderStatus(cancelledStatus.get());
+		orderJpa.save(order);
+
+		BigDecimal totalPriceOrder = orderUtilsService.calculateOrderTotal(order);
+
+		BigDecimal discount = BigDecimal.ZERO;
+
+		if (order.getDisPrice() != null && order.getDisPrice().compareTo(BigDecimal.ZERO) > 0) {
+			discount = order.getDisPrice();
+		} else if (order.getDisPercent() != null && order.getDisPercent().compareTo(BigDecimal.ZERO) > 0) {
+			discount = totalPriceOrder.multiply(order.getDisPercent().divide(BigDecimal.valueOf(100)));
+		}
+
+		currentUser.setBalance(currentUser.getBalance().add(totalPriceOrder.subtract(discount)));
+		userJpa.save(currentUser);
+
+		return new ApiResponse<>(200, "Order cancelled successfully", null);
+	}
+
+	private boolean isUserAuthorized(Order order, User currentUser) {
+		return order.getUser().getUserId() == currentUser.getUserId();
+	}
+
+	private boolean isCancellable(String currentStatus) {
+		return "pending".equalsIgnoreCase(currentStatus);
+	}
+
 }

@@ -1,25 +1,34 @@
 package com.configs;
 
-import com.errors.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.services.AuthDetailsService;
-import com.utils.JWTUtils;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.entities.User;
+import com.errors.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.repositories.UserJPA;
+import com.services.AuthDetailsService;
+import com.services.PermissionService;
+import com.utils.JWTUtils;
 import com.utils.TokenBlacklist;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JWTAuthFilter extends OncePerRequestFilter {
@@ -29,6 +38,21 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
     @Autowired
     private AuthDetailsService ourUserDetailsService;
+
+    @Autowired
+    private UserJPA userJPA;
+
+    @Autowired
+    @Lazy
+    private PermissionService permissionService;
+    
+    private final Map<String, String> uriToPermissionMap = new HashMap<>();
+
+    public JWTAuthFilter() {
+        uriToPermissionMap.put("/api/adversetiment/add", "Add ADV");
+        // Đứa nào api gì thì thêm vào, nhiều quá tui ko nhớ. Tự thêm giúp tui nhé
+        uriToPermissionMap.put("/api/other/endpoint", "Other Permission");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -81,4 +105,10 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private int getUserIdFromAuthentication(Authentication authentication) {
+        String email = authentication.getName();
+        Optional<User> userOptional = userJPA.findByEmailAndProvider(email,"Guest");
+        System.out.println("userid la: " + userOptional.get().getUserId());
+        return userOptional.get().getUserId();
+    }
 }

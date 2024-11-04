@@ -1,5 +1,6 @@
 package com.services;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.entities.Supplier;
 import com.errors.ApiResponse;
+import com.models.GetAllSupplierDTO;
 import com.models.SupplierDTO;
 import com.repositories.ReceiptJPA;
 import com.repositories.SupplierJPA;
@@ -25,6 +27,11 @@ public class SupplierService {
 	public Page<Supplier> getAllSuppliers(Pageable pageable) {
 		return supplierJpa.findAll(pageable);
 	}
+	
+	public List<GetAllSupplierDTO> getAllSimpleSuppliers() {
+	    return supplierJpa.findAllSupplierNamesAndIds(); 
+	}
+
 
 	public Optional<Supplier> getSupplierById(int id) {
 		return supplierJpa.findById(id);
