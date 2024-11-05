@@ -156,12 +156,12 @@ public class CartController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		if (productCartModel.getQuantity() > version.getQuantity()) {
-			response.setCode(422);
-			response.setMessage("Products that exceed the quantity in stock");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-		}
+//		if (productCartModel.getQuantity() > version.getQuantity()) {
+//			response.setCode(422);
+//			response.setMessage("Products that exceed the quantity in stock");
+//
+//			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+//		}
 
 		Cart cartEntity = new Cart();
 		cartEntity.setUser(user);
