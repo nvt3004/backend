@@ -1,5 +1,7 @@
 package com.repositories;
 
+import java.math.BigDecimal;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.entities.Product;
+import com.responsedto.ProductDTO;
 
 public interface ProductJPA extends JpaRepository<Product, Integer> {
 	@Query("SELECT o "

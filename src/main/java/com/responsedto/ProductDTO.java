@@ -24,4 +24,6 @@ public class ProductDTO {
 	private BigDecimal minPrice;
 	private BigDecimal maxPrice;
 	private List<String> images;
+	private Float discount;
+	private Boolean like;
 }

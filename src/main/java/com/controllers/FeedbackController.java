@@ -37,8 +37,6 @@ import com.services.UserService;
 import com.utils.UploadService;
 
 @RestController
-@RequestMapping("api/user/feedback")
-@CrossOrigin("*")
 public class FeedbackController {
 
 	@Autowired
@@ -64,18 +62,15 @@ public class FeedbackController {
 
 	@Autowired
 	ImageJPA imageJPA;
-	
+
 	@Autowired
 	FeedbackJPA feedbackJPA;
 
-	@PostMapping("/add")
+	@PostMapping("api/user/feedback/add")
 	public ResponseEntity<ResponseAPI<FeedbackResponseDTO>> addFeedback(
-			@RequestHeader("Authorization") Optional<String> authHeader,
-			@RequestParam("comment") String comment, 
+			@RequestHeader("Authorization") Optional<String> authHeader, @RequestParam("comment") String comment,
 			@RequestPart("photos") Optional<List<MultipartFile>> photos,
-			@RequestParam("productId") Optional<Integer> productId, 
-			Optional<Integer> rating) 
-	{
+			@RequestParam("productId") Optional<Integer> productId, Optional<Integer> rating) {
 		ResponseAPI<FeedbackResponseDTO> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
 
@@ -125,7 +120,7 @@ public class FeedbackController {
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
+
 		if (photos.isPresent() && photos.get().size() > 0 && uploadService.isEmptyFile(photos.get())) {
 			response.setCode(400);
 			response.setMessage("The uploaded file is not a valid image or is empty");
@@ -171,55 +166,51 @@ public class FeedbackController {
 		List<Image> images = saveImageFeedback(feedbackSaved, photos.orElse(new ArrayList<MultipartFile>()));
 
 		FeedbackResponseDTO feedbackResponse = new FeedbackResponseDTO();
-		UserResponseDTO userResponse = new UserResponseDTO(user.getUserId(), 
-														   user.getFullName(), 
-														   uploadService.getUrlImage(user.getImage()));
-		
+		UserResponseDTO userResponse = new UserResponseDTO(user.getUserId(), user.getFullName(),
+				uploadService.getUrlImage(user.getImage()));
+
 		feedbackResponse.setFeedbackId(feedback.getFeedbackId());
 		feedbackResponse.setComment(feedback.getComment());
 		feedbackResponse.setFeedbackDate(feedback.getFeedbackDate());
-		if(images.size()>0) {
-			feedbackResponse.setImages(images
-					.stream()
-					.map(img -> uploadService.getUrlImage(img.getImageUrl()))
-					.toList());
+		if (images.size() > 0) {
+			feedbackResponse
+					.setImages(images.stream().map(img -> uploadService.getUrlImage(img.getImageUrl())).toList());
 		}
-		
+
 		feedbackResponse.setProductId(feedback.getProduct().getProductId());
 		feedbackResponse.setProductName(feedback.getProduct().getProductName());
 		feedbackResponse.setRating(feedback.getRating());
 		feedbackResponse.setUser(userResponse);
-		
+
 		response.setCode(200);
 		response.setMessage("Success");
 		response.setData(feedbackResponse);
-		
+
 		return ResponseEntity.ok(response);
 	}
-	
-	@GetMapping()
+
+	@GetMapping("api/user/feedback")
 	public ResponseEntity<ResponseAPI<PageCustom<FeedbackResponseDTO>>> getFeedback(
 			@RequestParam("page") Optional<Integer> pageNumber,
-			@RequestParam("idProduct") Optional<Integer> idProduct) 
-	{	
+			@RequestParam("idProduct") Optional<Integer> idProduct) {
 		ResponseAPI<PageCustom<FeedbackResponseDTO>> response = new ResponseAPI<>();
-		
-		if(!idProduct.isPresent()) {
+
+		if (!idProduct.isPresent()) {
 			response.setCode(400);
 			response.setMessage("Invalid product id");
-			
+
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 		}
-		
-		if(productService.getProductById(idProduct.get())==null) {
+
+		if (productService.getProductById(idProduct.get()) == null) {
 			response.setCode(404);
 			response.setMessage("Product not found");
-			
+
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		PageCustom<FeedbackResponseDTO> feedbackPage = feedbackService.findFeedbackByCondition(
-				null, null, idProduct.get(), pageNumber.orElse(-1), 10);
+		PageCustom<FeedbackResponseDTO> feedbackPage = feedbackService.findFeedbackByCondition(null, null,
+				idProduct.get(), pageNumber.orElse(-1), 10);
 
 		response.setData(feedbackPage);
 		response.setCode(200);
@@ -227,15 +218,12 @@ public class FeedbackController {
 
 		return ResponseEntity.ok(response);
 	}
-	
-	@GetMapping("/dashboard")
+
+	@GetMapping("api/staff/feedback/dashboard")
 	public ResponseEntity<ResponseAPI<PageCustom<FeedbackResponseDTO>>> getFeedbackDashboard(
 			@RequestHeader("Authorization") Optional<String> authHeader,
-			@RequestParam("page") Optional<Integer> pageNumber,
-			@RequestParam("startDate") Optional<Date> startDate, 
-			@RequestParam("endDate") Optional<Date> endDate,
-			@RequestParam("idProduct") Optional<Integer> idProduct) 
-	{	
+			@RequestParam("page") Optional<Integer> pageNumber, @RequestParam("startDate") Optional<Date> startDate,
+			@RequestParam("endDate") Optional<Date> endDate, @RequestParam("idProduct") Optional<Integer> idProduct) {
 		ResponseAPI<PageCustom<FeedbackResponseDTO>> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
 
@@ -269,11 +257,11 @@ public class FeedbackController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
-		
-		//Bắt admin mới được vô đây
 
-		PageCustom<FeedbackResponseDTO> feedbackPage = feedbackService.findFeedbackByCondition(
-				startDate.orElse(null), endDate.orElse(null), idProduct.orElse(-1), pageNumber.orElse(-1), 10);
+		// Bắt admin mới được vô đây
+
+		PageCustom<FeedbackResponseDTO> feedbackPage = feedbackService.findFeedbackByCondition(startDate.orElse(null),
+				endDate.orElse(null), idProduct.orElse(-1), pageNumber.orElse(-1), 10);
 
 		response.setData(feedbackPage);
 		response.setCode(200);
@@ -284,7 +272,7 @@ public class FeedbackController {
 
 	private List<Image> saveImageFeedback(Feedback feedback, List<MultipartFile> files) {
 		List<Image> images = new ArrayList<>();
-		
+
 		if (!files.isEmpty() && files.size() > 0 && !uploadService.isEmptyFile(files)) {
 			for (MultipartFile file : files) {
 				Image image = new Image();
@@ -295,10 +283,10 @@ public class FeedbackController {
 
 				images.add(imageJPA.save(image));
 			}
-			
+
 			return images;
 		}
-		
+
 		return new ArrayList<Image>();
 	}
 }

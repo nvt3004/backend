@@ -41,7 +41,6 @@ import com.utils.UploadService;
 
 @RestController
 @RequestMapping("/api/staff/product")
-@CrossOrigin("*")
 public class ProductController {
 	@Autowired
 	AuthService authService;

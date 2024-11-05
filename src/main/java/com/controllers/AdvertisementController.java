@@ -16,9 +16,9 @@ public class AdvertisementController {
     }
 
     // @PostMapping("/delete")
-    // // @PreAuthorize("hasAuthority('Delete ADV')") 
+    // // @PreAuthorize("hasAuthority('Delete ADV')")
     // public ResponseEntity<String> deleteAdvertisement() {
-    //     // Logic thêm quảng cáo
-    //     return ResponseEntity.ok("Advertisement deleted successfully!");
+    // // Logic thêm quảng cáo
+    // return ResponseEntity.ok("Advertisement deleted successfully!");
     // }
 }

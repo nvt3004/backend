@@ -18,6 +18,11 @@ public class WishlistService {
 	@Autowired
 	ProductJPA productJPA;
 
+	public List<Wishlist> getAllWisListByUser(User user) {
+		List<Wishlist> wishlists = user.getWishlists();
+		return wishlists;
+	}
+	
 	public Wishlist createWishlist(Wishlist wishlist) {	
 		return wishlistJPA.save(wishlist);
 	}

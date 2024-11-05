@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.entities.Permission;
 import com.models.AuthDTO;
 import com.services.PermissionService;
 
@@ -28,6 +29,16 @@ public class PermissionController {
 
         System.out.println("Quyền của user với ID " + userId + ": " + permissions);
 
+        if (permissions.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok(permissions);
+        }
+    }
+
+    @GetMapping("/api/admin/permissions")
+    public ResponseEntity<List<Permission>> getAllPermission() {
+        List<Permission> permissions = permissionService.getAllPermission();
         if (permissions.isEmpty()) {
             return ResponseEntity.noContent().build();
         } else {

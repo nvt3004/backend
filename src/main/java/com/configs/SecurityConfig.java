@@ -1,6 +1,5 @@
 package com.configs;
 
-// import com.filters.CustomAuthorizationFilter;
 import com.services.AuthDetailsService;
 
 import java.util.Arrays;
@@ -16,6 +15,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,6 +30,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
 	@Autowired
@@ -47,13 +48,11 @@ public class SecurityConfig {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
-								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**")
-						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
-						.requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
-						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
-						.requestMatchers("/api/user/**").hasAnyAuthority("User","Admin","Staff")
-                        .requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest().authenticated())
+						"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "/api/product/**",
+						"/images/**","/api/home/**", "/api/vnp/result-vnpay", "/api/reset-password", "api/login-social").permitAll()
+						.requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
+						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin")
+						.anyRequest().authenticated())
 				.sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -98,5 +97,4 @@ public class SecurityConfig {
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
 	}
-
 }

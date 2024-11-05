@@ -56,7 +56,6 @@ import com.services.UserService;
 
 @RestController
 @RequestMapping("api/user/cart")
-@CrossOrigin("*")
 public class CartController {
 	@Autowired
 	AuthService authService;
@@ -96,10 +95,10 @@ public class CartController {
 
 	@Autowired
 	UserCouponService userCouponService;
-	
+
 	@Autowired
 	CartProductJPA cartProductJPA;
-	
+
 	@Autowired
 	UserCouponJPA userCouponJPA;
 
@@ -408,13 +407,13 @@ public class CartController {
 		orderEntity.setAddress(orderModel.getAddress());
 		if (coupon != null) {
 			orderEntity.setCoupon(coupon);
-			if(coupon.getDisPercent() != null) {
+			if (coupon.getDisPercent() != null) {
 				orderEntity.setDisPercent(coupon.getDisPercent());
-			}else {
+			} else {
 				orderEntity.setDisPrice(coupon.getDisPrice());
 			}
 		}
-		
+
 		orderEntity.setOrderDate(new Date());
 		orderEntity.setDeliveryDate(new Date());
 		orderEntity.setUser(user);
@@ -431,11 +430,11 @@ public class CartController {
 
 		if (coupon != null) {
 			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId());
-			
-			if(temp != null) {
+
+			if (temp != null) {
 				temp.setStatus(false);
 				userCouponService.createUserCoupon(temp);
-			}else {
+			} else {
 				UserCoupon userCoupon = new UserCoupon();
 				userCoupon.setUser(user);
 				userCoupon.setCoupon(coupon);
@@ -474,11 +473,11 @@ public class CartController {
 		paymentEntity.setAmount(BigDecimal.ZERO);
 
 		Payment paymentSaved = paymentService.createPayment(paymentEntity);
-		
-		//Mua xong xóa khỏi giỏ hàng
-		for(CartProduct crd : user.getCarts().get(0).getCartProducts()) {
-			for(CartOrderDetailModel md: orderModel.getOrderDetails()) {
-				if(crd.getProductVersionBean().getId()==md.getIdVersion()) {
+
+		// Mua xong xóa khỏi giỏ hàng
+		for (CartProduct crd : user.getCarts().get(0).getCartProducts()) {
+			for (CartOrderDetailModel md : orderModel.getOrderDetails()) {
+				if (crd.getProductVersionBean().getId() == md.getIdVersion()) {
 					cartProductService.removeCartItem(crd);
 					break;
 				}
@@ -508,7 +507,7 @@ public class CartController {
 		return ResponseEntity.ok(response);
 	}
 
-	@PostMapping("/update")
+	@PutMapping("/update")
 	public ResponseEntity<ResponseAPI<CartItemModel>> updateCatrt(@RequestBody CartItemModel cartItemModel,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 		ResponseAPI<CartItemModel> response = new ResponseAPI<>();
@@ -583,7 +582,7 @@ public class CartController {
 
 		return ResponseEntity.ok(response);
 	}
-	
+
 	@PutMapping("/update-item")
 	public ResponseEntity<ResponseAPI<CartItemModel>> updateCatrtItem(@RequestBody CartItemModel cartItemModel,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -621,7 +620,6 @@ public class CartController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-
 		CartProduct cartItem = cartProductService.getCartItemById(cartItemModel.getCartItemId());
 		if (cartItem == null) {
 			response.setCode(404);
@@ -646,15 +644,16 @@ public class CartController {
 
 		ProductVersion version = new ProductVersion();
 		version.setId(cartItemModel.getVersionId());
-		
-		CartProduct cartProductTemp = cartProductJPA.getVersionInCartByUser(cartItemModel.getVersionId(), user.getUserId());
+
+		CartProduct cartProductTemp = cartProductJPA.getVersionInCartByUserUp(cartItemModel.getVersionId(),
+				user.getUserId(), cartItemModel.getCartItemId());
 
 		if (cartProductTemp != null) {
-			cartProductTemp.setQuantity(cartProductTemp.getQuantity()+cartItem.getQuantity());
-		CartProduct saved =	cartProductService.updateCartItem(cartProductTemp);
-			
+			cartProductTemp.setQuantity(cartProductTemp.getQuantity() + cartItem.getQuantity());
+			CartProduct saved = cartProductService.updateCartItem(cartProductTemp);
+
 			cartProductService.removeCartItem(cartItem);
-			
+
 			cartItemModel.setQuantity(saved.getQuantity());
 
 			response.setCode(200);
@@ -663,10 +662,10 @@ public class CartController {
 
 			return ResponseEntity.ok(response);
 		}
-		
+
 		cartItem.setProductVersionBean(version);
 		cartProductService.updateCartItem(cartItem);
-				
+
 		cartItemModel.setQuantity(cartItem.getQuantity());
 
 		response.setCode(200);

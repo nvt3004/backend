@@ -193,7 +193,7 @@ public class ProductService {
 
 		productParrent.setId(product.getProductId());
 		productParrent.setProductName(product.getProductName());
-		productParrent.setPrice(product.getProductPrice());
+//		productParrent.setMinPrice(null);
 		productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
 		productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
 
@@ -228,10 +228,15 @@ public class ProductService {
 
 		List<Attribute> list = new ArrayList<>();
 		for (AttributeOptionsVersion options : version.getAttributeOptionsVersions()) {
-			String key = options.getAttributeOption().getAttribute().getAttributeName();
-			String value = options.getAttributeOption().getAttributeValue();
+
+			String key = options.getAttributeOption() != null
+					? options.getAttributeOption().getAttribute().getAttributeName()
+					: null;
+			String value = options.getAttributeOption() != null ? options.getAttributeOption().getAttributeValue()
+					: null;
 
 			list.add(new Attribute(key, value));
+
 		}
 
 		return list;
@@ -270,11 +275,11 @@ public class ProductService {
 		Product productEntity = setProduct(productModel);
 		productEntity.setProductId(productModel.getId());
 		productEntity.setProductImg(changeNewImage(productModel));
-		
+
 		Product productSaved = productJPA.save(productEntity);
 		removeCategoryProduct(productModel);
 		saveCategoryProduct(productModel);
-		
+
 		return productSaved;
 	}
 
@@ -320,7 +325,6 @@ public class ProductService {
 
 		}
 	}
-	
 
 	private ProductCategory createProductCategory(int idProduct, int idCategory) {
 		ProductCategory productCat = new ProductCategory();
@@ -346,13 +350,13 @@ public class ProductService {
 
 		return product;
 	}
-	
+
 	private String changeNewImage(ProductDTO productModel) {
 		Product product = productJPA.findById(productModel.getId()).orElse(null);
-		
+
 		uploadService.delete(product.getProductImg(), "images");
-		
-		String fileName = uploadService.save(productModel.getImage(), "images");	
+
+		String fileName = uploadService.save(productModel.getImage(), "images");
 		return fileName;
 	}
 
