@@ -1,6 +1,7 @@
 package com.controllers;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdvertisementController {
 
     @PostMapping("/add")
-    // @PreAuthorize("hasAuthority('Add ADV')") 
+    @PreAuthorize("hasPermission(#userId, 'Add ADV')")
     public ResponseEntity<String> addAdvertisement() {
         // Logic thêm quảng cáo
         return ResponseEntity.ok("Advertisement added successfully!");
