@@ -24,12 +24,12 @@ public class SupplierService {
 	@Autowired
 	private ReceiptJPA receiptJpa;
 
-	public Page<Supplier> getAllSuppliers(Pageable pageable) {
-		return supplierJpa.findAll(pageable);
+	public Page<Supplier> getAllSuppliers(Pageable pageable, Boolean status) {
+		return supplierJpa.findAllByStatus(pageable,status);
 	}
 	
-	public List<GetAllSupplierDTO> getAllSimpleSuppliers() {
-	    return supplierJpa.findAllSupplierNamesAndIds(); 
+	public List<GetAllSupplierDTO> getAllSuppliersWithoutPagination() {
+	    return supplierJpa.findAllActiveSupplierNamesAndIds(); 
 	}
 
 
@@ -60,18 +60,40 @@ public class SupplierService {
 	}
 
 	public ApiResponse<?> deleteSupplier(Integer id) {
-		if (receiptJpa.existsBySupplierSupplierId(id)) {
-			return new ApiResponse<>(400, "Cannot delete Supplier, it is referenced in a receipt.", null);
-		}
+	    if (receiptJpa.existsBySupplierSupplierId(id)) {
+	        return new ApiResponse<>(400, "Cannot delete Supplier, it is referenced in a receipt.", null);
+	    }
 
-		Optional<Supplier> supplier = supplierJpa.findById(id);
+	    Optional<Supplier> supplier = supplierJpa.findById(id);
 
-		if (supplier.isPresent()) {
-			supplierJpa.deleteById(id);
-			return new ApiResponse<>(200, "Supplier deleted successfully.", null);
-		} else {
-			return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
-		}
+	    if (supplier.isPresent()) {
+	        Supplier existingSupplier = supplier.get();
+	        existingSupplier.setStatus(false);
+	        supplierJpa.save(existingSupplier);
+
+	        return new ApiResponse<>(200, "Supplier marked as deleted successfully.", null);
+	    } else {
+	        return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
+	    }
 	}
+	
+	public ApiResponse<?> restoreSupplier(Integer id) {
+	    Optional<Supplier> supplier = supplierJpa.findById(id);
+
+	    if (supplier.isPresent()) {
+	        Supplier existingSupplier = supplier.get();
+	        if (existingSupplier.getStatus() == false) {
+	            existingSupplier.setStatus(true);
+	            supplierJpa.save(existingSupplier);
+	            return new ApiResponse<>(200, "Supplier restored successfully.", null);
+	        } else {
+	            return new ApiResponse<>(400, "Supplier is already active.", null);
+	        }
+	    } else {
+	        return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
+	    }
+	}
+
+
 
 }

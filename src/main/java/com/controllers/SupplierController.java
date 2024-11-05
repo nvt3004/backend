@@ -51,6 +51,7 @@ public class SupplierController {
 	@GetMapping
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size,
+			@RequestParam(value = "status", defaultValue = "true") Boolean status,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<String> errorResponse = new ApiResponse<>();
@@ -95,7 +96,7 @@ public class SupplierController {
 		}
 
 		Pageable pageable = PageRequest.of(page, size);
-		Page<Supplier> supplierPage = supplierService.getAllSuppliers(pageable);
+		Page<Supplier> supplierPage = supplierService.getAllSuppliers(pageable,status);
 
 		ApiResponse<Page<Supplier>> response = new ApiResponse<>(200, "Suppliers retrieved successfully", supplierPage);
 
@@ -141,7 +142,7 @@ public class SupplierController {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 	    }
 
-	    List<GetAllSupplierDTO> suppliers = supplierService.getAllSimpleSuppliers();
+	    List<GetAllSupplierDTO> suppliers = supplierService.getAllSuppliersWithoutPagination();
 
 	    ApiResponse<List<GetAllSupplierDTO>> response = new ApiResponse<>(200, "Suppliers retrieved successfully", suppliers);
 	    return ResponseEntity.ok(response);
@@ -350,5 +351,54 @@ public class SupplierController {
 
 		return ResponseEntity.ok(errorResponse);
 	}
+	
+	@PutMapping("/restore")
+	public ResponseEntity<ApiResponse<?>> restoreSupplier(@RequestParam Integer id,
+	        @RequestHeader("Authorization") Optional<String> authHeader) {
+
+	    ApiResponse<?> errorResponse = new ApiResponse<>();
+
+	    if (!authHeader.isPresent()) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Authorization header is missing");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
+
+	    String token = authService.readTokenFromHeader(authHeader);
+
+	    try {
+	        jwtService.extractUsername(token);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Invalid token format");
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    }
+
+	    User user;
+	    try {
+	        user = authService.validateTokenAndGetUsername(token);
+	    } catch (InvalidException e) {
+	        errorResponse.setErrorCode(401);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	    } catch (UserServiceException e) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage(e.getMessage());
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+	    } catch (Exception e) {
+	        errorResponse.setErrorCode(500);
+	        errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+	    }
+
+	    errorResponse = supplierService.restoreSupplier(id);
+
+	    if (errorResponse.getErrorCode() != 200) {
+	        return ResponseEntity.status(errorResponse.getErrorCode()).body(errorResponse);
+	    }
+
+	    return ResponseEntity.ok(errorResponse);
+	}
+
 
 }
