@@ -128,6 +128,7 @@ public class ProductService {
 		response.setId(product.getProductId());
 		response.setPrice(product.getProductPrice());
 		response.setProductName(product.getProductName());
+		response.setDiscription(product.getDescription());
 		response.setDiscount(getDiscount(product));
 		response.setImage(uploadService.getUrlImage(product.getProductImg()));
 		response.setCategories(product.getProductCategories().stream().map(item -> {
@@ -147,6 +148,8 @@ public class ProductService {
 			version.setRetailPrice(vs.getRetailPrice());
 			version.setWholesalePrice(vs.getWholesalePrice());
 			version.setQuantity(vs.getQuantity());
+			version.setActive(vs.isStatus());
+			
 			if (!vs.getImages().isEmpty()) {
 				version.setImages(vs.getImages().stream().map(img -> {
 					ImageResponse imgres = new ImageResponse();
@@ -229,14 +232,16 @@ public class ProductService {
 		List<Attribute> list = new ArrayList<>();
 		for (AttributeOptionsVersion options : version.getAttributeOptionsVersions()) {
 
+			int id = options.getAttributeOption() != null ? options.getAttributeOption().getId()
+					: null;
+			
 			String key = options.getAttributeOption() != null
 					? options.getAttributeOption().getAttribute().getAttributeName()
 					: null;
 			String value = options.getAttributeOption() != null ? options.getAttributeOption().getAttributeValue()
 					: null;
 
-			list.add(new Attribute(key, value));
-
+			list.add(new Attribute(id,key, value));
 		}
 
 		return list;
@@ -265,7 +270,7 @@ public class ProductService {
 		return productJpa.findById(productSaved.getProductId()).orElse(null);
 	}
 
-	public Product updateProduct(ProductDTO productModel) {
+	public Product updateProduct(ProductDTO productModel, Product product) {
 		Product temp = productJPA.findById(productModel.getId()).orElse(null);
 
 		if (temp != null) {
@@ -274,9 +279,13 @@ public class ProductService {
 
 		Product productEntity = setProduct(productModel);
 		productEntity.setProductId(productModel.getId());
+
+		//Nếu truyền lên ảnh thì cập nhật còn không thì để trống
 		productEntity.setProductImg(changeNewImage(productModel));
 
+		// Sản phẩm chính
 		Product productSaved = productJPA.save(productEntity);
+		// Danh mục sản phẩm
 		removeCategoryProduct(productModel);
 		saveCategoryProduct(productModel);
 
@@ -345,7 +354,10 @@ public class ProductService {
 		product.setProductName(productModel.getName());
 		product.setProductPrice(productModel.getPrice());
 		product.setDescription(productModel.getDescription());
-		product.setProductImg(uploadService.save(productModel.getImage(), "images"));
+		if (productModel.getImage() != null && !productModel.getImage().isEmpty()
+				&& !productModel.getImage().isBlank()) {
+			product.setProductImg(uploadService.save(productModel.getImage(), "images"));
+		}
 		product.setStatus(true);
 
 		return product;
@@ -353,10 +365,16 @@ public class ProductService {
 
 	private String changeNewImage(ProductDTO productModel) {
 		Product product = productJPA.findById(productModel.getId()).orElse(null);
+		String fileName = "";
+		
+		if (productModel.getImage() != null && !productModel.getImage().isBlank()
+				&& !productModel.getImage().isEmpty()) {
+			uploadService.delete(product.getProductImg(), "images");
+			fileName = uploadService.save(productModel.getImage(), "images");
+		}else {
+			fileName = product.getProductImg();
+		}
 
-		uploadService.delete(product.getProductImg(), "images");
-
-		String fileName = uploadService.save(productModel.getImage(), "images");
 		return fileName;
 	}
 

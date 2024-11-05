@@ -170,7 +170,7 @@ public class ProductController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		productService.updateProduct(productModel);
+		productService.updateProduct(productModel, temp);
 
 		response.setCode(200);
 		response.setMessage("Success");

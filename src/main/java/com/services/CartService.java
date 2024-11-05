@@ -49,8 +49,10 @@ public class CartService {
 
 		for (CartProduct cart : cartProducts) {
 			List<Attribute> attributes = new ArrayList<>();
+			boolean activeVersion = cart.getProductVersionBean().getProduct().isStatus() && cart.getProductVersionBean().isStatus();
+			
 			CartItemResponse item = new CartItemResponse(cart.getCartPrdId(), cart.getProductVersionBean().getId(),
-					cart.getProductVersionBean().getProduct().isStatus(), cart.getProductVersionBean().getQuantity(),
+					activeVersion, cart.getProductVersionBean().getQuantity(),
 					cart.getProductVersionBean().getProduct().getProductName(),
 					cart.getProductVersionBean().getRetailPrice(), cart.getQuantity());
 
@@ -61,7 +63,7 @@ public class CartService {
 
 			List<AttributeOptionsVersion> optionVersions = cart.getProductVersionBean().getAttributeOptionsVersions();
 			optionVersions.stream().forEach(optionVersion -> {
-				Attribute attribute = new Attribute(
+				Attribute attribute = new Attribute(0,
 						optionVersion.getAttributeOption() != null
 								? optionVersion.getAttributeOption().getAttribute().getAttributeName()
 								: null,
