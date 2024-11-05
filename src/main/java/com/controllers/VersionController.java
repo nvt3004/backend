@@ -37,6 +37,7 @@ public class VersionController {
 
 	@PostMapping("/add")
 	public ResponseEntity<ResponseAPI<Boolean>> addVersion(@RequestBody ProductVersionResponse versionModal) {
+		System.out.println("Add version");
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String versionName = versionModal.getVersionName();
