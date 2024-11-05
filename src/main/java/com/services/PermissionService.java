@@ -20,8 +20,8 @@ import com.models.AuthDTO;
 import com.repositories.ManagePermissionsJPA;
 import com.repositories.PermissionJPA;
 import com.repositories.RoleJPA;
+import com.repositories.UserJPA;
 import com.repositories.UserRoleJPA;
-import com.repositories.UsersJPA;
 import com.utils.DateTimeUtil;
 import com.utils.JWTUtils;
 
@@ -37,7 +37,7 @@ public class PermissionService {
     private RoleJPA roleRepo;
 
     @Autowired
-    private UsersJPA usersRepo;
+    private UserJPA userRepo;
 
     @Autowired
     private UserRoleJPA userRoleRepo;
@@ -80,12 +80,12 @@ public class PermissionService {
             }
 
             if (username.matches(emailRegex)) {
-                Optional<User> existingUser = usersRepo.findByEmailAndProvider(username, "Guest");
+                Optional<User> existingUser = userRepo.findByEmailAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Email already exists with provider Guest");
                 }
             } else if (username.matches(phoneRegex)) {
-                Optional<User> existingUser = usersRepo.findByPhoneAndProvider(username, "Guest");
+                Optional<User> existingUser = userRepo.findByPhoneAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Phone number already exists with provider Guest");
                 }
@@ -117,7 +117,7 @@ public class PermissionService {
             ourUser.setProvider("Guest");
             ourUser.setStatus((byte) 1);
             ourUser.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
-            User ourUsersResult = usersRepo.save(ourUser);
+            User ourUsersResult = userRepo.save(ourUser);
 
             List<String> roles = Collections.singletonList("Staff");
             List<UserRole> userRoles = roles.stream().map(roleName -> {
@@ -177,7 +177,7 @@ public class PermissionService {
                     return reqRes;
                 }
 
-                Optional<User> userOptional = usersRepo.findById(userId);
+                Optional<User> userOptional = userRepo.findById(userId);
                 if (userOptional.isPresent()) {
                     User existingUser = userOptional.get();
 
@@ -191,7 +191,7 @@ public class PermissionService {
                     existingUser.setPhone(authDTO.getPhone());
                     existingUser.setImage(authDTO.getImage());
 
-                    User savedUser = usersRepo.save(existingUser);
+                    User savedUser = userRepo.save(existingUser);
 
                     System.out.println("Quyền = "+existingUser.getManagePermissions());
 

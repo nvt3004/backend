@@ -355,9 +355,11 @@ public class AuthManagementService {
 
                     existingUser.setEmail(updatedUser.getEmail());
                     existingUser.setFullName(updatedUser.getFullName());
-                    existingUser.setUsername(updatedUser.getEmail());
+                    // existingUser.setUsername(updatedUser.getUsername());
                     existingUser.setPhone(updatedUser.getPhone());
                     existingUser.setImage(updatedUser.getImage());
+                    existingUser.setGender(updatedUser.getGender());
+                    existingUser.setBirthday(updatedUser.getBirthday());
                     existingUser.setStatus((byte)1);
 
                     User savedUser = usersRepo.save(existingUser);
@@ -402,6 +404,7 @@ public class AuthManagementService {
                     reqRes.setFullName(user.getFullName());
                     reqRes.setEmail(user.getEmail());
                     reqRes.setPhone(user.getPhone());
+                    reqRes.setUsername(user.getUsername());
                     reqRes.setRoles(user.getUserRoles().stream()
                         .map(UserRole::getRole)
                         .map(Role::getRoleName)
@@ -466,6 +469,8 @@ public class AuthManagementService {
             }
             if (userOptional.isPresent()) {
                 reqRes.setListData(userOptional.get());
+                System.out.println("So dien thoai"+userOptional.get().getPhone());
+                System.out.println("Ngay sinh"+userOptional.get().getBirthday());
                 reqRes.setStatusCode(200);
                 reqRes.setMessage("successful");
             } else {
