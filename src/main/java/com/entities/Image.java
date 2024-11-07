@@ -36,11 +36,10 @@ public class Image implements Serializable {
 	@JsonBackReference("feedback-images")
 	private Feedback feedback;
 
-	//bi-directional many-to-one association to ProductVersion
-	@ManyToOne
-	@JoinColumn(name="product_version_id")
-	@JsonBackReference("productVersion-images")
-	private ProductVersion productVersion;
+	@OneToOne
+    @JoinColumn(name = "product_version_id")
+    @JsonBackReference("productVersion-image")
+    private ProductVersion productVersion;
 
 	//bi-directional many-to-one association to User
 	@ManyToOne
@@ -84,12 +83,12 @@ public class Image implements Serializable {
 	}
 
 	public ProductVersion getProductVersion() {
-		return this.productVersion;
-	}
+        return this.productVersion;
+    }
 
-	public void setProductVersion(ProductVersion productVersion) {
-		this.productVersion = productVersion;
-	}
+    public void setProductVersion(ProductVersion productVersion) {
+        this.productVersion = productVersion;
+    }
 
 	public User getUser() {
 		return this.user;

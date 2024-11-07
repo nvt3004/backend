@@ -87,10 +87,10 @@ public class OrderDetailService {
 			BigDecimal price = item.getPrice();
 			BigDecimal total = price.multiply(quantity);
 
-			List<Image> images = item.getProductVersionBean().getImages();
+			Image images = item.getProductVersionBean().getImage();
 			String imageUrl = null;
-			if (images != null && !images.isEmpty()) {
-				imageUrl = images.get(0).getImageUrl();
+			if (images != null) {
+				imageUrl = images.getImageUrl();
 			}
 
 			productDetails.add(new OrderDetailProductDetailsDTO(

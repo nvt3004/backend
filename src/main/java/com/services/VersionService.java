@@ -42,7 +42,7 @@ public class VersionService {
 		versionEntity.setProduct(product);
 
 		ProductVersion versionSaved = versionJPA.save(versionEntity);
-		saveImageVersion(versionSaved, versionModel.getImages().get(0).getName());
+		saveImageVersion(versionSaved, versionModel.getImage().getName());
 		saveAttributeOptionVersion(versionSaved, versionModel.getAttributes());
 	}
 
@@ -69,12 +69,12 @@ public class VersionService {
 
 	private String changeNewImage(ProductVersionResponse versionModel, ProductVersion version) {
 		//ProductVersion version = versionJPA.findById(versionModel.getId()).orElse(null);
-		String imageNameVersion = versionModel.getImages().get(0).getName();
+		String imageNameVersion = versionModel.getImage().getName();
 		String fileName = null;
 
 		if (imageNameVersion != null && !imageNameVersion.isBlank() && !imageNameVersion.isEmpty()) {
-			uploadService.delete(version.getImages().get(0).getImageUrl(), "images");
-			imageJPA.delete(version.getImages().get(0));
+			uploadService.delete(version.getImage().getImageUrl(), "images");
+			imageJPA.delete(version.getImage());
 			fileName = uploadService.save(imageNameVersion, "images");
 		}
 
