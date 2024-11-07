@@ -53,7 +53,7 @@ public class OrderController {
 	private JWTService jwtService;
 
 	@GetMapping("/staff/orders")
-	@PreAuthorize("hasPermission(#userId, 'ORDER_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllOrders(
 			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
@@ -115,7 +115,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/user/orders/username")
-	@PreAuthorize("hasPermission(#userId, 'ORDER_VIEW_ALL_BY_USERNAME')")
+	@PreAuthorize("hasPermission(#userId, 'USER_ORDER_VIEW_SELF')")
 	public ResponseEntity<ApiResponse<?>> getOrdersByUsername(
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,
@@ -180,6 +180,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/staff/orders/statuses")
+	 @PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_STATUS_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllOrderStatus(
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -229,6 +230,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/staff/orders/update-order-detail")
+	@PreAuthorize("hasPermission(#user.id, 'STAFF_ORDER_DETAIL_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateOrderDetail(@RequestParam("orderDetailId") Integer orderDetailId,
 			@RequestParam("productId") Integer productId, @RequestParam("colorId") Integer colorId,
 			@RequestParam("sizeId") Integer sizeId, @RequestHeader("Authorization") Optional<String> authHeader) {
@@ -284,6 +286,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/staff/orders/update-order-detail-quantity")
+	@PreAuthorize("hasPermission(#user.id, 'STAFF_ORDER_DETAIL_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateOrderDetailQuantity(
 			@RequestParam("orderDetailId") Integer orderDetailId, @RequestParam("quantity") Integer quantity,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
