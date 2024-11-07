@@ -42,9 +42,9 @@ public class ProductVersion implements Serializable {
 	@JsonManagedReference("productVersionBean-productVersion")
 	private List<CartProduct> cartProducts;
 
-	@OneToMany(fetch = FetchType.EAGER,mappedBy = "productVersion")
-	@JsonManagedReference("productVersion-images")
-	private List<Image> images;
+	@OneToOne(fetch = FetchType.EAGER, mappedBy = "productVersion", cascade = CascadeType.ALL)
+    @JsonManagedReference("productVersion-image")
+    private Image image;
 
 	@OneToMany(mappedBy = "productVersionBean")
 	@JsonManagedReference("productVersionBean-orderDetails")
@@ -146,27 +146,16 @@ public class ProductVersion implements Serializable {
 		return cartProduct;
 	}
 
-	public List<Image> getImages() {
-		return this.images;
-	}
+	public Image getImage() {
+        return this.image;
+    }
 
-	public void setImages(List<Image> images) {
-		this.images = images;
-	}
-
-	public Image addImage(Image image) {
-		getImages().add(image);
-		image.setProductVersion(this);
-
-		return image;
-	}
-
-	public Image removeImage(Image image) {
-		getImages().remove(image);
-		image.setProductVersion(null);
-
-		return image;
-	}
+    public void setImage(Image image) {
+        this.image = image;
+        if (image != null) {
+            image.setProductVersion(this);
+        }
+    }
 
 	public List<OrderDetail> getOrderDetails() {
 		return this.orderDetails;

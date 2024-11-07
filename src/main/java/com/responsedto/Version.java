@@ -15,6 +15,6 @@ public class Version {
 	private String versionName;
 	private BigDecimal price;
 	private boolean inStock;
-	private List<String> images;
+	private String image;
 	private List<Attribute> attributes;
 }

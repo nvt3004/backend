@@ -81,7 +81,7 @@ public class ProductClientService {
 
 	public List<ProductDTO> getProductWish(User user) {
 		List<Wishlist> wls = wishlistService.getAllWisListByUser(user);
-
+		String image = null;
 		List<ProductDTO> productDTOs = new ArrayList<>();
 	
 			for (Wishlist wishlist : wls) {
@@ -101,15 +101,13 @@ public class ProductClientService {
 					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
 						maxPrice = productVer.getRetailPrice();
 					}
-					// Xử lý danh sách hình ảnh
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+					
+					 image = productVer.getImage().getImageUrl();
 				}
 				productDTO.setImgName(images.get(0));
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
-				productDTO.setImages(images);
+				productDTO.setImage(image);
 				productDTO.setLike(true);
 				// Thêm productDTO vào danh sách
 				productDTOs.add(productDTO);
@@ -148,6 +146,7 @@ public class ProductClientService {
 	 // còn sử dụng
 	public List<ProductDTO> getALLProduct() {
 		List<ProductDTO> productDTOs = new ArrayList<>();
+		String image = null;
 		try {
 			List<Product> products = productJPA.findAll();
 			if (products == null || products.isEmpty()) {
@@ -172,14 +171,11 @@ public class ProductClientService {
 					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
 						maxPrice = productVer.getRetailPrice();
 					}
-					// Xử lý danh sách hình ảnh
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+					image = productVer.getImage().getImageUrl();
 				}
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
-				productDTO.setImages(images);
+				productDTO.setImage(image);
 				// Thêm productDTO vào danh sách
 				productDTOs.add(productDTO);
 			}
@@ -192,6 +188,7 @@ public class ProductClientService {
    // còn sử dụng
 	public List<ProductDTO> getALLProduct(User user) {
 		List<ProductDTO> productDTOs = new ArrayList<>();
+		String image = null;
 		try {
 			List<Product> products = productJPA.findAll();
 			if (products == null || products.isEmpty()) {
@@ -283,9 +280,7 @@ public class ProductClientService {
 						colors.add(color);
 						sizes.add(size);
 					}
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+					image = productVer.getImage().getImageUrl();
 					// Cập nhật minPrice và maxPrice
 					if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
 						minPrice = productVer.getRetailPrice();
@@ -300,7 +295,7 @@ public class ProductClientService {
 				productDTO.setSizes(sizes);
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
-				productDTO.setImages(images);
+				productDTO.setImage(image);
 				// Thêm productDTO vào danh sách
 				productDTOs.add(productDTO);
 			}
@@ -315,6 +310,7 @@ public class ProductClientService {
 			String colorc, String sizec, String sort, Pageable pageable) {
 
 		List<ProductDTO> productDTOs = new ArrayList<>();
+		String image = null;
 		try {
 			List<Product> products = productJPA.findAll();
 			if (products == null || products.isEmpty()) {
@@ -397,10 +393,7 @@ public class ProductClientService {
 						}
 					}
 
-					// Xử lý hình ảnh
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+					image = productVer.getImage().getImageUrl();
 
 					// Cập nhật minPrice và maxPrice
 					if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
@@ -417,7 +410,7 @@ public class ProductClientService {
 				productDTO.setSizes(sizes);
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
-				productDTO.setImages(images);
+				productDTO.setImage(image);
 
 				// Kiểm tra điều kiện lọc theo minPricec và maxPricec
 				if (minPricec != null && maxPricec != null) {
