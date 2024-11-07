@@ -28,7 +28,7 @@ public class CartService {
 
 	@Autowired
 	UploadService uploadService;
-	
+
 	@Autowired
 	ProductService productService;
 
@@ -49,26 +49,32 @@ public class CartService {
 
 		for (CartProduct cart : cartProducts) {
 			List<Attribute> attributes = new ArrayList<>();
-			CartItemResponse item = new CartItemResponse(cart.getCartPrdId(), cart.getProductVersionBean().getId(),
-					cart.getProductVersionBean().getProduct().isStatus(), cart.getProductVersionBean().getQuantity(),
-					cart.getProductVersionBean().getProduct().getProductName(), cart.getProductVersionBean().getRetailPrice(),
-					cart.getQuantity());
+			boolean activeVersion = cart.getProductVersionBean().getProduct().isStatus() && cart.getProductVersionBean().isStatus();
 			
-			ProductDetailResponse productDetail = productService.getProductDetail(cart.getProductVersionBean().getProduct().getProductId());
+			CartItemResponse item = new CartItemResponse(cart.getCartPrdId(), cart.getProductVersionBean().getId(),
+					activeVersion, cart.getProductVersionBean().getQuantity(),
+					cart.getProductVersionBean().getProduct().getProductName(),
+					cart.getProductVersionBean().getRetailPrice(), cart.getQuantity());
+
+			ProductDetailResponse productDetail = productService
+					.getProductDetail(cart.getProductVersionBean().getProduct().getProductId());
 			productDetail.setProduct(null);
 			item.setProductDetail(productDetail);
-			
+
 			List<AttributeOptionsVersion> optionVersions = cart.getProductVersionBean().getAttributeOptionsVersions();
 			optionVersions.stream().forEach(optionVersion -> {
-			    Attribute attribute = new Attribute(
-			        optionVersion.getAttributeOption().getAttribute().getAttributeName(),
-			        optionVersion.getAttributeOption().getAttributeValue()
-			    );
-			    attributes.add(attribute);
+				Attribute attribute = new Attribute(0,
+						optionVersion.getAttributeOption() != null
+								? optionVersion.getAttributeOption().getAttribute().getAttributeName()
+								: null,
+						optionVersion.getAttributeOption() != null
+								? optionVersion.getAttributeOption().getAttributeValue()
+								: null);
+				attributes.add(attribute);
 			});
-			
+
 			item.setAttributes(attributes);
-			
+
 			String image = cart.getProductVersionBean().getProduct().getProductImg();
 			item.setImage(uploadService.getUrlImage(image));
 

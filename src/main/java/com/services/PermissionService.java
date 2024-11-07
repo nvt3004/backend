@@ -60,6 +60,10 @@ public class PermissionService {
         return maPerJPA.findPermissionsByUserId(userId);
     }
 
+    public List<Permission> getAllPermission() {
+        return permissionRepo.findAll();
+    }
+
     public AuthDTO addPermissions(AuthDTO registrationRequest, @RequestBody List<String> permissions) {
         AuthDTO resp = new AuthDTO();
 

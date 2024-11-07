@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,12 +25,12 @@ import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ProductService;
 import com.utils.GetURLImg;
+import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("api/home")
-@CrossOrigin("*")
 public class ProductHomeController {
 
 	@Autowired
@@ -40,6 +41,9 @@ public class ProductHomeController {
 
 	@Autowired
 	ProductService productService;
+	
+	@Autowired
+	UploadService uploadService;
 
 	@GetMapping("/products")
 	public ResponseEntity<ResponseAPI<PageCustom<ProductHomeResponse>>> getAllProduct(
@@ -47,6 +51,7 @@ public class ProductHomeController {
 		ResponseAPI<PageCustom<ProductHomeResponse>> response = new ResponseAPI<>();
 		PageCustom<ProductHomeResponse> products = null;
 		int size = 10;
+		
 
 		if (!page.isPresent()) {
 			products = productService.getProducts(1, size);

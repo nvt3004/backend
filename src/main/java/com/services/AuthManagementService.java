@@ -1,13 +1,21 @@
 package com.services;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import com.models.AuthDTO;
+import com.models.EmailRequestDTO;
+import com.entities.User;
+import com.entities.Cart;
+import com.entities.Role;
+import com.entities.UserRole;
+import com.errors.ApiResponse;
+import com.repositories.RoleJPA;
+import com.repositories.UsersJPA;
+import com.utils.DateTimeUtil;
+import com.utils.JWTUtils;
+import com.utils.TokenBlacklist;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import com.repositories.UserRoleJPA;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,26 +27,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import com.entities.Cart;
-import com.entities.Role;
-import com.entities.User;
-import com.entities.UserRole;
-import com.models.AuthDTO;
-import com.models.EmailRequestDTO;
-import com.repositories.RoleJPA;
-import com.repositories.UserJPA;
-import com.repositories.UserRoleJPA;
-import com.utils.DateTimeUtil;
-import com.utils.JWTUtils;
-import com.utils.TokenBlacklist;
-
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthManagementService {
 
     @Autowired
-    private UserJPA userRepo;
+    private UsersJPA usersRepo;
     @Autowired
     private UserRoleJPA userRoleRepo;
     @Autowired
@@ -56,7 +58,7 @@ public class AuthManagementService {
 
     @Autowired
     private CartService cartRepo;
-    
+
     public AuthDTO register(AuthDTO registrationRequest) {
         AuthDTO resp = new AuthDTO();
 
@@ -73,12 +75,12 @@ public class AuthManagementService {
             }
 
             if (username.matches(emailRegex)) {
-                Optional<User> existingUser = userRepo.findByEmailAndProvider(username, "Guest");
+                Optional<User> existingUser = usersRepo.findByEmailAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Email already exists with provider Guest");
                 }
             } else if (username.matches(phoneRegex)) {
-                Optional<User> existingUser = userRepo.findByPhoneAndProvider(username, "Guest");
+                Optional<User> existingUser = usersRepo.findByPhoneAndProvider(username, "Guest");
                 if (existingUser.isPresent()) {
                     throw new IllegalArgumentException("Phone number already exists with provider Guest");
                 }
@@ -110,7 +112,7 @@ public class AuthManagementService {
             ourUser.setProvider("Guest");
             ourUser.setStatus((byte) 1);
             ourUser.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
-            User ourUsersResult = userRepo.save(ourUser);
+            User ourUsersResult = usersRepo.save(ourUser);
 
             List<String> roles = Collections.singletonList("User");
             List<UserRole> userRoles = roles.stream().map(roleName -> {
@@ -148,22 +150,23 @@ public class AuthManagementService {
         AuthDTO response = new AuthDTO();
         try {
             System.out.println("Login attempt for username: " + loginRequest.getUsername());
-    
+
             // Kiểm tra người dùng
-            Optional<User> optionalUser = userRepo.findByUsernameAndProvider(loginRequest.getUsername(), "Guest");
+            Optional<User> optionalUser = usersRepo.findByUsernameAndProvider(loginRequest.getUsername(), "Guest");
             if (optionalUser.isEmpty()) {
                 response.setStatusCode(401);
                 response.setError("Login fail: username or password incorrect");
                 System.out.println("User not found: " + loginRequest.getUsername());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-    
+
             User user = optionalUser.get();
-    
+
             // Xác thực
             try {
                 authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                        new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                                loginRequest.getPassword()));
                 System.out.println("Authentication successful for user: " + user.getEmail());
             } catch (BadCredentialsException e) {
                 response.setStatusCode(401);
@@ -171,13 +174,13 @@ public class AuthManagementService {
                 System.out.println("Authentication failed: " + e.getMessage());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-    
+
             // Tạo JWT token
-            long expirationTime = 30 * 60 * 1000; 
-            String jwt = jwtUtils.generateToken(user, "login",expirationTime);
+            long expirationTime = 30 * 60 * 1000;
+            String jwt = jwtUtils.generateToken(user, "login", expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
-    
+
             response.setStatusCode(200);
             response.setToken(jwt);
             response.setRefreshToken(refreshToken);
@@ -189,10 +192,10 @@ public class AuthManagementService {
                     .map(Role::getRoleName)
                     .collect(Collectors.toList()));
             response.setTokenType(tokenPurpose);
-            
+
             System.out.println("Login successful for user: " + user.getEmail());
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.out.println("Username: " + loginRequest.getUsername());
             System.out.println("An error occurred: " + e.getMessage());
@@ -202,16 +205,15 @@ public class AuthManagementService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    
 
     public AuthDTO refreshToken(AuthDTO refreshTokenReqiest) {
         AuthDTO response = new AuthDTO();
         try {
             String ourEmail = jwtUtils.extractUsername(refreshTokenReqiest.getToken());
-            User users = userRepo.findByEmail(ourEmail).orElseThrow();
+            User users = usersRepo.findByEmail(ourEmail).orElseThrow();
             if (jwtUtils.isTokenValid(refreshTokenReqiest.getToken(), users)) {
-                long expirationTime = 7 * 24 * 60 * 60 * 1000; 
-                var jwt = jwtUtils.generateToken(users, "login",expirationTime);
+                long expirationTime = 7 * 24 * 60 * 60 * 1000;
+                var jwt = jwtUtils.generateToken(users, "login", expirationTime);
                 response.setStatusCode(200);
                 response.setToken(jwt);
                 response.setRefreshToken(refreshTokenReqiest.getToken());
@@ -243,7 +245,7 @@ public class AuthManagementService {
             }
 
             try {
-                List<User> result = userRepo.findAll();
+                List<User> result = usersRepo.findAll();
                 if (!result.isEmpty()) {
                     reqRes.setUserList(result);
                     reqRes.setStatusCode(200);
@@ -270,16 +272,16 @@ public class AuthManagementService {
         try {
             String authorizationHeader = request.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); 
-                
+                String token = authorizationHeader.substring(7);
+
                 String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
                 if (!"login".equals(tokenPurpose)) {
                     reqRes.setStatusCode(403);
                     reqRes.setMessage("Invalid token purpose");
                     return reqRes;
                 }
-    
-                User usersById = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User Not found"));
+
+                User usersById = usersRepo.findById(id).orElseThrow(() -> new RuntimeException("User Not found"));
                 reqRes.setListData(usersById);
                 reqRes.setStatusCode(200);
                 reqRes.setMessage("Users with id '" + id + "' found successfully");
@@ -293,25 +295,24 @@ public class AuthManagementService {
         }
         return reqRes;
     }
-    
 
     public AuthDTO deleteUser(HttpServletRequest request, Integer userId) {
         AuthDTO reqRes = new AuthDTO();
         try {
             String authorizationHeader = request.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); 
-                
+                String token = authorizationHeader.substring(7);
+
                 String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
                 if (!"login".equals(tokenPurpose)) {
                     reqRes.setStatusCode(403);
                     reqRes.setMessage("Invalid token purpose");
                     return reqRes;
                 }
-    
-                Optional<User> userOptional = userRepo.findById(userId);
+
+                Optional<User> userOptional = usersRepo.findById(userId);
                 if (userOptional.isPresent()) {
-                    userRepo.deleteById(userId);
+                    usersRepo.deleteById(userId);
                     reqRes.setStatusCode(200);
                     reqRes.setMessage("User deleted successfully");
                 } else {
@@ -330,37 +331,38 @@ public class AuthManagementService {
         return reqRes;
     }
 
-
     public AuthDTO updateUser(HttpServletRequest request, Integer userId, User updatedUser) {
         AuthDTO reqRes = new AuthDTO();
         try {
             String authorizationHeader = request.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); 
-                
+                String token = authorizationHeader.substring(7);
+
                 String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
                 if (!"login".equals(tokenPurpose)) {
                     reqRes.setStatusCode(403);
                     reqRes.setMessage("Invalid token purpose");
                     return reqRes;
                 }
-    
-                Optional<User> userOptional = userRepo.findById(userId);
+
+                Optional<User> userOptional = usersRepo.findById(userId);
                 if (userOptional.isPresent()) {
                     User existingUser = userOptional.get();
 
                     if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
                         existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
                     }
- 
+
                     existingUser.setEmail(updatedUser.getEmail());
                     existingUser.setFullName(updatedUser.getFullName());
-                    existingUser.setUsername(updatedUser.getEmail());
+                    // existingUser.setUsername(updatedUser.getUsername());
                     existingUser.setPhone(updatedUser.getPhone());
                     existingUser.setImage(updatedUser.getImage());
-                    existingUser.setStatus(updatedUser.getStatus());
-    
-                    User savedUser = userRepo.save(existingUser);
+                    existingUser.setGender(updatedUser.getGender());
+                    existingUser.setBirthday(updatedUser.getBirthday());
+                    existingUser.setStatus((byte)1);
+
+                    User savedUser = usersRepo.save(existingUser);
                     reqRes.setListData(savedUser);
                     reqRes.setStatusCode(200);
                     reqRes.setMessage("User updated successfully");
@@ -383,51 +385,83 @@ public class AuthManagementService {
     public AuthDTO loginSocial(User newUser) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            if (userRepo.findByUsername(newUser.getUsername()).isPresent()
-                    && newUser.getProvider().equalsIgnoreCase("facebook")) {
-                reqRes.setStatusCode(200);
-                reqRes.setMessage("Login Facebook successfully");
-                return reqRes;
+            Optional<User> optionalUser = usersRepo.findByUsername(newUser.getUsername());
+    
+            if (optionalUser.isPresent()) {
+                User user = optionalUser.get();
+                if (newUser.getProvider().equalsIgnoreCase("facebook") || newUser.getProvider().equalsIgnoreCase("google")) {
+                    reqRes.setStatusCode(200);
+                    reqRes.setMessage("Login " + newUser.getProvider() + " successfully");
+    
+                    // Tạo JWT token
+                    long expirationTime = 30 * 60 * 1000;
+                    String jwt = jwtUtils.generateToken(user, "login", expirationTime);
+                    String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
+                    String tokenPurpose = jwtUtils.extractPurpose(jwt);
+    
+                    reqRes.setToken(jwt);
+                    reqRes.setRefreshToken(refreshToken);
+                    reqRes.setFullName(user.getFullName());
+                    reqRes.setEmail(user.getEmail());
+                    reqRes.setPhone(user.getPhone());
+                    reqRes.setUsername(user.getUsername());
+                    reqRes.setRoles(user.getUserRoles().stream()
+                        .map(UserRole::getRole)
+                        .map(Role::getRoleName)
+                        .collect(Collectors.toList()));
+                    reqRes.setTokenType(tokenPurpose);
+    
+                    return reqRes;
+                }
             }
-            if (userRepo.findByUsername(newUser.getUsername()).isPresent()
-                    && newUser.getProvider().equalsIgnoreCase("google")) {
-                reqRes.setStatusCode(200);
-                reqRes.setMessage("Login Google successfully");
-                return reqRes;
-            }
+    
+            // Nếu người dùng chưa tồn tại, tạo mới
             newUser.setStatus((byte) 1);
             newUser.setCreateDate(datecurrent);
-
-            User savedUser = userRepo.save(newUser);
-
+            User savedUser = usersRepo.save(newUser);
+    
+            // Gán vai trò mặc định cho người dùng mới
             List<String> roles = Collections.singletonList("User");
-
             List<UserRole> userRoles = roles.stream().map(roleName -> {
                 Role role = roleRepo.findByRoleName(roleName)
-                        .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+                    .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
                 UserRole userRole = new UserRole();
-                userRole.setUser(newUser);
+                userRole.setUser(savedUser);
                 userRole.setRole(role);
                 return userRole;
             }).collect(Collectors.toList());
-
+    
             userRoleRepo.saveAll(userRoles);
-
+    
+            // Tạo JWT token cho người dùng mới
+            long expirationTime = 30 * 60 * 1000;
+            String jwt = jwtUtils.generateToken(savedUser, "login", expirationTime);
+            String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), savedUser);
+            String tokenPurpose = jwtUtils.extractPurpose(jwt);
+    
             reqRes.setListData(savedUser);
-            reqRes.setStatusCode(201); 
+            reqRes.setStatusCode(201);
             reqRes.setMessage("User created successfully");
-
+            reqRes.setToken(jwt);
+            reqRes.setRefreshToken(refreshToken);
+            reqRes.setFullName(savedUser.getFullName());
+            reqRes.setEmail(savedUser.getEmail());
+            reqRes.setPhone(savedUser.getPhone());
+            reqRes.setRoles(roles);
+            reqRes.setTokenType(tokenPurpose);
+    
         } catch (Exception e) {
             reqRes.setStatusCode(500);
             reqRes.setMessage("Error occurred while creating user: " + e.getMessage());
         }
         return reqRes;
     }
+    
 
     public AuthDTO getMyInfo(String username) {
         AuthDTO reqRes = new AuthDTO();
         try {
-            Optional<User> userOptional = userRepo.findByUsername(username);
+            Optional<User> userOptional = usersRepo.findByUsername(username);
             if (userOptional.isPresent()) {
                 System.out.println(userOptional.get().getEmail());
             } else {
@@ -435,6 +469,8 @@ public class AuthManagementService {
             }
             if (userOptional.isPresent()) {
                 reqRes.setListData(userOptional.get());
+                System.out.println("So dien thoai"+userOptional.get().getPhone());
+                System.out.println("Ngay sinh"+userOptional.get().getBirthday());
                 reqRes.setStatusCode(200);
                 reqRes.setMessage("successful");
             } else {
@@ -451,77 +487,100 @@ public class AuthManagementService {
 
     }
 
-    public ResponseEntity<String> sendResetPasswordEmail(EmailRequestDTO emailRequest) {
+    public ResponseEntity<ApiResponse<User>> sendResetPasswordEmail(EmailRequestDTO emailRequest) {
+        ApiResponse<User> response = new ApiResponse<>();
         String email = emailRequest.getTo();
-        Optional<User> userOptional = userRepo.findByEmailAndProvider(email,"Guest");
+        Optional<User> userOptional = usersRepo.findByEmailAndProvider(email, "Guest");
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            long expirationTime = 2 * 60 * 1000;
+            long expirationTime = 2 * 60 * 1000; 
             String jwt = jwtUtils.generateToken(user, "reset-password", expirationTime);
 
-            userRepo.save(user);
+            usersRepo.save(user);
 
             String resetLink = "http://localhost:3000/auth/reset-password?token=" + jwt;
 
             mailService.sendEmail(email, "Reset Password", "Click the link to reset your password: " + resetLink);
 
-            return ResponseEntity.ok("Reset password email sent successfully");
+            response.setErrorCode(200);
+            response.setMessage("Email đã được gửi thành công");
+            response.setData(user);
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(404).body("Email not found");
+            response.setErrorCode(404);
+            response.setMessage("Email không tồn tại");
+            response.setData(null); // Hoặc có thể bỏ qua nếu không cần
+            return ResponseEntity.status(404).body(response);
         }
     }
 
-    public ResponseEntity<String> resetPassword(Map<String, String> payload) {
+    public ResponseEntity<ApiResponse<User>> resetPassword(Map<String, String> payload) {
         String token = payload.get("token");
         String newPassword = payload.get("newPassword");
 
         String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
 
+        ApiResponse<User> response = new ApiResponse<>(); 
+
         if (token == null) {
-            return ResponseEntity.status(400).body("Token is required");
+            response.setErrorCode(400);
+            response.setMessage("Token is required");
+            return ResponseEntity.badRequest().body(response);
         }
 
         String username = jwtUtils.extractUsername(token);
         if (username == null || !jwtUtils.isTokenValid(token,
                 new org.springframework.security.core.userdetails.User(username, "", new ArrayList<>()))) {
-            return ResponseEntity.status(400).body("Invalid or expired token");
+            response.setErrorCode(400);
+            response.setMessage("Invalid or expired token");
+            return ResponseEntity.badRequest().body(response);
         }
 
         String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
         if (!"reset-password".equals(tokenPurpose)) {
-            return ResponseEntity.status(403).body("Invalid token purpose for password reset");
+            response.setErrorCode(403);
+            response.setMessage("Invalid token purpose for password reset");
+            return ResponseEntity.status(403).body(response);
         }
 
-        System.out.println("Chưa lỗi nè");
-
-        Optional<User> userOptional = userRepo.findByEmailAndProvider(username,"Guest");
+        Optional<User> userOptional = usersRepo.findByEmailAndProvider(username, "Guest");
         if (userOptional.isEmpty()) {
-            return ResponseEntity.status(404).body("User not found");
+            response.setErrorCode(404);
+            response.setMessage("User not found");
+            return ResponseEntity.status(404).body(response);
         }
 
         if (passwordEncoder.matches(newPassword, userOptional.get().getPassword())) {
-            return ResponseEntity.status(400).body("New password cannot be the same as the old password");
+            response.setErrorCode(400);
+            response.setMessage("New password cannot be the same as the old password");
+            return ResponseEntity.badRequest().body(response);
         }
 
         if (newPassword == null || newPassword.isEmpty()) {
-            return ResponseEntity.status(400).body("New password is required");
+            response.setErrorCode(400);
+            response.setMessage("New password is required");
+            return ResponseEntity.badRequest().body(response);
         }
 
         if (!newPassword.matches(passwordRegex)) {
-            return ResponseEntity.status(400).body(
+            response.setErrorCode(400);
+            response.setMessage(
                     "Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
+            return ResponseEntity.badRequest().body(response);
         }
 
         User user = userOptional.get();
         user.setPassword(passwordEncoder.encode(newPassword));
-        userRepo.save(user);
+        usersRepo.save(user);
 
         TokenBlacklist.blacklistToken(token);
 
-        System.out.println(token);
+        response.setErrorCode(200);
+        response.setMessage("Password reset successfully");
+        response.setData(user); 
 
-        return ResponseEntity.ok("Password reset successfully");
+        return ResponseEntity.ok(response);
     }
 
     public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token) {
@@ -543,7 +602,5 @@ public class AuthManagementService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-
-
 
 }

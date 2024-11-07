@@ -33,7 +33,6 @@ import com.utils.UploadService;
 
 @RestController
 @RequestMapping("/api/admin/reply")
-@CrossOrigin("*")
 public class ReplyController {
 	@Autowired
 	AuthService authService;

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +41,6 @@ import com.utils.UploadService;
 
 @RestController
 @RequestMapping("/api/staff/product")
-@CrossOrigin("*")
 public class ProductController {
 	@Autowired
 	AuthService authService;
@@ -107,10 +107,10 @@ public class ProductController {
 		// ResponseAPI<Boolean> responseValid = validProduct(productModel);
 
 		// if (!responseValid.getData()) {
-		// 	response.setCode(responseValid.getCode());
-		// 	response.setMessage(responseValid.getMessage());
+		// response.setCode(responseValid.getCode());
+		// response.setMessage(responseValid.getMessage());
 
-		// 	return ResponseEntity.status(responseValid.getCode()).body(response);
+		// return ResponseEntity.status(responseValid.getCode()).body(response);
 		// }
 
 		Product productSaved = productService.createProduct(productModel);
@@ -124,7 +124,8 @@ public class ProductController {
 
 	@PutMapping("/update")
 	public ResponseEntity<ResponseAPI<Boolean>> updateProduct(
-			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody com.models.ProductDTO productModel) {
+			@RequestHeader("Authorization") Optional<String> authHeader,
+			@RequestBody com.models.ProductDTO productModel) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String token = authService.readTokenFromHeader(authHeader);
@@ -169,7 +170,7 @@ public class ProductController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		productService.updateProduct(productModel);
+		productService.updateProduct(productModel, temp);
 
 		response.setCode(200);
 		response.setMessage("Success");

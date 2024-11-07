@@ -12,9 +12,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductVersionResponse {
 	private int id;
+	private int idProduct;
 	private String versionName;
 	private BigDecimal retailPrice;
 	private BigDecimal wholesalePrice;
+	private boolean active;
 	private int quantity;
 	private ImageResponse image;
 	private List<Attribute> attributes;

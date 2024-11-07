@@ -39,7 +39,7 @@ public class Product implements Serializable {
 	@JsonManagedReference("product-productCategories")
 	private List<ProductCategory> productCategories;
 
-	@OneToMany(mappedBy = "product")
+	@OneToMany(fetch = FetchType.EAGER,mappedBy = "product")
 	@JsonManagedReference("product-productSales")
 	private List<ProductSale> productSales;
 

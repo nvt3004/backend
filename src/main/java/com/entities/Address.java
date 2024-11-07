@@ -35,6 +35,7 @@ public class Address implements Serializable {
     // bi-directional many-to-one association to User
     @ManyToOne
     @JsonBackReference("user-addresses")
+    @JoinColumn(name="user_id")
     private User user;
 
     public Address() {
