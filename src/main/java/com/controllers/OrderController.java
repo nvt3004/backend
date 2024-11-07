@@ -53,7 +53,7 @@ public class OrderController {
 	private JWTService jwtService;
 
 	@GetMapping("/staff/orders")
-	@PreAuthorize("hasPermission(#userId, 'ORDER_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userId, 'View Orders')")
 	public ResponseEntity<ApiResponse<?>> getAllOrders(
 			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
@@ -174,7 +174,7 @@ public class OrderController {
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {
 			errorResponse.setErrorCode(500);
-			errorResponse.setMessage("An error occurred while retrieving orders"+e);
+			errorResponse.setMessage("An error occurred while retrieving orders "+e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 	}

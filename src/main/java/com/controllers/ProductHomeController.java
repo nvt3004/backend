@@ -44,7 +44,6 @@ public class ProductHomeController {
 	
 	@Autowired
 	UploadService uploadService;
-	
 
 	@GetMapping("/products")
 	public ResponseEntity<ResponseAPI<PageCustom<ProductHomeResponse>>> getAllProduct(
