@@ -15,6 +15,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
+import com.entities.Image;
 import com.entities.ProductVersion;
 import com.entities.Receipt;
 import com.entities.ReceiptDetail;
@@ -27,12 +28,10 @@ import com.models.ReceiptDTO;
 import com.models.ReceiptInfoDTO;
 import com.repositories.ReceiptDetailJPA;
 import com.repositories.ReceiptJPA;
+import com.utils.UploadService;
 
 @Service
 public class ReceiptService {
-//
-//	@Autowired
-//	private WarehousJPA warehousJpa;
 
 	@Autowired
 	private ReceiptJPA receiptJpa;
@@ -45,6 +44,9 @@ public class ReceiptService {
 
 	@Autowired
 	private SupplierService supplierService;
+	
+	@Autowired
+	private UploadService uploadService;
 
 	public Optional<Receipt> getWarehousById(int id) {
 		return receiptJpa.findById(id);
@@ -95,7 +97,13 @@ public class ReceiptService {
 			ReceiptDTO.ProductVersionDTO productDTO = receiptDTO.new ProductVersionDTO();
 			ProductVersion productVersion = detail.getProductVersion();
 			if (productVersion != null) {
+				Image images = productVersion.getImage();
+				String imageUrl = null;
+				if (images != null) {
+					imageUrl = images.getImageUrl();
+				}
 				productDTO.setProductVersionId(productVersion.getId());
+				productDTO.setVersionImage(uploadService.getUrlImage(imageUrl));
 				productDTO.setProductVersionName(productVersion.getVersionName());
 			}
 			dto.setProductVersionDTO(productDTO);

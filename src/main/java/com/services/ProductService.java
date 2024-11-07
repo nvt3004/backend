@@ -147,15 +147,15 @@ public class ProductService {
 			version.setRetailPrice(vs.getRetailPrice());
 			version.setWholesalePrice(vs.getWholesalePrice());
 			version.setQuantity(vs.getQuantity());
-			if (!vs.getImages().isEmpty()) {
-				version.setImages(vs.getImages().stream().map(img -> {
-					ImageResponse imgres = new ImageResponse();
-					imgres.setId(img.getImageId());
-					imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
-
-					return imgres;
-				}).toList());
+			if (vs.getImage() != null) {
+			    Image img = vs.getImage();
+			    ImageResponse imgres = new ImageResponse();
+			    imgres.setId(img.getImageId());
+			    imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
+			    
+			    version.setImage(imgres);
 			}
+
 			List<Attribute> attributes = getAllAttributeByVersion(vs);
 			version.setAttributes(attributes);
 
@@ -201,15 +201,17 @@ public class ProductService {
 			Version versionDto = new Version();
 
 			List<Attribute> attributes = getAllAttributeByVersion(vs);
-			List<String> images = vs.getImages().stream().map((img) -> {
-				return img.getImageUrl();
-			}).toList();
+			String imageUrl = null;
+			if (vs.getImage() != null) {
+			    imageUrl = vs.getImage().getImageUrl();
+			}
+
 
 			versionDto.setId(vs.getId());
 			versionDto.setVersionName((vs.getVersionName()));
 			versionDto.setPrice(vs.getRetailPrice());
 			versionDto.setInStock(vs.getQuantity() > 0);
-			versionDto.setImages(images);
+			versionDto.setImage(imageUrl);
 			versionDto.setAttributes(attributes);
 
 			versions.add(versionDto);

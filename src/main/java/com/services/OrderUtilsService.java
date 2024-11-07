@@ -20,7 +20,7 @@ public class OrderUtilsService {
 	            BigDecimal quantity = new BigDecimal(orderDetail.getQuantity());
 	            total = total.add(retailPrice.multiply(quantity));
 	        }
-	        return new BigDecimal(decimalFormat.format(total));
+	        return total;
 	    }
 
 	    public BigDecimal calculateDiscountedPrice(Order order) {

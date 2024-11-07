@@ -31,6 +31,7 @@ public class ReceiptDTO {
     @AllArgsConstructor
     public class ProductVersionDTO {
     	private Integer productVersionId;
+    	private String versionImage;
     	private String productVersionName;
     }
 }

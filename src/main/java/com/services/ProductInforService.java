@@ -80,18 +80,19 @@ public class ProductInforService {
 				List<String> images = new ArrayList<>();
 				for (ProductVersion productVer : productCategory.getProduct().getProductVersions()) {
 
-					// Cập nhật minPrice và maxPrice
-					if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
-						minPrice = productVer.getRetailPrice();
-					}
-					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
-						maxPrice = productVer.getRetailPrice();
-					}
-					// Xử lý danh sách hình ảnh
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+				    if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+				        minPrice = productVer.getRetailPrice();
+				    }
+				    if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+				        maxPrice = productVer.getRetailPrice();
+				    }
+
+				    Image img = productVer.getImage();
+				    if (img != null) {
+				        images.add(img.getImageUrl());
+				    }
 				}
+
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
 				productDTO.setImages(images);
@@ -150,18 +151,20 @@ public class ProductInforService {
 				List<String> images = new ArrayList<>();
 				for (ProductVersion productVer : product.getProductVersions()) {
 
-					// Cập nhật minPrice và maxPrice
-					if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
-						minPrice = productVer.getRetailPrice();
-					}
-					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
-						maxPrice = productVer.getRetailPrice();
-					}
-					// Xử lý danh sách hình ảnh
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+				    // Cập nhật minPrice và maxPrice
+				    if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+				        minPrice = productVer.getRetailPrice();
+				    }
+				    if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+				        maxPrice = productVer.getRetailPrice();
+				    }
+
+				    Image img = productVer.getImage();
+				    if (img != null) {
+				        images.add(img.getImageUrl());
+				    }
 				}
+
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
 				productDTO.setImages(images);
@@ -246,9 +249,10 @@ public class ProductInforService {
 						colors.add(color);
 						sizes.add(size);
 					}
-					for (Image img : productVer.getImages()) {
-						images.add(img.getImageUrl());
-					}
+					Image img = productVer.getImage();
+				    if (img != null) {
+				        images.add(img.getImageUrl());
+				    }
 					// Cập nhật minPrice và maxPrice
 					if (minPrice.equals(BigDecimal.ZERO) || productVer.getRetailPrice().compareTo(minPrice) < 0) {
 						minPrice = productVer.getRetailPrice();

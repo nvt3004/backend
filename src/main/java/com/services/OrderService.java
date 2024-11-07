@@ -254,6 +254,7 @@ public class OrderService {
 		}
 	}
 
+	//Lấy tổng là số lượng của product version cộng với cancel và đã....
 	private Boolean updateProductVersionsForOrder(List<OrderDetail> orderDetailList) {
 		for (OrderDetail orderDetail : orderDetailList) {
 			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {

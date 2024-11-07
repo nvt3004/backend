@@ -16,6 +16,6 @@ public class ProductVersionResponse {
 	private BigDecimal retailPrice;
 	private BigDecimal wholesalePrice;
 	private int quantity;
-	private List<ImageResponse> images;
+	private ImageResponse image;
 	private List<Attribute> attributes;
 }
