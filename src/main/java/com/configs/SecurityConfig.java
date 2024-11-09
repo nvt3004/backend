@@ -49,7 +49,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**")
+								"api/getImage/**","/api/home/**","/api/vnp/**", "/images/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")

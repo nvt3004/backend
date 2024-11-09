@@ -106,4 +106,30 @@ public class VersionService {
 			attributeOptionsVersionJPA.save(mapping);
 		}
 	}
+	
+	public boolean isExitVersionInProduct(Product product, List<Attribute> attributeRes) {
+		boolean reslut = false;
+		for (ProductVersion vs : product.getProductVersions()) {
+			List<AttributeOptionsVersion> opvs = vs.getAttributeOptionsVersions();
+			int lengthOption = opvs.size();
+			int countCheck = 0;
+			
+			for (AttributeOptionsVersion opv : opvs) {
+				AttributeOption attributeOption = opv.getAttributeOption();
+				for (Attribute pdres : attributeRes) {
+					if (attributeOption.getId() == pdres.getId()) {
+						countCheck += 1;
+					}
+				}
+			}
+			
+			if(lengthOption > 0 && countCheck == lengthOption) {
+				reslut = true;
+				break;
+			}
+		}
+		
+		return reslut;
+	}
+	
 }

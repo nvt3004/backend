@@ -142,7 +142,7 @@ public class ProductService {
 
 		List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
 			ProductVersionResponse version = new ProductVersionResponse();
-
+		System.out.println("Id version:------------ "+vs.getId());
 			version.setId(vs.getId());
 			version.setVersionName(vs.getVersionName());
 			version.setRetailPrice(vs.getRetailPrice());
