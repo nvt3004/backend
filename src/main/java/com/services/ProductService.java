@@ -400,6 +400,7 @@ public class ProductService {
 			version.setVersionName(vs.getVersionName());
 			version.setRetailPrice(vs.getRetalPrice());
 			version.setWholesalePrice(vs.getWholesalePrice());
+			version.setStatus(true);
 
 			ProductVersion versionSaved = productVersionJPA.save(version);
 
