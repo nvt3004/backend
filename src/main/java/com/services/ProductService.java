@@ -70,6 +70,9 @@ public class ProductService {
 
 	@Autowired
 	ImageJPA imageJPA;
+	
+	@Autowired 
+	VersionService versionService;
 
 	@Autowired
 	AttributeOptionsVersionJPA attributeOptionsVersionJPA;
@@ -82,6 +85,9 @@ public class ProductService {
 
 	@Autowired
 	ProductCategoryJPA productCategoryJPA;
+	
+	@Autowired
+	VersionService vsService;
 
 	public PageCustom<ProductHomeResponse> getProducts(int page, int size) {
 		return productCustomJPA.getAllProducts(page, size);
@@ -142,12 +148,14 @@ public class ProductService {
 
 		List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
 			ProductVersionResponse version = new ProductVersionResponse();
-		System.out.println("Id version:------------ "+vs.getId());
+			int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
 			version.setId(vs.getId());
 			version.setVersionName(vs.getVersionName());
 			version.setRetailPrice(vs.getRetailPrice());
 			version.setWholesalePrice(vs.getWholesalePrice());
-			version.setQuantity(vs.getQuantity());
+			version.setQuantity(stockQuantity);
+			version.setActive(vs.isStatus() && product.isStatus());
+			
 			if (vs.getImage() != null) {
 			    Image img = vs.getImage();
 			    ImageResponse imgres = new ImageResponse();
@@ -200,6 +208,7 @@ public class ProductService {
 
 		for (ProductVersion vs : product.getProductVersions()) {
 			Version versionDto = new Version();
+			int stock = vsService.getTotalStockQuantityVersion(vs.getId());
 
 			List<Attribute> attributes = getAllAttributeByVersion(vs);
 			String imageUrl = null;
@@ -211,7 +220,8 @@ public class ProductService {
 			versionDto.setId(vs.getId());
 			versionDto.setVersionName((vs.getVersionName()));
 			versionDto.setPrice(vs.getRetailPrice());
-			versionDto.setInStock(vs.getQuantity() > 0);
+			versionDto.setQuantity(stock);
+			versionDto.setActive(vs.isStatus() && product.isStatus());
 			versionDto.setImage(imageUrl);
 			versionDto.setAttributes(attributes);
 
