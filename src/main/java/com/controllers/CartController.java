@@ -429,7 +429,7 @@ public class CartController {
 		Order orderSaved = orderService.createOrderCart(orderEntity);
 
 		if (coupon != null) {
-			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId());
+			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId(), user.getUserId());
 
 			if (temp != null) {
 				temp.setStatus(false);

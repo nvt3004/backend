@@ -140,22 +140,22 @@ public class ProductService {
             return cat;
         }).toList());
 
-        List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
-            ProductVersionResponse version = new ProductVersionResponse();
-
-            version.setId(vs.getId());
-            version.setVersionName(vs.getVersionName());
-            version.setRetailPrice(vs.getRetailPrice());
-            version.setWholesalePrice(vs.getWholesalePrice());
-            version.setQuantity(vs.getQuantity());
-            if (vs.getImage() != null) {
-                Image img = vs.getImage();
-                ImageResponse imgres = new ImageResponse();
-                imgres.setId(img.getImageId());
-                imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
-
-                version.setImage(imgres);
-            }
+		List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
+			ProductVersionResponse version = new ProductVersionResponse();
+		System.out.println("Id version:------------ "+vs.getId());
+			version.setId(vs.getId());
+			version.setVersionName(vs.getVersionName());
+			version.setRetailPrice(vs.getRetailPrice());
+			version.setWholesalePrice(vs.getWholesalePrice());
+			version.setQuantity(vs.getQuantity());
+			if (vs.getImage() != null) {
+			    Image img = vs.getImage();
+			    ImageResponse imgres = new ImageResponse();
+			    imgres.setId(img.getImageId());
+			    imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
+			    
+			    version.setImage(imgres);
+			}
 
             List<Attribute> attributes = getAllAttributeByVersion(vs);
             version.setAttributes(attributes);

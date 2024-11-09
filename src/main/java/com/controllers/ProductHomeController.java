@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.Product;
+import com.entities.ProductVersion;
 import com.errors.ResponseAPI;
+import com.repositories.ProductVersionJPA;
 import com.responsedto.PageCustom;
 import com.responsedto.ProductDetailResponse;
 import com.responsedto.ProductHomeResponse;
@@ -44,6 +46,9 @@ public class ProductHomeController {
 	
 	@Autowired
 	UploadService uploadService;
+	
+	@Autowired
+	ProductVersionJPA vsJPA;
 
 	@GetMapping("/products")
 	public ResponseEntity<ResponseAPI<PageCustom<ProductHomeResponse>>> getAllProduct(
@@ -80,6 +85,7 @@ public class ProductHomeController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
+		
 		ProductDetailResponse productDetail = productService.getProductDetail(productId);
 		for (Version v : productDetail.getVersions()) {
 			if (v.getImage() != null) {

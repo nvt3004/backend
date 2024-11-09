@@ -1,6 +1,7 @@
 package com.controllers;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,10 +15,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.entities.AttributeOption;
+import com.entities.AttributeOptionsVersion;
 import com.entities.Product;
 import com.entities.ProductVersion;
 import com.errors.ResponseAPI;
 import com.repositories.ProductVersionJPA;
+import com.responsedto.Attribute;
 import com.responsedto.ProductVersionResponse;
 import com.services.ProductService;
 import com.services.VersionService;
@@ -37,7 +41,6 @@ public class VersionController {
 
 	@PostMapping("/add")
 	public ResponseEntity<ResponseAPI<Boolean>> addVersion(@RequestBody ProductVersionResponse versionModal) {
-		System.out.println("Add version");
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String versionName = versionModal.getVersionName();
@@ -67,6 +70,15 @@ public class VersionController {
 		if (wholesalePrice == null || wholesalePrice.compareTo(BigDecimal.ZERO) <= 0) {
 			response.setCode(999);
 			response.setMessage("Wholesale price invalid!");
+			return ResponseEntity.status(999).body(response);
+		}
+		
+		
+		boolean isExitVersion = versionService.isExitVersionInProduct(product, versionModal.getAttributes());
+
+		if(isExitVersion) {
+			response.setCode(999);
+			response.setMessage("The version attribute already exists!");
 			return ResponseEntity.status(999).body(response);
 		}
 
