@@ -16,6 +16,7 @@ import com.repositories.ImageJPA;
 import com.repositories.ProductVersionJPA;
 import com.responsedto.Attribute;
 import com.responsedto.ProductVersionResponse;
+import com.responsedto.StockQuantityDTO;
 import com.utils.UploadService;
 
 @Service
@@ -34,7 +35,7 @@ public class VersionService {
 
 	public void addVersion(ProductVersionResponse versionModel, Product product) {
 		ProductVersion versionEntity = new ProductVersion();
-		
+
 		versionEntity.setVersionName(versionModel.getVersionName());
 		versionEntity.setRetailPrice(versionModel.getRetailPrice());
 		versionEntity.setWholesalePrice(versionModel.getWholesalePrice());
@@ -54,9 +55,9 @@ public class VersionService {
 		versionEntity.setWholesalePrice(versionModel.getWholesalePrice());
 
 		ProductVersion versionSaved = versionJPA.save(versionEntity);
-		
+
 		String imageName = changeNewImage(versionModel, versionEntity);
-		if(imageName != null) {
+		if (imageName != null) {
 			Image imageEntity = new Image();
 
 			imageEntity.setImageUrl(imageName);
@@ -66,9 +67,7 @@ public class VersionService {
 		}
 	}
 
-
 	private String changeNewImage(ProductVersionResponse versionModel, ProductVersion version) {
-		//ProductVersion version = versionJPA.findById(versionModel.getId()).orElse(null);
 		String imageNameVersion = versionModel.getImage().getName();
 		String fileName = null;
 
@@ -106,14 +105,14 @@ public class VersionService {
 			attributeOptionsVersionJPA.save(mapping);
 		}
 	}
-	
+
 	public boolean isExitVersionInProduct(Product product, List<Attribute> attributeRes) {
 		boolean reslut = false;
 		for (ProductVersion vs : product.getProductVersions()) {
 			List<AttributeOptionsVersion> opvs = vs.getAttributeOptionsVersions();
 			int lengthOption = opvs.size();
 			int countCheck = 0;
-			
+
 			for (AttributeOptionsVersion opv : opvs) {
 				AttributeOption attributeOption = opv.getAttributeOption();
 				for (Attribute pdres : attributeRes) {
@@ -122,14 +121,21 @@ public class VersionService {
 					}
 				}
 			}
-			
-			if(lengthOption > 0 && countCheck == lengthOption) {
+
+			if (lengthOption > 0 && countCheck == lengthOption) {
 				reslut = true;
 				break;
 			}
 		}
-		
+
 		return reslut;
 	}
-	
+
+	public Integer getTotalStockQuantityVersion(int versionId) {
+	    return versionJPA.getTotalStockQuantityVersion(versionId);
+	}
+
+
+
+
 }
