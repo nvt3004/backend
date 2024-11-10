@@ -72,10 +72,11 @@ public class VersionController {
 			response.setMessage("Wholesale price invalid!");
 			return ResponseEntity.status(999).body(response);
 		}
-
+		
+		
 		boolean isExitVersion = versionService.isExitVersionInProduct(product, versionModal.getAttributes());
 
-		if (isExitVersion) {
+		if(isExitVersion) {
 			response.setCode(999);
 			response.setMessage("The version attribute already exists!");
 			return ResponseEntity.status(999).body(response);
@@ -102,14 +103,14 @@ public class VersionController {
 			response.setCode(404);
 			response.setMessage("Version not found!");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (!version.isStatus() || !version.getProduct().isStatus()) {
 			response.setCode(404);
 			response.setMessage("Version not found!");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (versionName.isBlank() || versionName.isEmpty() || versionName == null) {
@@ -148,14 +149,14 @@ public class VersionController {
 			response.setCode(404);
 			response.setMessage("Version not found!");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (!version.isStatus() || !version.getProduct().isStatus()) {
 			response.setCode(404);
 			response.setMessage("Version not found!");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		version.setStatus(false);

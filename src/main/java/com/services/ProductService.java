@@ -68,11 +68,8 @@ public class ProductService {
     @Autowired
     ProductVersionJPA productVersionJPA;
 
-	@Autowired
-	ImageJPA imageJPA;
-	
-	@Autowired 
-	VersionService versionService;
+    @Autowired
+    ImageJPA imageJPA;
 
     @Autowired
     AttributeOptionsVersionJPA attributeOptionsVersionJPA;
@@ -83,11 +80,8 @@ public class ProductService {
     @Autowired
     AttributeService attributeService;
 
-	@Autowired
-	ProductCategoryJPA productCategoryJPA;
-	
-	@Autowired
-	VersionService vsService;
+    @Autowired
+    ProductCategoryJPA productCategoryJPA;
 
     public PageCustom<ProductHomeResponse> getProducts(int page, int size) {
         return productCustomJPA.getAllProducts(page, size);
@@ -148,14 +142,12 @@ public class ProductService {
 
 		List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
 			ProductVersionResponse version = new ProductVersionResponse();
-			int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
+		System.out.println("Id version:------------ "+vs.getId());
 			version.setId(vs.getId());
 			version.setVersionName(vs.getVersionName());
 			version.setRetailPrice(vs.getRetailPrice());
 			version.setWholesalePrice(vs.getWholesalePrice());
-			version.setQuantity(stockQuantity);
-			version.setActive(vs.isStatus() && product.isStatus());
-			
+			version.setQuantity(vs.getQuantity());
 			if (vs.getImage() != null) {
 			    Image img = vs.getImage();
 			    ImageResponse imgres = new ImageResponse();
@@ -206,9 +198,8 @@ public class ProductService {
         productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
         productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
 
-		for (ProductVersion vs : product.getProductVersions()) {
-			Version versionDto = new Version();
-			int stock = vsService.getTotalStockQuantityVersion(vs.getId());
+        for (ProductVersion vs : product.getProductVersions()) {
+            Version versionDto = new Version();
 
             List<Attribute> attributes = getAllAttributeByVersion(vs);
             String imageUrl = null;
@@ -223,13 +214,8 @@ public class ProductService {
             versionDto.setImage(imageUrl);
             versionDto.setAttributes(attributes);
 
-			versionDto.setId(vs.getId());
-			versionDto.setVersionName((vs.getVersionName()));
-			versionDto.setPrice(vs.getRetailPrice());
-			versionDto.setQuantity(stock);
-			versionDto.setActive(vs.isStatus() && product.isStatus());
-			versionDto.setImage(imageUrl);
-			versionDto.setAttributes(attributes);
+            versions.add(versionDto);
+        }
 
         return new ProductDetailResponse(productParrent, versions, productAttributes);
     }
@@ -406,11 +392,8 @@ public class ProductService {
 
     private void saveProductVersion(Product product, List<VersionDTO> versions) {
 
-			version.setProduct(product);
-			version.setVersionName(vs.getVersionName());
-			version.setRetailPrice(vs.getRetalPrice());
-			version.setWholesalePrice(vs.getWholesalePrice());
-			version.setStatus(true);
+        for (VersionDTO vs : versions) {
+            ProductVersion version = new ProductVersion();
 
             version.setProduct(product);
             version.setVersionName(vs.getVersionName());

@@ -53,7 +53,6 @@ import com.services.ProductService;
 import com.services.ProductVersionService;
 import com.services.UserCouponService;
 import com.services.UserService;
-import com.services.VersionService;
 
 @RestController
 @RequestMapping("api/user/cart")
@@ -102,9 +101,6 @@ public class CartController {
 
 	@Autowired
 	UserCouponJPA userCouponJPA;
-	
-	@Autowired 
-	VersionService vsService;
 
 	// @RequestHeader("Authorization") Optional<String> authHeader
 	@PostMapping("/add")
@@ -159,22 +155,13 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
-		int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
 
-		if (stockQuantity <= 0) {
-			response.setCode(422);
-			response.setMessage("Products that exceed the quantity in stock");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-		}
-		
-		if (productCartModel.getQuantity() > stockQuantity) {
-			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-		}
+//		if (productCartModel.getQuantity() > version.getQuantity()) {
+//			response.setCode(422);
+//			response.setMessage("Products that exceed the quantity in stock");
+//
+//			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+//		}
 
 		Cart cartEntity = new Cart();
 		cartEntity.setUser(user);
@@ -398,23 +385,14 @@ public class CartController {
 
 			if (!version.getProduct().isStatus()) {
 				response.setCode(404);
-				response.setMessage(String.format("Product id %s does not exist", detail.getIdVersion()));
+				response.setMessage("Product not found");
 
 				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 			}
 
-			int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
-
-			if (stockQuantity <= 0) {
+			if (detail.getQuantity() > version.getQuantity()) {
 				response.setCode(422);
-				response.setMessage("Products that exceed the quantity in stock");
-
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
-			
-			if (detail.getQuantity() > stockQuantity) {
-				response.setCode(422);
-				response.setMessage("The product version id "+detail.getIdVersion()+" currently has only "+stockQuantity+" versions left");
+				response.setMessage("Exceeded stock quantity");
 
 				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 			}
@@ -588,29 +566,11 @@ public class CartController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		ProductVersion version = versionService.getProductVersionById(cartItemModel.getVersionId());
-		// False: nếu sản phẩm gốc bị xóa hoặc phiên bản sản phẩm này không tồn tại
-		if (!versionService.isValidProductVersion(version)) {
+		if (!cartItem.getProductVersionBean().getProduct().isStatus()) {
 			response.setCode(404);
-			response.setMessage("Products version not found");
+			response.setMessage("Product version not found");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
-		
-		int stockQuantity = vsService.getTotalStockQuantityVersion(cartItem.getProductVersionBean().getId());
-
-		if (stockQuantity <= 0) {
-			response.setCode(422);
-			response.setMessage("Products that exceed the quantity in stock");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-		}
-		
-		if (cartItemModel.getQuantity() > stockQuantity) {
-			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
 		cartItem.setQuantity(cartItemModel.getQuantity());
@@ -675,30 +635,11 @@ public class CartController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		ProductVersion versionCheck = versionService.getProductVersionById(cartItemModel.getVersionId());
-		// False: nếu sản phẩm gốc bị xóa hoặc phiên bản sản phẩm này không tồn tại
-		if (!versionService.isValidProductVersion(versionCheck)) {
+		if (!cartItem.getProductVersionBean().getProduct().isStatus()) {
 			response.setCode(404);
-			response.setMessage("Products version not found");
+			response.setMessage("Product version not found");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
-		
-		
-		int stockQuantity = vsService.getTotalStockQuantityVersion(versionCheck.getId());
-
-		if (stockQuantity <= 0) {
-			response.setCode(422);
-			response.setMessage("Products that exceed the quantity in stock");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-		}
-		
-		if (cartItem.getQuantity() > stockQuantity) {
-			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
-
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
 		ProductVersion version = new ProductVersion();

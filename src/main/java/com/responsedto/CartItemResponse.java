@@ -16,7 +16,6 @@ public class CartItemResponse {
 	private boolean statusVersion;
 	private int inventory;
 	private String productName;
-	private int stockQuantity;
 	private String image;
 	private BigDecimal price;
 	private int quantity;
@@ -24,7 +23,7 @@ public class CartItemResponse {
 	private ProductDetailResponse productDetail;
 	
 	public CartItemResponse(int catrItemId, int versionId, boolean statusVersion, int inventory, String versionName,
-			BigDecimal price, int quantity, int stock, boolean active) {
+			BigDecimal price, int quantity) {
 		this.catrItemId = catrItemId;
 		this.versionId = versionId;
 		this.statusVersion = statusVersion;
@@ -32,8 +31,6 @@ public class CartItemResponse {
 		this.productName = versionName;
 		this.price = price;
 		this.quantity = quantity;
-		this.stockQuantity = stock;
-		this.statusVersion = active;
 	}
 	
 }
