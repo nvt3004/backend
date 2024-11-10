@@ -10,6 +10,7 @@ import com.entities.AttributeOptionsVersion;
 import com.entities.Cart;
 import com.entities.CartProduct;
 import com.entities.Image;
+import com.entities.ProductVersion;
 import com.repositories.CartJPA;
 import com.repositories.UserJPA;
 import com.responsedto.Attribute;
@@ -31,6 +32,9 @@ public class CartService {
 
 	@Autowired
 	ProductService productService;
+	
+	@Autowired
+	VersionService vsService;
 
 	public Cart addCart(Cart cart) {
 		Cart cartTemp = cartJPA.getCartByUser(cart.getUser().getUserId());
@@ -49,12 +53,15 @@ public class CartService {
 
 		for (CartProduct cart : cartProducts) {
 			List<Attribute> attributes = new ArrayList<>();
+			ProductVersion pdvsion = cart.getProductVersionBean();
 			boolean activeVersion = cart.getProductVersionBean().getProduct().isStatus() && cart.getProductVersionBean().isStatus();
+			int stockQuantityVersion = vsService.getTotalStockQuantityVersion(cart.getProductVersionBean().getId());
+			boolean active = pdvsion.isStatus() && pdvsion.getProduct().isStatus();
 			
 			CartItemResponse item = new CartItemResponse(cart.getCartPrdId(), cart.getProductVersionBean().getId(),
 					activeVersion, cart.getProductVersionBean().getQuantity(),
 					cart.getProductVersionBean().getProduct().getProductName(),
-					cart.getProductVersionBean().getRetailPrice(), cart.getQuantity());
+					cart.getProductVersionBean().getRetailPrice(), cart.getQuantity(), stockQuantityVersion, active);
 
 			ProductDetailResponse productDetail = productService
 					.getProductDetail(cart.getProductVersionBean().getProduct().getProductId());
