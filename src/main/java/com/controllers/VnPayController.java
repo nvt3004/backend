@@ -242,8 +242,20 @@ public class VnPayController {
 		Order order = orderService.getOrderById(orderId);
 
 		if (vpnResponseCode.equals("24")) {
-			removeOrder(order);		
+			User user = order.getUser();		
+			Coupon coupon = order.getCoupon();
+			
+			if (coupon != null) {
+				UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId(),user.getUserId());
+				
+				if(temp != null) {
+					temp.setStatus(true);
+					userCouponService.createUserCoupon(temp);
+				}
+			}
+					
 			System.out.println("Hủy giao dịch");
+			removeOrder(order);	
 			res.sendRedirect("http://localhost:3000/pm-cancel");
 		} else if (vpnResponseCode.equals("00")) {
 			OrderStatus status = new OrderStatus();
@@ -274,12 +286,8 @@ public class VnPayController {
 	private void removeOrder(Order order) {
 		if(order == null ) return;
 		
-		Coupon coupon = order.getCoupon();
 		Payment payment = order.getPayments();
 
-		if (coupon != null) {
-			userCouponService.deleteUserCoupon(coupon.getUserCoupons().get(0));
-		}
 		
 		paymentService.deletePayment(payment);
 		orderDetailService.deleteAllOrderDetail(order.getOrderDetails());
@@ -375,6 +383,7 @@ public class VnPayController {
 		orderEntity.setAddress(orderModel.getAddress());
 		if (coupon != null) {
 			orderEntity.setCoupon(coupon);
+			
 			if(coupon.getDisPercent() != null) {
 				orderEntity.setDisPercent(coupon.getDisPercent());
 			}else {
@@ -393,9 +402,9 @@ public class VnPayController {
 
 		// Save order
 		Order orderSaved = orderService.createOrderCart(orderEntity);
-
+		
 		if (coupon != null) {
-			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId());
+			UserCoupon temp = userCouponJPA.findUsercouponByCoupon(coupon.getCouponId(),user.getUserId());
 			
 			if(temp != null) {
 				temp.setStatus(false);

@@ -1,7 +1,5 @@
 package com.configs;
 
-import com.services.AuthDetailsService;
-
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +26,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.services.AuthDetailsService;
+
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
@@ -48,8 +48,8 @@ public class SecurityConfig {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
-								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**","api/home/product/*",
-								"/images/**","/api/advertisement/**")
+								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
+								"/images/**","/api/advertisement/**","/api/home/**","/api/vnp/**", "/images/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")

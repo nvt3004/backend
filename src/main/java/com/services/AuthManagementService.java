@@ -7,7 +7,6 @@ import com.entities.Cart;
 import com.entities.Role;
 import com.entities.UserRole;
 import com.errors.ApiResponse;
-import com.repositories.ManagePermissionsJPA;
 import com.repositories.RoleJPA;
 import com.repositories.UsersJPA;
 import com.utils.DateTimeUtil;
@@ -17,13 +16,16 @@ import com.utils.TokenBlacklist;
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.repositories.UserRoleJPA;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,14 +35,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class AuthManagementService {
@@ -59,9 +58,6 @@ public class AuthManagementService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private MailService mailService;
-    @Autowired
-    private ManagePermissionsJPA managePermissionsJPA;
-
     Date datecurrent = DateTimeUtil.getCurrentDateInVietnam();
 
     @Autowired
@@ -184,7 +180,7 @@ public class AuthManagementService {
             }
 
             // Tạo JWT token
-            long expirationTime = 30 * 60 * 1000;
+            long expirationTime = (5 * 60) * 60 * 1000;
             String jwt = jwtUtils.generateToken(user, "login", expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
