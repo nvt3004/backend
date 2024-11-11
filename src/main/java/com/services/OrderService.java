@@ -243,7 +243,7 @@ public class OrderService {
 	private boolean isValidStatusTransition(String currentStatus, String newStatus) {
 	    switch (currentStatus.toLowerCase()) {
 	        case "pending":
-	            return "processed".equalsIgnoreCase(newStatus);
+	            return "processed".equalsIgnoreCase(newStatus) || "cancelled".equalsIgnoreCase(newStatus);
 	        case "processed":
 	            return "shipped".equalsIgnoreCase(newStatus);
 	        case "shipped":
@@ -258,6 +258,7 @@ public class OrderService {
 	            return false;
 	    }
 	}
+
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
 	    List<String> insufficientStockMessages = new ArrayList<>();
