@@ -46,6 +46,8 @@ public class AdvertisementController {
 
         adversitementJPA.save(advertisement);
 
+        // System.out.println("Nhan duoc anh: "+advertisementModal.getImages().get(0).getName());
+
         saveImageAdvertisement(advertisement, advertisementModal.getImages());
 
         response.setCode(200);
@@ -85,6 +87,7 @@ public class AdvertisementController {
 
     private void saveImageAdvertisement(Advertisement advertisement, List<ImageResponse> images) {
         for (ImageResponse img : images) {
+            System.out.println("Nhan duoc anh: "+img.getName());
             String fileName = uploadService.save(img.getName(), "images");
             Image imageEntity = new Image();
             imageEntity.setImageUrl(fileName);
