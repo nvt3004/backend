@@ -104,7 +104,7 @@ public class OrderDetailService {
 					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
 					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
 					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
-					attributeProductVersion, attributesProducts));
+					attributeProductVersion, attributesProducts, item.getProductVersionBean().getProduct().getProductName()));
 		}
 		return productDetails;
 	}
