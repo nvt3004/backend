@@ -1,6 +1,8 @@
 package com.entities;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 import java.util.Date;
 import java.util.List;
@@ -31,11 +33,14 @@ public class Advertisement implements Serializable {
 
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "end_date")
-	private Date endDate;
+	private LocalDateTime endDate;
 
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "start_date")
-	private Date startDate;
+	private LocalDateTime startDate;
+
+	@Column(name = "status")
+	private byte status;;
 
 	// bi-directional many-to-one association to Image
 	@OneToMany(mappedBy = "advertisement")
@@ -69,19 +74,19 @@ public class Advertisement implements Serializable {
 		this.advName = advName;
 	}
 
-	public Date getEndDate() {
+	public LocalDateTime getEndDate() {
 		return this.endDate;
 	}
 
-	public void setEndDate(Date endDate) {
+	public void setEndDate(LocalDateTime endDate) {
 		this.endDate = endDate;
 	}
 
-	public Date getStartDate() {
+	public LocalDateTime getStartDate() {
 		return this.startDate;
 	}
 
-	public void setStartDate(Date startDate) {
+	public void setStartDate(LocalDateTime startDate) {
 		this.startDate = startDate;
 	}
 
@@ -105,6 +110,14 @@ public class Advertisement implements Serializable {
 		image.setAdvertisement(null);
 
 		return image;
+	}
+
+	public byte getStatus() {
+		return status;
+	}
+
+	public void setStatus(byte status) {
+		this.status = status;
 	}
 
 }

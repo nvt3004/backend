@@ -23,7 +23,7 @@ public class PermissionController {
     @Autowired
     private PermissionService permissionService;
 
-    @GetMapping("/api/admin/permissions/{userId}")
+    @GetMapping("/api/staff/permissions/{userId}")
     public ResponseEntity<List<String>> getPermissions(@PathVariable int userId) {
         List<String> permissions = permissionService.getPermissionsByUserId(userId);
 

@@ -7,6 +7,7 @@ import com.entities.Cart;
 import com.entities.Role;
 import com.entities.UserRole;
 import com.errors.ApiResponse;
+import com.repositories.ManagePermissionsJPA;
 import com.repositories.RoleJPA;
 import com.repositories.UsersJPA;
 import com.utils.DateTimeUtil;
@@ -18,6 +19,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import com.repositories.UserRoleJPA;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -53,6 +59,8 @@ public class AuthManagementService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private MailService mailService;
+    @Autowired
+    private ManagePermissionsJPA managePermissionsJPA;
 
     Date datecurrent = DateTimeUtil.getCurrentDateInVietnam();
 
@@ -217,7 +225,6 @@ public class AuthManagementService {
                 response.setStatusCode(200);
                 response.setToken(jwt);
                 response.setRefreshToken(refreshTokenReqiest.getToken());
-                response.setExpirationTime("24Hr");
                 response.setMessage("Successfully Refreshed Token");
             }
             response.setStatusCode(200);
@@ -230,41 +237,66 @@ public class AuthManagementService {
         }
     }
 
-    public AuthDTO getAllUsers(HttpServletRequest request) {
-        AuthDTO reqRes = new AuthDTO();
-
+    public ApiResponse<PageImpl<AuthDTO>> getAllUsers(HttpServletRequest request, int page, int size, String keyword) {
+        ApiResponse<PageImpl<AuthDTO>> response = new ApiResponse<>();
         String authorizationHeader = request.getHeader("Authorization");
+
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
-
             String tokenPurpose = jwtUtils.extractClaim(token, claims -> claims.get("purpose", String.class));
+
             if (!"login".equals(tokenPurpose)) {
-                reqRes.setStatusCode(403);
-                reqRes.setMessage("Invalid token purpose");
-                return reqRes;
+                response.setErrorCode(403);
+                response.setMessage("Invalid token purpose");
+                return response;
             }
 
             try {
-                List<User> result = usersRepo.findAll();
-                if (!result.isEmpty()) {
-                    reqRes.setUserList(result);
-                    reqRes.setStatusCode(200);
-                    reqRes.setMessage("Successful");
+                Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "userId"));
+                Page<User> usersPage;
+
+                if (keyword == null || keyword.trim().isEmpty()) {
+                    usersPage = usersRepo.findAll(pageable);
                 } else {
-                    reqRes.setStatusCode(404);
-                    reqRes.setMessage("No users found");
+                    usersPage = usersRepo.findAllByKeyword(keyword, pageable);
                 }
-                return reqRes;
+
+                if (!usersPage.isEmpty()) {
+                    List<AuthDTO> userDTOs = usersPage.stream().map(this::convertToAuthDTO)
+                            .collect(Collectors.toList());
+                    PageImpl<AuthDTO> resultPage = new PageImpl<>(userDTOs, pageable, usersPage.getTotalElements());
+
+                    response.setData(resultPage);
+                    response.setErrorCode(200);
+                    response.setMessage("Successful");
+                } else {
+                    response.setErrorCode(404);
+                    response.setMessage("No users found");
+                }
+
             } catch (Exception e) {
-                reqRes.setStatusCode(500);
-                reqRes.setMessage("Error occurred: " + e.getMessage());
-                return reqRes;
+                response.setErrorCode(500);
+                response.setMessage("Error occurred: " + e.getMessage());
             }
         } else {
-            reqRes.setStatusCode(401);
-            reqRes.setMessage("Authorization header is missing or token is invalid");
-            return reqRes;
+            response.setErrorCode(401);
+            response.setMessage("Authorization header is missing or token is invalid");
         }
+
+        return response;
+    }
+
+    public AuthDTO convertToAuthDTO(User user) {
+        AuthDTO authDTO = new AuthDTO();
+        authDTO.setFullName(user.getFullName());
+        authDTO.setEmail(user.getEmail());
+        authDTO.setPhone(user.getPhone());
+        authDTO.setGender(user.getGender());
+        authDTO.setImage(user.getImage());
+        authDTO.setProvider(user.getProvider());
+        authDTO.setCreatDate(user.getCreateDate());
+        authDTO.setBirthDate(user.getBirthday());
+        return authDTO;
     }
 
     public AuthDTO getUsersById(HttpServletRequest request, Integer id) {
@@ -312,7 +344,7 @@ public class AuthManagementService {
 
                 Optional<User> userOptional = usersRepo.findById(userId);
                 if (userOptional.isPresent()) {
-                    usersRepo.deleteById(userId);
+                    userOptional.get().setStatus((byte) 0);
                     reqRes.setStatusCode(200);
                     reqRes.setMessage("User deleted successfully");
                 } else {
@@ -355,12 +387,11 @@ public class AuthManagementService {
 
                     existingUser.setEmail(updatedUser.getEmail());
                     existingUser.setFullName(updatedUser.getFullName());
-                    // existingUser.setUsername(updatedUser.getUsername());
                     existingUser.setPhone(updatedUser.getPhone());
                     existingUser.setImage(updatedUser.getImage());
                     existingUser.setGender(updatedUser.getGender());
                     existingUser.setBirthday(updatedUser.getBirthday());
-                    existingUser.setStatus((byte)1);
+                    existingUser.setStatus((byte) 1);
 
                     User savedUser = usersRepo.save(existingUser);
                     reqRes.setListData(savedUser);
@@ -386,19 +417,20 @@ public class AuthManagementService {
         AuthDTO reqRes = new AuthDTO();
         try {
             Optional<User> optionalUser = usersRepo.findByUsername(newUser.getUsername());
-    
+
             if (optionalUser.isPresent()) {
                 User user = optionalUser.get();
-                if (newUser.getProvider().equalsIgnoreCase("facebook") || newUser.getProvider().equalsIgnoreCase("google")) {
+                if (newUser.getProvider().equalsIgnoreCase("facebook")
+                        || newUser.getProvider().equalsIgnoreCase("google")) {
                     reqRes.setStatusCode(200);
                     reqRes.setMessage("Login " + newUser.getProvider() + " successfully");
-    
+
                     // Tạo JWT token
                     long expirationTime = 30 * 60 * 1000;
                     String jwt = jwtUtils.generateToken(user, "login", expirationTime);
                     String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
                     String tokenPurpose = jwtUtils.extractPurpose(jwt);
-    
+
                     reqRes.setToken(jwt);
                     reqRes.setRefreshToken(refreshToken);
                     reqRes.setFullName(user.getFullName());
@@ -406,39 +438,39 @@ public class AuthManagementService {
                     reqRes.setPhone(user.getPhone());
                     reqRes.setUsername(user.getUsername());
                     reqRes.setRoles(user.getUserRoles().stream()
-                        .map(UserRole::getRole)
-                        .map(Role::getRoleName)
-                        .collect(Collectors.toList()));
+                            .map(UserRole::getRole)
+                            .map(Role::getRoleName)
+                            .collect(Collectors.toList()));
                     reqRes.setTokenType(tokenPurpose);
-    
+
                     return reqRes;
                 }
             }
-    
+
             // Nếu người dùng chưa tồn tại, tạo mới
             newUser.setStatus((byte) 1);
             newUser.setCreateDate(datecurrent);
             User savedUser = usersRepo.save(newUser);
-    
+
             // Gán vai trò mặc định cho người dùng mới
             List<String> roles = Collections.singletonList("User");
             List<UserRole> userRoles = roles.stream().map(roleName -> {
                 Role role = roleRepo.findByRoleName(roleName)
-                    .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+                        .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
                 UserRole userRole = new UserRole();
                 userRole.setUser(savedUser);
                 userRole.setRole(role);
                 return userRole;
             }).collect(Collectors.toList());
-    
+
             userRoleRepo.saveAll(userRoles);
-    
+
             // Tạo JWT token cho người dùng mới
             long expirationTime = 30 * 60 * 1000;
             String jwt = jwtUtils.generateToken(savedUser, "login", expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), savedUser);
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
-    
+
             reqRes.setListData(savedUser);
             reqRes.setStatusCode(201);
             reqRes.setMessage("User created successfully");
@@ -449,14 +481,13 @@ public class AuthManagementService {
             reqRes.setPhone(savedUser.getPhone());
             reqRes.setRoles(roles);
             reqRes.setTokenType(tokenPurpose);
-    
+
         } catch (Exception e) {
             reqRes.setStatusCode(500);
             reqRes.setMessage("Error occurred while creating user: " + e.getMessage());
         }
         return reqRes;
     }
-    
 
     public AuthDTO getMyInfo(String username) {
         AuthDTO reqRes = new AuthDTO();
@@ -469,8 +500,8 @@ public class AuthManagementService {
             }
             if (userOptional.isPresent()) {
                 reqRes.setListData(userOptional.get());
-                System.out.println("So dien thoai"+userOptional.get().getPhone());
-                System.out.println("Ngay sinh"+userOptional.get().getBirthday());
+                System.out.println("So dien thoai" + userOptional.get().getPhone());
+                System.out.println("Ngay sinh" + userOptional.get().getBirthday());
                 reqRes.setStatusCode(200);
                 reqRes.setMessage("successful");
             } else {
@@ -494,7 +525,7 @@ public class AuthManagementService {
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            long expirationTime = 2 * 60 * 1000; 
+            long expirationTime = 2 * 60 * 1000;
             String jwt = jwtUtils.generateToken(user, "reset-password", expirationTime);
 
             usersRepo.save(user);
@@ -521,7 +552,7 @@ public class AuthManagementService {
 
         String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
 
-        ApiResponse<User> response = new ApiResponse<>(); 
+        ApiResponse<User> response = new ApiResponse<>();
 
         if (token == null) {
             response.setErrorCode(400);
@@ -578,7 +609,7 @@ public class AuthManagementService {
 
         response.setErrorCode(200);
         response.setMessage("Password reset successfully");
-        response.setData(user); 
+        response.setData(user);
 
         return ResponseEntity.ok(response);
     }

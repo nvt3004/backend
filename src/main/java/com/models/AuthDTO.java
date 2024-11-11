@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.entities.User;
 import lombok.Data;
 
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -17,22 +18,19 @@ public class AuthDTO {
     private String message;
     private String token;
     private String refreshToken;
-    private String expirationTime;
     private String fullName;
     private String username;
     private String phone;
     private String email;
     private String password;
     private String image;
-    // private byte isActive = 1;
+    private String provider;
+    private Date creatDate;
+    private Date birthDate;
+    private Integer gender;
     private User listData;
     private List<User> userList;
-    private List<String> roles;  // Thêm trường roles vào đây
+    private List<String> roles;
     private String tokenType;
     private List<String> permissions;
-
-    // Thêm setter cho roles
-    public void setRoles(List<String> roles) {
-        this.roles = roles;
-    }
 }

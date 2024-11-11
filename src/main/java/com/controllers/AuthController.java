@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,19 +25,11 @@ public class AuthController {
 
     @PostMapping("/api/register")
     public ResponseEntity<AuthDTO> regeister(@RequestBody AuthDTO reg) {
-        System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
-        return ResponseEntity.ok(usersManagementService.register(reg));
-    }
-
-    @PostMapping("/api/te")
-    public ResponseEntity<AuthDTO> regeisterh(@RequestBody AuthDTO reg) {
-        System.out.println("Vô resgfdgfdgdfsgdfgfdsgdffffffffffffffffffffff");
         return ResponseEntity.ok(usersManagementService.register(reg));
     }
 
     @PostMapping("/api/login")
     public ResponseEntity<AuthDTO> login(@RequestBody AuthDTO req) {
-        // Trả thẳng về bên kia luôn để cho bên controller ngắn lại dễ nhìn
         return usersManagementService.login(req);
     }
 
@@ -45,10 +38,15 @@ public class AuthController {
         return ResponseEntity.ok(usersManagementService.refreshToken(req));
     }
 
-    @GetMapping("/api/admin/get-all-users")
-    public ResponseEntity<AuthDTO> getAllUsers(HttpServletRequest request) {
-        AuthDTO response = usersManagementService.getAllUsers(request);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+    @GetMapping("/api/staff/get-all-users")
+    public ResponseEntity<ApiResponse<PageImpl<AuthDTO>>> getAllUsers(
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String keyword) {
+        ApiResponse<PageImpl<AuthDTO>> response = usersManagementService.getAllUsers(request, page, size, keyword);
+        return ResponseEntity.status(response.getErrorCode())
+                .body(response);
     }
 
     @GetMapping("/api/admin/get-users/{userId}")
@@ -95,7 +93,7 @@ public class AuthController {
     }
 
     @PostMapping("/api/adminuser/logout")
-    public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token){
+    public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token) {
         return usersManagementService.logout(token);
     }
 }
