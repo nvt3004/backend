@@ -83,8 +83,7 @@ public class ProductHomeController {
 		ProductDetailResponse productDetail = productService.getProductDetail(productId);
 		for (Version v : productDetail.getVersions()) {
 			if (v.getImage() != null) {
-				String imgs = GetURLImg.getURLImg(request, v.getImage());
-				v.setImage(imgs);
+				v.setImage(uploadService.getUrlImage(v.getImage()));
 			}
 		}
 		response.setCode(200);

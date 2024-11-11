@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.algolia.search.models.indexing.Query;
+import com.algolia.search.models.indexing.SearchResult;
 import com.entities.AttributeOption;
 import com.entities.Category;
 import com.entities.User;
@@ -155,51 +156,47 @@ public class ProductClientController {
 		return ResponseEntity.ok(response);
 	}
 
-	@GetMapping("/getProds")
-	public ResponseEntity<ResponseAPI<List<ProductDTO>>> getProds(
+	@GetMapping("/search")
+	public ResponseEntity<ResponseAPI<List<ProductDTO>>> searchProducts(
 			@RequestHeader("Authorization") Optional<String> authHeader, @RequestParam(required = false) String query,
-			@RequestParam(required = false) String categoryName, @RequestParam(required = false) BigDecimal minPrice,
-			@RequestParam(required = false) BigDecimal maxPrice, @RequestParam(required = false) String color,
-			@RequestParam(required = false) String size, @RequestParam(defaultValue = "ASC") String sortPrice,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int pageSize,
-			@RequestParam(defaultValue = "0") int action) {
+			@RequestParam(required = false) Integer categoryID, @RequestParam(required = false) BigDecimal minPrice,
+			@RequestParam(required = false) BigDecimal maxPrice, @RequestParam(required = false) Integer colorID,
+			@RequestParam(required = false) Integer sizeID, @RequestParam(defaultValue = "ASC") String sortMaxPrice,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int pageSize) {
 
+		System.out.println("Query: " + query);
+		System.out.println("Category ID: " + categoryID);
+		System.out.println("Min Price: " + minPrice);
+		System.out.println("Max Price: " + maxPrice);
+		System.out.println("Color ID: " + colorID);
+		System.out.println("Size ID: " + sizeID);
+		System.out.println("Sort Max Price: " + sortMaxPrice);
+		System.out.println("Page: " + page);
+		System.out.println("Page Size: " + pageSize);
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
-		List<ProductDTO> products = null;
 		List<Wishlist> wishlist = new ArrayList<>();
 
 		try {
 			User user = null;
 
-			// Nếu có token, tiến hành xác thực và lấy wishlist
 			if (authHeader.isPresent() && !authHeader.get().isEmpty()) {
 				String token = authService.readTokenFromHeader(authHeader);
 
 				if (token != null && !token.isEmpty() && !jwtService.isTokenExpired(token)) {
 					String username = jwtService.extractUsername(token);
 					user = userService.getUserByUsername(username);
-					wishlist = (user != null) ? user.getWishlists() : new ArrayList<>();
+					if (user != null) {
+						wishlist = user.getWishlists();
+					}
 				}
 			}
 
-			// Lựa chọn hành động
-			if (action == 1) {
-				Query algoliaQuery = new Query(query).setPage(page).setHitsPerPage(pageSize);
-				products = algoliaProductService.searchProducts(algoliaQuery);
-			} else if (action == 0) {
-				Page<ProductDTO> prods = inforService.getFilteredProducts(user, categoryName, minPrice, maxPrice, color,
-						size, sortPrice, page, pageSize);
-				products = prods != null ? prods.getContent() : new ArrayList<>();
-			} else {
-				response.setCode(400);
-				response.setMessage("Invalid action value");
-				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-			}
+			List<ProductDTO> products = algoliaProductService.searchProducts(categoryID, colorID, sizeID, minPrice,
+					maxPrice, query, sortMaxPrice, page, pageSize);
 
-			// Xử lý sản phẩm với wishlist và URL hình ảnh
 			if (products != null && !products.isEmpty()) {
 				for (ProductDTO productDTO : products) {
-					// Nếu có user và wishlist, gán trạng thái "like" cho sản phẩm
+
 					if (user != null) {
 						for (Wishlist wishlistItem : wishlist) {
 							if (String.valueOf(wishlistItem.getProduct().getProductId())
@@ -209,17 +206,19 @@ public class ProductClientController {
 							}
 						}
 					}
-					// Thiết lập URL hình ảnh
+
 					String img = productDTO.getImgName();
 					if (img != null && !img.isEmpty()) {
-						productDTO.setImgName(uploadService.getUrlImage(img));
+						String imageUrl = uploadService.getUrlImage(img);
+						if (imageUrl != null && !imageUrl.isEmpty()) {
+							productDTO.setImgName(imageUrl);
+						}
 					}
 				}
 			}
 
-			// Kiểm tra kết quả sản phẩm
-			if (products == null || products.isEmpty()) {
-				response.setCode(204);
+			if (products.isEmpty()) {
+				response.setCode(404);
 				response.setMessage("No products found");
 			} else {
 				response.setCode(200);
