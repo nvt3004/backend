@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,6 +53,7 @@ public class CouponController {
 	private JWTService jwtService;
 
 	@PostMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_CREATE')")
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -108,6 +110,7 @@ public class CouponController {
 	}
 
 	@PutMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateCoupon(@RequestParam("id") Integer id,
 			@Valid @RequestBody CouponCreateDTO couponCreateDTO, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -169,6 +172,7 @@ public class CouponController {
 	}
 
 	@DeleteMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_REMOVE')")
 	public ResponseEntity<ApiResponse<?>> deleteCoupon(@RequestParam("id") Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -223,6 +227,7 @@ public class CouponController {
 	}
 
 	@GetMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllCoupons(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestParam(value = "startDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,

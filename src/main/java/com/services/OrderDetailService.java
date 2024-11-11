@@ -49,12 +49,20 @@ public class OrderDetailService {
 		String disPercent = formatDiscount(orderDetail.getOrder().getDisPercent());
 		String disPrice = formatDiscount(orderDetail.getOrder().getDisPrice());
 
-		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(),
-				orderDetail.getOrder().getCoupon().getCouponId(), orderDetail.getOrder().getDeliveryDate(), disPercent,
-				disPrice, orderDetail.getOrder().getFullname(), orderDetail.getOrder().getOrderDate(),
-				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getOrderStatus().getStatusName(),
-				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()),
-				orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName(),
+		Integer couponId = (orderDetail.getOrder().getCoupon() != null)
+				? orderDetail.getOrder().getCoupon().getCouponId()
+				: null;
+
+		String paymentMethod = (orderDetail.getOrder().getPayments() != null
+				&& orderDetail.getOrder().getPayments().getPaymentMethod() != null)
+						? orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName()
+						: null;
+
+		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
+				orderDetail.getOrder().getDeliveryDate(), disPercent, disPrice, orderDetail.getOrder().getFullname(),
+				orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
+				orderDetail.getOrder().getOrderStatus().getStatusName(),
+				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,
 				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getUser().getEmail(), productDetails);
 	}
 
@@ -96,7 +104,8 @@ public class OrderDetailService {
 			productDetails.add(new OrderDetailProductDetailsDTO(
 					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
 					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
-					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(), attributeProductVersion, attributesProducts));
+					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
+					attributeProductVersion, attributesProducts));
 		}
 		return productDetails;
 	}
@@ -137,7 +146,6 @@ public class OrderDetailService {
 	private String formatDiscount(BigDecimal discount) {
 		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;
 	}
-
 
 	public Optional<OrderDetail> findOrderDetailById(Integer orderDetailId) {
 		return orderDetailJpa.findById(orderDetailId);
@@ -183,12 +191,8 @@ public class OrderDetailService {
 		return quantity != null && quantity > 0;
 	}
 
-	public boolean isStockSufficient(OrderDetail orderDetail, Integer quantity) {
-		int productVersionQuantity = orderDetail.getProductVersionBean().getQuantity();
-		return productVersionQuantity >= quantity;
-	}
+	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, Integer quantity) {
 
-	public ApiResponse<OrderDetail> validateAndPrepareUpdate(Integer orderDetailId, Integer quantity) {
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
 			return new ApiResponse<>(404, "Order detail not found", null);
@@ -196,32 +200,55 @@ public class OrderDetailService {
 
 		OrderDetail orderDetail = existingOrderDetail.get();
 		String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
-
+		
 		if (!isValidOrderStatus(orderStatusName)) {
 			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
 		}
+
 		if (!isValidQuantity(quantity)) {
-			return new ApiResponse<OrderDetail>(400, "Quantity must be positive.", null);
+			return new ApiResponse<>(400, "Quantity must be positive.", null);
 		}
 
-		if (!isStockSufficient(orderDetail, quantity)) {
-			return new ApiResponse<OrderDetail>(400, "Quantity must not exceed available stock.", null);
-		}
+		ProductVersion productVersion = orderDetail.getProductVersionBean();
+		Integer productVersionStock = productVersion.getQuantity();
 
-		return new ApiResponse<>(200, "Validation passed", orderDetail);
-	}
+		Integer processedOrderQuantity = productVersionJpa
+				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+		Integer cancelledOrderQuantity = productVersionJpa
+				.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+		Integer shippedOrderQuantity = productVersionJpa
+				.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+		Integer deliveredOrderQuantity = productVersionJpa
+				.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-	public OrderDetail updateOrderDetailQuantity(OrderDetail orderDetail, Integer quantity) {
-		orderDetail.setQuantity(quantity);
-		return orderDetailJpa.save(orderDetail);
-	}
+		processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+		cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+		shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+		deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+
 	
-	//ty
+		Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+		Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
+		Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
+
+		if (quantity > availableProductVersionStock) {
+			return new ApiResponse<>(400,
+					"Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
+					null);
+		}
+
+		orderDetail.setQuantity(quantity);
+		orderDetailJpa.save(orderDetail);
+
+		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
+	}
+
+	// ty
 	public OrderDetail createOrderDetail(OrderDetail orderDetail) {
 		return orderDetailJpa.save(orderDetail);
 	}
-	
-	public boolean deleteAllOrderDetail(List<OrderDetail> orderDetails){
+
+	public boolean deleteAllOrderDetail(List<OrderDetail> orderDetails) {
 		try {
 			orderDetailJpa.deleteAll(orderDetails);
 			return true;

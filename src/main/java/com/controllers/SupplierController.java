@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,6 +50,7 @@ public class SupplierController {
 	private JWTService jwtService;
 
 	@GetMapping
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size,
 			@RequestParam(value = "status", defaultValue = "true") Boolean status,
@@ -104,6 +106,7 @@ public class SupplierController {
 	}
 	
 	@GetMapping("/all")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(
 	        @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -150,6 +153,7 @@ public class SupplierController {
 
 
 	@GetMapping("/supplier-detail")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_DETAIL_VIEW')")
 	public ResponseEntity<ApiResponse<?>> getSupplierById(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -201,6 +205,7 @@ public class SupplierController {
 	}
 
 	@PostMapping
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_CREATE')")
 	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierDTO supplierDetails,
 			BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -253,6 +258,7 @@ public class SupplierController {
 	}
 
 	@PutMapping
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id,
 			@Valid @RequestBody SupplierDTO supplierDetails, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -305,6 +311,7 @@ public class SupplierController {
 	}
 
 	@DeleteMapping
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_REMOVE')")
 	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -353,6 +360,7 @@ public class SupplierController {
 	}
 	
 	@PutMapping("/restore")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_RESTORE')")
 	public ResponseEntity<ApiResponse<?>> restoreSupplier(@RequestParam Integer id,
 	        @RequestHeader("Authorization") Optional<String> authHeader) {
 

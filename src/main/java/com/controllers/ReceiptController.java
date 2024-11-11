@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,10 +47,8 @@ public class ReceiptController {
 	@Autowired
 	private JWTService jwtService;
 
-	@Autowired
-	private UserService userService;
-
 	@GetMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllWarehouses(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -104,6 +103,7 @@ public class ReceiptController {
 	}
 
 	@GetMapping("/receipt-detail")
+	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_DETAIL_VIEW')")
 	public ResponseEntity<ApiResponse<?>> getWarehouseById(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -154,6 +154,7 @@ public class ReceiptController {
 	}
 
 	@PostMapping
+	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_CREATE')")
 	public ResponseEntity<ApiResponse<?>> createReceipt(@Valid @RequestBody ReceiptCreateDTO receiptCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 

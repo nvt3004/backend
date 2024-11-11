@@ -115,7 +115,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/user/orders/username")
-	@PreAuthorize("hasPermission(#userId, 'USER_ORDER_VIEW_SELF')")
+//	@PreAuthorize("hasPermission(#userId, 'USER_ORDER_VIEW_SELF')")
 	public ResponseEntity<ApiResponse<?>> getOrdersByUsername(
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,
@@ -174,13 +174,13 @@ public class OrderController {
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {
 			errorResponse.setErrorCode(500);
-			errorResponse.setMessage("An error occurred while retrieving orders "+e);
+			errorResponse.setMessage("An error occurred while retrieving orders " + e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 	}
 
 	@GetMapping("/staff/orders/statuses")
-	 @PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_STATUS_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_STATUS_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllOrderStatus(
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -219,9 +219,7 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		List<OrderStatus> orderStatuses = orderStatusService.getAllOrderStatuses();
-		List<OrderStatusDTO> orderStatusDTOList = orderStatusService.convertToDTO(orderStatuses);
-
+		List<OrderStatusDTO> orderStatusDTOList = orderStatusService.getAllOrderStatusDTOs();
 		ApiResponse<List<OrderStatusDTO>> response = new ApiResponse<>(200, "Order statuses fetched successfully",
 				orderStatusDTOList);
 
@@ -230,7 +228,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/staff/orders/update-order-detail")
-	@PreAuthorize("hasPermission(#user.id, 'STAFF_ORDER_DETAIL_UPDATE')")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateOrderDetail(@RequestParam("orderDetailId") Integer orderDetailId,
 			@RequestParam("productId") Integer productId, @RequestParam("colorId") Integer colorId,
 			@RequestParam("sizeId") Integer sizeId, @RequestHeader("Authorization") Optional<String> authHeader) {
@@ -286,7 +284,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/staff/orders/update-order-detail-quantity")
-	@PreAuthorize("hasPermission(#user.id, 'STAFF_ORDER_DETAIL_UPDATE')")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateOrderDetailQuantity(
 			@RequestParam("orderDetailId") Integer orderDetailId, @RequestParam("quantity") Integer quantity,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -331,22 +329,20 @@ public class OrderController {
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
 
-		ApiResponse<OrderDetail> validationResponse = orderDetailService.validateAndPrepareUpdate(orderDetailId,
-				quantity);
+		ApiResponse<OrderDetail> validationResponse = orderDetailService
+				.validateAndUpdateOrderDetailQuantity(orderDetailId, quantity);
 
 		if (validationResponse.getErrorCode() != 200) {
 			return ResponseEntity.status(HttpStatus.valueOf(validationResponse.getErrorCode()))
 					.body(validationResponse);
 		}
-
-		OrderDetail orderDetail = validationResponse.getData();
-		OrderDetail updatedOrderDetail = orderDetailService.updateOrderDetailQuantity(orderDetail, quantity);
-
+		
 		return ResponseEntity
-				.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", updatedOrderDetail));
+				.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", null));
 	}
 
 	@PutMapping("/staff/orders/update-status")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_STATUS_UPDATE')")
 	public ResponseEntity<ApiResponse<?>> updateOrderStatus(@RequestParam("orderId") Integer orderId,
 			@RequestParam("statusId") Integer statusId, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -400,6 +396,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/staff/orders/{orderId}")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_VIEW')")
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -453,6 +450,7 @@ public class OrderController {
 	}
 
 	@DeleteMapping("/staff/orders/remove-orderdetail")
+	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_REMOVE')")
 	public ResponseEntity<ApiResponse<?>> deleteOrderDetailsByOrderDetailId(@RequestParam Integer orderId,
 			@RequestParam Integer orderDetailId, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -502,6 +500,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/user/orders/cancel-order")
+//	@PreAuthorize("hasPermission(#userid, 'USER_ORDER_CANCEL')")
 	public ResponseEntity<ApiResponse<?>> cancelOrder(@RequestParam("orderId") Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
