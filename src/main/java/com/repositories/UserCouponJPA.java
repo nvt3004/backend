@@ -20,10 +20,10 @@ public interface UserCouponJPA extends JpaRepository<UserCoupon, Integer> {
 			+ "AND o.coupon.quantity > 0 " + "AND o.coupon.status = true" +  " AND o.status = true")
 	List<Coupon> findAllCouponByUser(@Param("userId") int userId);
 
-	@Query("SELECT o FROM UserCoupon o WHERE o.coupon.couponId=:id "
+	@Query("SELECT o FROM UserCoupon o WHERE o.coupon.couponId=:id AND o.user.userId=:userId "
 			+ "AND CURRENT_TIMESTAMP >= o.coupon.startDate " + "AND CURRENT_TIMESTAMP <= o.coupon.endDate "
 			+ "AND o.coupon.quantity > 0 " + "AND o.coupon.status = true")
-	UserCoupon findUsercouponByCoupon(@Param("id") int id);
+	UserCoupon findUsercouponByCoupon(@Param("id") int id, @Param("userId") int userId);
 	
 	@Query("SELECT o FROM Coupon o WHERE o.couponCode=:code "
 			+ "AND CURRENT_TIMESTAMP >= o.startDate " + "AND CURRENT_TIMESTAMP <= o.endDate "

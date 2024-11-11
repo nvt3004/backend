@@ -6,10 +6,14 @@ import java.math.BigDecimal;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.responsedto.StockQuantityDTO;
 
 @Entity
 @Table(name = "product_version")
 @NamedQuery(name = "ProductVersion.findAll", query = "SELECT p FROM ProductVersion p")
+@NamedStoredProcedureQuery(name = "ProductVersion.rp_stock_quantity", procedureName = "rp_stock_quantity", parameters = {
+		@StoredProcedureParameter(mode = ParameterMode.IN, name = "versionId", type = Integer.class),
+		@StoredProcedureParameter(mode = ParameterMode.OUT, name = "total_quantity", type = Integer.class) })
 public class ProductVersion implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -30,11 +34,11 @@ public class ProductVersion implements Serializable {
 
 	@Column(name = "version_name")
 	private String versionName;
-	
+
 	@Column(name = "status")
 	private Boolean status;
 
-	@OneToMany( fetch = FetchType.EAGER,mappedBy = "productVersion")
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "productVersion")
 	@JsonManagedReference("productVersion-attributeOptionsVersions")
 	private List<AttributeOptionsVersion> attributeOptionsVersions;
 
@@ -42,9 +46,9 @@ public class ProductVersion implements Serializable {
 	@JsonManagedReference("productVersionBean-productVersion")
 	private List<CartProduct> cartProducts;
 
-	@OneToOne(fetch = FetchType.EAGER, mappedBy = "productVersion", cascade = CascadeType.ALL)
-    @JsonManagedReference("productVersion-image")
-    private Image image;
+	@OneToOne(fetch = FetchType.EAGER, mappedBy = "productVersion")
+	@JsonManagedReference("productVersion-image")
+	private Image image;
 
 	@OneToMany(mappedBy = "productVersionBean")
 	@JsonManagedReference("productVersionBean-orderDetails")
@@ -147,15 +151,15 @@ public class ProductVersion implements Serializable {
 	}
 
 	public Image getImage() {
-        return this.image;
-    }
+		return this.image;
+	}
 
-    public void setImage(Image image) {
-        this.image = image;
-        if (image != null) {
-            image.setProductVersion(this);
-        }
-    }
+	public void setImage(Image image) {
+		this.image = image;
+		if (image != null) {
+			image.setProductVersion(this);
+		}
+	}
 
 	public List<OrderDetail> getOrderDetails() {
 		return this.orderDetails;
@@ -195,7 +199,6 @@ public class ProductVersion implements Serializable {
 		this.versionName = versionName;
 	}
 
-
 	public Boolean isStatus() {
 		return status;
 	}
@@ -205,4 +208,3 @@ public class ProductVersion implements Serializable {
 	}
 
 }
-

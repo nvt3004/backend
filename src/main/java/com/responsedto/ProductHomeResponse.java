@@ -16,4 +16,6 @@ public class ProductHomeResponse {
 	private double discount;
 	private BigDecimal minPrice;
 	private BigDecimal maxPrice;
+	private boolean active;
+	private long inStock;
 }
