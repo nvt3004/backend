@@ -69,17 +69,16 @@ public class OrderDetailService {
 	private List<OrderDetailProductDetailsDTO> createProductDetailsList(List<OrderDetail> orderDetails) {
 		List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
 
-		ColorDTO color = new ColorDTO();
-		SizeDTO size = new SizeDTO();
 		for (OrderDetail item : orderDetails) {
+
+			ColorDTO color = new ColorDTO();
+			SizeDTO size = new SizeDTO();
 			for (AttributeOptionsVersion aov : item.getProductVersionBean().getAttributeOptionsVersions()) {
 				String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
 				if ("Color".equalsIgnoreCase(attributeName)) {
-
 					color.setColor(aov.getAttributeOption().getAttributeValue());
 					color.setColorId(aov.getAttributeOption().getId());
 				} else if ("Size".equalsIgnoreCase(attributeName)) {
-
 					size.setSizeId(aov.getAttributeOption().getId());
 					size.setSize(aov.getAttributeOption().getAttributeValue());
 
@@ -200,7 +199,7 @@ public class OrderDetailService {
 
 		OrderDetail orderDetail = existingOrderDetail.get();
 		String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
-		
+
 		if (!isValidOrderStatus(orderStatusName)) {
 			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
 		}
@@ -226,7 +225,6 @@ public class OrderDetailService {
 		shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
 		deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-	
 		Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
 		Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
 		Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
