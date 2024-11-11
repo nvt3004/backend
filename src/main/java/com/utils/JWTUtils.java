@@ -94,6 +94,4 @@ public class JWTUtils {
         return (extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
     
-
-
 }

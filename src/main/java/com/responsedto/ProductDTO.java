@@ -15,15 +15,18 @@ public class ProductDTO {
 	private String name;
 	private String description;
 	private double rating;
-	private Integer reviewCount;
-	private List<String> categories;
 	private String imgName;
+	private List<String> categories;
 	private List<String> versionName;
 	private List<String> colors;
 	private List<String> sizes;
-	private BigDecimal minPrice;
-	private BigDecimal maxPrice;
-	private String image;
+	private List<String> images;
 	private Float discount;
 	private Boolean like;
+	private List<Integer> categoryID;
+	private List<Integer> colorID;
+	private List<Integer> sizeID;
+	private BigDecimal minPrice;
+	private BigDecimal maxPrice;
+	
 }

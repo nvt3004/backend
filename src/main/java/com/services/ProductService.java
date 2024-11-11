@@ -53,399 +53,415 @@ import com.repositories.ProductJPA;
 @Service
 public class ProductService {
 
-	@Autowired
-	ProductCustomJPA productCustomJPA;
+    @Autowired
+    ProductCustomJPA productCustomJPA;
 
-	@Autowired
-	ProductJPA productJPA;
+    @Autowired
+    ProductJPA productJPA;
 
-	@Autowired
-	CategoryJPA categoryJPA;
+    @Autowired
+    CategoryJPA categoryJPA;
 
-	@Autowired
-	ProductJPA productJpa;
+    @Autowired
+    ProductJPA productJpa;
 
-	@Autowired
-	ProductVersionJPA productVersionJPA;
+    @Autowired
+    ProductVersionJPA productVersionJPA;
 
-	@Autowired
-	ImageJPA imageJPA;
+    @Autowired
+    ImageJPA imageJPA;
 
-	@Autowired
-	AttributeOptionsVersionJPA attributeOptionsVersionJPA;
+    @Autowired
+    VersionService versionService;
 
-	@Autowired
-	UploadService uploadService;
+    @Autowired
+    AttributeOptionsVersionJPA attributeOptionsVersionJPA;
 
-	@Autowired
-	AttributeService attributeService;
+    @Autowired
+    UploadService uploadService;
 
-	@Autowired
-	ProductCategoryJPA productCategoryJPA;
+    @Autowired
+    AttributeService attributeService;
 
-	public PageCustom<ProductHomeResponse> getProducts(int page, int size) {
-		return productCustomJPA.getAllProducts(page, size);
-	}
+    @Autowired
+    ProductCategoryJPA productCategoryJPA;
 
-	public PageCustom<ProductHomeResponse> getProducts(int page, int size, int categoryId) {
-		return productCustomJPA.getAllProductsByCategory(page, size, categoryId);
-	}
+    @Autowired
+    VersionService vsService;
 
-	public PageImpl<ProductResponse> getProductsByKeyword(int page, int size, boolean status, String keyword) {
-		Sort sort = Sort.by(Sort.Direction.DESC, "productId");
-		Pageable pageable = PageRequest.of(page, size, sort);
+    public PageCustom<ProductHomeResponse> getProducts(int page, int size) {
+        return productCustomJPA.getAllProducts(page, size);
+    }
 
-		Page<Product> products = productJPA.getAllProductByKeyword(status, keyword, pageable);
+    public PageCustom<ProductHomeResponse> getProducts(int page, int size, int categoryId) {
+        return productCustomJPA.getAllProductsByCategory(page, size, categoryId);
+    }
 
-		List<ProductResponse> productResponses = products.getContent().stream().map(this::createProductResponse)
-				.toList();
+    public PageImpl<ProductResponse> getProductsByKeyword(int page, int size, boolean status, String keyword) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "productId");
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-		PageImpl<ProductResponse> result = new PageImpl<ProductResponse>(productResponses, pageable,
-				products.getTotalElements());
+        Page<Product> products = productJPA.getAllProductByKeyword(status, keyword, pageable);
 
-		return result;
-	}
+        List<ProductResponse> productResponses = products.getContent().stream().map(this::createProductResponse)
+                .toList();
 
-	public PageImpl<ProductResponse> getProductsByKeywordAndCategory(int page, int size, int idCat, boolean status,
-			String keyword) {
-		Sort sort = Sort.by(Sort.Direction.DESC, "productId");
-		Pageable pageable = PageRequest.of(page, size, sort);
+        PageImpl<ProductResponse> result = new PageImpl<ProductResponse>(productResponses, pageable,
+                products.getTotalElements());
 
-		Page<Product> products = productJPA.getAllProductByKeywordAndCategory(status, keyword, idCat, pageable);
+        return result;
+    }
 
-		List<ProductResponse> productResponses = products.getContent().stream().map(this::createProductResponse)
-				.toList();
+    public PageImpl<ProductResponse> getProductsByKeywordAndCategory(int page, int size, int idCat, boolean status,
+            String keyword) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "productId");
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-		PageImpl<ProductResponse> result = new PageImpl<ProductResponse>(productResponses, pageable,
-				products.getTotalElements());
+        Page<Product> products = productJPA.getAllProductByKeywordAndCategory(status, keyword, idCat, pageable);
 
-		return result;
-	}
+        List<ProductResponse> productResponses = products.getContent().stream().map(this::createProductResponse)
+                .toList();
 
-	private ProductResponse createProductResponse(Product product) {
-		ProductResponse response = new ProductResponse();
+        PageImpl<ProductResponse> result = new PageImpl<ProductResponse>(productResponses, pageable,
+                products.getTotalElements());
 
-		response.setId(product.getProductId());
-		response.setPrice(product.getProductPrice());
-		response.setProductName(product.getProductName());
-		response.setDiscription(product.getDescription());
-		response.setDiscount(getDiscount(product));
-		response.setImage(uploadService.getUrlImage(product.getProductImg()));
-		response.setCategories(product.getProductCategories().stream().map(item -> {
-			CategoryDTO cat = new CategoryDTO();
+        return result;
+    }
 
-			cat.setId(item.getCategory().getCategoryId());
-			cat.setName(item.getCategory().getCategoryName());
+    private ProductResponse createProductResponse(Product product) {
+        ProductResponse response = new ProductResponse();
 
-			return cat;
-		}).toList());
+        response.setId(product.getProductId());
+        response.setPrice(product.getProductPrice());
+        response.setProductName(product.getProductName());
+        response.setDiscription(product.getDescription());
+        response.setDiscount(getDiscount(product));
+        response.setImage(uploadService.getUrlImage(product.getProductImg()));
+        response.setCategories(product.getProductCategories().stream().map(item -> {
+            CategoryDTO cat = new CategoryDTO();
 
-		List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
-			ProductVersionResponse version = new ProductVersionResponse();
+            cat.setId(item.getCategory().getCategoryId());
+            cat.setName(item.getCategory().getCategoryName());
 
-			version.setId(vs.getId());
-			version.setVersionName(vs.getVersionName());
-			version.setRetailPrice(vs.getRetailPrice());
-			version.setWholesalePrice(vs.getWholesalePrice());
-			version.setQuantity(vs.getQuantity());
-			if (vs.getImage() != null) {
-			    Image img = vs.getImage();
-			    ImageResponse imgres = new ImageResponse();
-			    imgres.setId(img.getImageId());
-			    imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
-			    
-			    version.setImage(imgres);
-			}
+            return cat;
+        }).toList());
 
-			List<Attribute> attributes = getAllAttributeByVersion(vs);
-			version.setAttributes(attributes);
+        List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
+            ProductVersionResponse version = new ProductVersionResponse();
+            int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
+            version.setId(vs.getId());
+            version.setVersionName(vs.getVersionName());
+            version.setRetailPrice(vs.getRetailPrice());
+            version.setWholesalePrice(vs.getWholesalePrice());
+            version.setQuantity(stockQuantity);
+            version.setActive(vs.isStatus() && product.isStatus());
 
-			return version;
-		}).toList();
+            if (vs.getImage() != null) {
+                Image img = vs.getImage();
+                ImageResponse imgres = new ImageResponse();
+                imgres.setId(img.getImageId());
+                imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
 
-		response.setVersions(versions);
+                version.setImage(imgres);
+            }
 
-		return response;
-	}
+            List<Attribute> attributes = getAllAttributeByVersion(vs);
+            version.setAttributes(attributes);
 
-	private float getDiscount(Product product) {
-		List<ProductSale> sales = product.getProductSales();
-		long now = new Date().getTime();
+            return version;
+        }).toList();
 
-		if (sales.isEmpty()) {
-			return 0;
-		}
+        response.setVersions(versions);
 
-		ProductSale productSale = sales.get(0);
-		if (now < productSale.getStartDate().getTime() || now > productSale.getEndDate().getTime()) {
-			return 0;
-		}
+        return response;
+    }
 
-		return productSale.getDiscount();
-	}
+    private float getDiscount(Product product) {
+        List<ProductSale> sales = product.getProductSales();
+        long now = new Date().getTime();
 
-	public ProductDetailResponse getProductDetail(int idProduct) {
-		Product product = productJPA.findById(idProduct).get();
-		List<Version> versions = new ArrayList<>();
-		List<AttributeProductResponse> productAttributes = attributeService.getAttributeProduct(idProduct);
+        if (sales.isEmpty()) {
+            return 0;
+        }
 
-		ProductHomeResponse productParrent = new ProductHomeResponse();
-		List<ProductSale> sales = product.getProductSales();
+        ProductSale productSale = sales.get(0);
+        if (now < productSale.getStartDate().getTime() || now > productSale.getEndDate().getTime()) {
+            return 0;
+        }
 
-		productParrent.setId(product.getProductId());
-		productParrent.setProductName(product.getProductName());
+        return productSale.getDiscount();
+    }
+
+    public ProductDetailResponse getProductDetail(int idProduct) {
+        Product product = productJPA.findById(idProduct).get();
+        List<Version> versions = new ArrayList<>();
+        List<AttributeProductResponse> productAttributes = attributeService.getAttributeProduct(idProduct);
+
+        ProductHomeResponse productParrent = new ProductHomeResponse();
+        List<ProductSale> sales = product.getProductSales();
+
+        productParrent.setId(product.getProductId());
+        productParrent.setProductName(product.getProductName());
 //		productParrent.setMinPrice(null);
-		productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
-		productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
+        productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
+        productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
 
-		for (ProductVersion vs : product.getProductVersions()) {
-			Version versionDto = new Version();
+        for (ProductVersion vs : product.getProductVersions()) {
+            Version versionDto = new Version();
+            int stock = vsService.getTotalStockQuantityVersion(vs.getId());
 
-			List<Attribute> attributes = getAllAttributeByVersion(vs);
-			String imageUrl = null;
-			if (vs.getImage() != null) {
-			    imageUrl = vs.getImage().getImageUrl();
-			}
+            List<Attribute> attributes = getAllAttributeByVersion(vs);
+            String imageUrl = null;
+            if (vs.getImage() != null) {
+                imageUrl = vs.getImage().getImageUrl();
+            }
 
+            versionDto.setId(vs.getId());
+            versionDto.setVersionName((vs.getVersionName()));
+            versionDto.setPrice(vs.getRetailPrice());
+            versionDto.setQuantity(stock);
+            versionDto.setActive(vs.isStatus() && product.isStatus());
+            versionDto.setImage(imageUrl);
+            versionDto.setAttributes(attributes);
 
-			versionDto.setId(vs.getId());
-			versionDto.setVersionName((vs.getVersionName()));
-			versionDto.setPrice(vs.getRetailPrice());
-			versionDto.setInStock(vs.getQuantity() > 0);
-			versionDto.setImage(imageUrl);
-			versionDto.setAttributes(attributes);
+            versions.add(versionDto);
+        }
 
-			versions.add(versionDto);
-		}
+        return new ProductDetailResponse(productParrent, versions, productAttributes);
+    }
 
-		return new ProductDetailResponse(productParrent, versions, productAttributes);
-	}
+    public Product getProductById(int id) {
+        Product product = productJPA.findById(id).orElse(null);
 
-	public Product getProductById(int id) {
-		Product product = productJPA.findById(id).orElse(null);
+        return product != null && product.isStatus() ? product : null;
+    }
 
-		return product != null && product.isStatus() ? product : null;
-	}
+    private List<Attribute> getAllAttributeByVersion(ProductVersion version) {
 
-	private List<Attribute> getAllAttributeByVersion(ProductVersion version) {
+        List<Attribute> list = new ArrayList<>();
+        for (AttributeOptionsVersion options : version.getAttributeOptionsVersions()) {
 
-		List<Attribute> list = new ArrayList<>();
-		for (AttributeOptionsVersion options : version.getAttributeOptionsVersions()) {
+            int id = options.getAttributeOption() != null ? options.getAttributeOption().getId()
+                    : null;
 
-			int id = options.getAttributeOption() != null ? options.getAttributeOption().getId()
-					: null;
-			
-			String key = options.getAttributeOption() != null
-					? options.getAttributeOption().getAttribute().getAttributeName()
-					: null;
-			String value = options.getAttributeOption() != null ? options.getAttributeOption().getAttributeValue()
-					: null;
+            String key = options.getAttributeOption() != null
+                    ? options.getAttributeOption().getAttribute().getAttributeName()
+                    : null;
+            String value = options.getAttributeOption() != null ? options.getAttributeOption().getAttributeValue()
+                    : null;
 
-			list.add(new Attribute(id,key, value));
-		}
+            list.add(new Attribute(id, key, value));
+        }
 
-		return list;
-	}
+        return list;
+    }
 
-	public Product saveProduct(Product product) {
-		return productJpa.save(product);
-	}
+    public Product saveProduct(Product product) {
+        return productJpa.save(product);
+    }
 
-	public Product findProductById(Integer productId) {
-		Optional<Product> product = productJpa.findById(productId);
-		if (product.isPresent()) {
-			return product.get();
-		} else {
-			throw new RuntimeException("Product not found with id: " + productId);
-		}
-	}
+    public Product findProductById(Integer productId) {
+        Optional<Product> product = productJpa.findById(productId);
+        if (product.isPresent()) {
+            return product.get();
+        } else {
+            throw new RuntimeException("Product not found with id: " + productId);
+        }
+    }
 
-	public Product createProduct(ProductDTO productModel) {
-		Product productEntity = setProduct(productModel);
-		Product productSaved = productJpa.save(productEntity);
+    public Product createProduct(ProductDTO productModel) {
+        Product productEntity = setProduct(productModel);
+        Product productSaved = productJpa.save(productEntity);
 
-		saveProductCategory(productSaved, productModel.getCategories());
-		saveProductVersion(productSaved, productModel.getVersions());
+        saveProductCategory(productSaved, productModel.getCategories());
+        saveProductVersion(productSaved, productModel.getVersions());
 
-		return productJpa.findById(productSaved.getProductId()).orElse(null);
-	}
+        return productJpa.findById(productSaved.getProductId()).orElse(null);
+    }
 
-	public Product updateProduct(ProductDTO productModel, Product product) {
-		Product temp = productJPA.findById(productModel.getId()).orElse(null);
+    public Product updateProduct(ProductDTO productModel, Product product) {
+        Product temp = productJPA.findById(productModel.getId()).orElse(null);
 
-		if (temp != null) {
-			uploadService.delete(temp.getProductImg(), "images");
-		}
+        if (temp != null) {
+            uploadService.delete(temp.getProductImg(), "images");
+        }
 
-		Product productEntity = setProduct(productModel);
-		productEntity.setProductId(productModel.getId());
+        Product productEntity = setProduct(productModel);
+        productEntity.setProductId(productModel.getId());
 
-		//Nếu truyền lên ảnh thì cập nhật còn không thì để trống
-		productEntity.setProductImg(changeNewImage(productModel));
+        //Nếu truyền lên ảnh thì cập nhật còn không thì để trống
+        productEntity.setProductImg(changeNewImage(productModel));
 
-		// Sản phẩm chính
-		Product productSaved = productJPA.save(productEntity);
-		// Danh mục sản phẩm
-		removeCategoryProduct(productModel);
-		saveCategoryProduct(productModel);
+        // Sản phẩm chính
+        Product productSaved = productJPA.save(productEntity);
+        // Danh mục sản phẩm
+        removeCategoryProduct(productModel);
+        saveCategoryProduct(productModel);
 
-		return productSaved;
-	}
+        return productSaved;
+    }
 
-	private void removeCategoryProduct(ProductDTO productModel) {
-		List<ProductCategory> productCategories = productCategoryJPA
-				.getAllProductCategoryByProductId(productModel.getId());
+    private void removeCategoryProduct(ProductDTO productModel) {
+        List<ProductCategory> productCategories = productCategoryJPA
+                .getAllProductCategoryByProductId(productModel.getId());
 
-		for (ProductCategory catEntity : productCategories) {
-			boolean check = false;
+        for (ProductCategory catEntity : productCategories) {
+            boolean check = false;
 
-			for (CategoryDTO cat : productModel.getCategories()) {
-				if (catEntity.getCategory().getCategoryId() == cat.getId()) {
-					check = true;
-					break;
-				}
-			}
+            for (CategoryDTO cat : productModel.getCategories()) {
+                if (catEntity.getCategory().getCategoryId() == cat.getId()) {
+                    check = true;
+                    break;
+                }
+            }
 
-			if (!check) {
-				int idProductCategory = catEntity.getPrdCatId();
-				productCategoryJPA.deleteById(idProductCategory);
-			}
-		}
-	}
+            if (!check) {
+                int idProductCategory = catEntity.getPrdCatId();
+                productCategoryJPA.deleteById(idProductCategory);
+            }
+        }
+    }
 
-	private void saveCategoryProduct(ProductDTO productModel) {
-		List<ProductCategory> productCategories = productCategoryJPA
-				.getAllProductCategoryByProductId(productModel.getId());
+    private void saveCategoryProduct(ProductDTO productModel) {
+        List<ProductCategory> productCategories = productCategoryJPA
+                .getAllProductCategoryByProductId(productModel.getId());
 
-		for (CategoryDTO catDTO : productModel.getCategories()) {
-			boolean check = false;
+        for (CategoryDTO catDTO : productModel.getCategories()) {
+            boolean check = false;
 
-			for (ProductCategory catEntity : productCategories) {
-				if (catDTO.getId() == catEntity.getCategory().getCategoryId()) {
-					check = true;
-					break;
-				}
-			}
+            for (ProductCategory catEntity : productCategories) {
+                if (catDTO.getId() == catEntity.getCategory().getCategoryId()) {
+                    check = true;
+                    break;
+                }
+            }
 
-			if (!check) {
-				ProductCategory productCategory = createProductCategory(productModel.getId(), catDTO.getId());
-				productCategoryJPA.save(productCategory);
-			}
+            if (!check) {
+                ProductCategory productCategory = createProductCategory(productModel.getId(), catDTO.getId());
+                productCategoryJPA.save(productCategory);
+            }
 
-		}
-	}
+        }
+    }
 
-	private ProductCategory createProductCategory(int idProduct, int idCategory) {
-		ProductCategory productCat = new ProductCategory();
-		Product product = new Product();
-		Category cat = new Category();
-		cat.setCategoryId(idCategory);
-		product.setProductId(idProduct);
+    private ProductCategory createProductCategory(int idProduct, int idCategory) {
+        ProductCategory productCat = new ProductCategory();
+        Product product = new Product();
+        Category cat = new Category();
+        cat.setCategoryId(idCategory);
+        product.setProductId(idProduct);
 
-		productCat.setCategory(cat);
-		productCat.setProduct(product);
+        productCat.setCategory(cat);
+        productCat.setProduct(product);
 
-		return productCat;
-	}
+        return productCat;
+    }
 
-	private Product setProduct(ProductDTO productModel) {
-		Product product = new Product();
+    private Product setProduct(ProductDTO productModel) {
+        Product product = new Product();
 
-		product.setProductName(productModel.getName());
-		product.setProductPrice(productModel.getPrice());
-		product.setDescription(productModel.getDescription());
-		if (productModel.getImage() != null && !productModel.getImage().isEmpty()
-				&& !productModel.getImage().isBlank()) {
-			product.setProductImg(uploadService.save(productModel.getImage(), "images"));
-		}
-		product.setStatus(true);
+        product.setProductName(productModel.getName());
+        product.setProductPrice(productModel.getPrice());
+        product.setDescription(productModel.getDescription());
+        if (productModel.getImage() != null && !productModel.getImage().isEmpty()
+                && !productModel.getImage().isBlank()) {
+            product.setProductImg(uploadService.save(productModel.getImage(), "images"));
+        }
+        product.setStatus(true);
 
-		return product;
-	}
+        return product;
+    }
 
-	private String changeNewImage(ProductDTO productModel) {
-		Product product = productJPA.findById(productModel.getId()).orElse(null);
-		String fileName = "";
-		
-		if (productModel.getImage() != null && !productModel.getImage().isBlank()
-				&& !productModel.getImage().isEmpty()) {
-			uploadService.delete(product.getProductImg(), "images");
-			fileName = uploadService.save(productModel.getImage(), "images");
-		}else {
-			fileName = product.getProductImg();
-		}
+    private String changeNewImage(ProductDTO productModel) {
+        Product product = productJPA.findById(productModel.getId()).orElse(null);
+        String fileName = "";
 
-		return fileName;
-	}
+        if (productModel.getImage() != null && !productModel.getImage().isBlank()
+                && !productModel.getImage().isEmpty()) {
+            uploadService.delete(product.getProductImg(), "images");
+            fileName = uploadService.save(productModel.getImage(), "images");
+        } else {
+            fileName = product.getProductImg();
+        }
 
-	private void saveProductCategory(Product product, List<CategoryDTO> productCategories) {
-		for (CategoryDTO cat : productCategories) {
-			ProductCategory productCategoryEntity = new ProductCategory();
-			Category category = new Category();
-			category.setCategoryId(cat.getId());
+        return fileName;
+    }
 
-			productCategoryEntity.setCategory(category);
-			productCategoryEntity.setProduct(product);
+    private void saveProductCategory(Product product, List<CategoryDTO> productCategories) {
+        for (CategoryDTO cat : productCategories) {
+            ProductCategory productCategoryEntity = new ProductCategory();
+            Category category = new Category();
+            category.setCategoryId(cat.getId());
 
-			productCategoryJPA.save(productCategoryEntity);
-		}
-	}
+            productCategoryEntity.setCategory(category);
+            productCategoryEntity.setProduct(product);
 
-	private void saveProductVersion(Product product, List<VersionDTO> versions) {
+            productCategoryJPA.save(productCategoryEntity);
+        }
+    }
 
-		for (VersionDTO vs : versions) {
-			ProductVersion version = new ProductVersion();
+    private void saveProductVersion(Product product, List<VersionDTO> versions) {
 
-			version.setProduct(product);
-			version.setVersionName(vs.getVersionName());
-			version.setRetailPrice(vs.getRetalPrice());
-			version.setWholesalePrice(vs.getWholesalePrice());
+        for (VersionDTO vs : versions) {
+            ProductVersion version = new ProductVersion();
 
-			ProductVersion versionSaved = productVersionJPA.save(version);
+            version.setProduct(product);
+            version.setVersionName(vs.getVersionName());
+            version.setRetailPrice(vs.getRetalPrice());
+            version.setWholesalePrice(vs.getWholesalePrice());
+            version.setStatus(true);
 
-			saveAttributeOptionVersion(versionSaved, vs.getAttributes());
-			saveImageVersion(versionSaved, vs.getImages());
-		}
-	}
+            ProductVersion versionSaved = productVersionJPA.save(version);
 
-	private void saveAttributeOptionVersion(ProductVersion version, List<OptionDTO> attribute) {
-		for (OptionDTO op : attribute) {
-			AttributeOptionsVersion mapping = new AttributeOptionsVersion();
-			AttributeOption option = new AttributeOption();
+            saveAttributeOptionVersion(versionSaved, vs.getAttributes());
+            saveImageVersion(versionSaved, vs.getImages());
+        }
+    }
 
-			option.setId(op.getId());
+    private void saveAttributeOptionVersion(ProductVersion version, List<OptionDTO> attribute) {
+        for (OptionDTO op : attribute) {
+            AttributeOptionsVersion mapping = new AttributeOptionsVersion();
+            AttributeOption option = new AttributeOption();
 
-			mapping.setProductVersion(version);
-			mapping.setAttributeOption(option);
+            option.setId(op.getId());
 
-			attributeOptionsVersionJPA.save(mapping);
-		}
-	}
+            mapping.setProductVersion(version);
+            mapping.setAttributeOption(option);
 
-	private void saveImageVersion(ProductVersion version, List<String> images) {
-		for (String img : images) {
-			String fileName = uploadService.save(img, "images");
+            attributeOptionsVersionJPA.save(mapping);
+        }
+    }
 
-			Image imageEntity = new Image();
+    private void saveImageVersion(ProductVersion version, List<String> images) {
+        for (String img : images) {
+            String fileName = uploadService.save(img, "images");
 
-			imageEntity.setImageUrl(fileName);
-			imageEntity.setProductVersion(version);
+            Image imageEntity = new Image();
 
-			imageJPA.save(imageEntity);
-		}
-	}
+            imageEntity.setImageUrl(fileName);
+            imageEntity.setProductVersion(version);
 
-	public boolean removeProduct(int id) {
-		try {
-			Product product = productJPA.findById(id).get();
+            imageJPA.save(imageEntity);
+        }
+    }
 
-			product.setStatus(false);
+    public boolean removeProduct(int id) {
+        try {
+            Product product = productJPA.findById(id).get();
 
-			productJPA.save(product);
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
-	}
+            product.setStatus(false);
+
+            productJPA.save(product);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public ProductResponse refreshSelectedProduct(int id) {
+        return productJPA.findById(id)
+                .map(this::createProductResponse) // Chuyển đổi Product sang ProductResponse
+                .orElse(null); // Trả về null nếu không tìm thấy Product
+    }
 
 }
