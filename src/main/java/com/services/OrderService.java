@@ -118,6 +118,8 @@ public class OrderService {
 		if (ordersPage.isEmpty()) {
 			return new ApiResponse<>(404, "No orders found", null);
 		}
+		
+		
 
 		List<OrderByUserDTO> orderDtos = new ArrayList<>();
 		for (Order order : ordersPage) {
@@ -197,96 +199,107 @@ public class OrderService {
 	}
 
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
-		if (statusId == null) {
-			return new ApiResponse<>(400, "Status is required.", null);
-		}
+	    if (statusId == null) {
+	        return new ApiResponse<>(400, "Status is required.", null);
+	    }
 
-		Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
-		if (newOrderStatus.isEmpty()) {
-			return new ApiResponse<>(400, "The provided status does not exist.", null);
-		}
+	    Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
+	    if (newOrderStatus.isEmpty()) {
+	        return new ApiResponse<>(400, "The provided status does not exist.", null);
+	    }
 
-		Optional<Order> updatedOrder = orderJpa.findById(orderId);
-		if (updatedOrder.isEmpty()) {
-			return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
-		}
+	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
+	    if (updatedOrder.isEmpty()) {
+	        return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
+	    }
 
-		Order order = updatedOrder.get();
-		String currentStatus = order.getOrderStatus().getStatusName();
-		String newStatus = newOrderStatus.get().getStatusName();
+	    Order order = updatedOrder.get();
+	    String currentStatus = order.getOrderStatus().getStatusName();
+	    String newStatus = newOrderStatus.get().getStatusName();
 
-		if (!isValidStatusTransition(currentStatus, newStatus)) {
-			return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
-		}
+	    if (!isValidStatusTransition(currentStatus, newStatus)) {
+	        return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
+	    }
 
-		if (isOrderStatusChanged(order, newStatus)) {
-			if ("Processed".equalsIgnoreCase(newStatus)) {
-				Boolean isStockSufficient = updateProductVersionsForOrder(order.getOrderDetails());
-				if (!isStockSufficient) {
-					return new ApiResponse<>(400, "Not enough stock available for one or more products.", null);
-				}
-			}
-			order.setOrderStatus(newOrderStatus.get());
-			orderJpa.save(order);
-		}
+	    if (isOrderStatusChanged(order, newStatus)) {
+	        if ("Processed".equalsIgnoreCase(newStatus)) {
+	            List<String> insufficientStockMessages = checkProductVersionsStock(order.getOrderDetails());
+	            if (!insufficientStockMessages.isEmpty()) {
+	                return new ApiResponse<>(400, String.join(", ", insufficientStockMessages), null);
+	            }
+	        }
+	        order.setOrderStatus(newOrderStatus.get());
+	        orderJpa.save(order);
+	    }
 
-		return new ApiResponse<>(200, "Order status updated successfully", null);
+	    return new ApiResponse<>(200, "Order status updated successfully", null);
 	}
+
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
 		return !statusName.equalsIgnoreCase(order.getOrderStatus().getStatusName());
 	}
 
 	private boolean isValidStatusTransition(String currentStatus, String newStatus) {
-		switch (currentStatus.toLowerCase()) {
-		case "pending":
-			return "processed".equalsIgnoreCase(newStatus);
-		case "processed":
-			return "shipped".equalsIgnoreCase(newStatus);
-		case "shipped":
-			return "delivered".equalsIgnoreCase(newStatus);
-		case "delivered":
-			return false;
-		case "cancelled":
-			return false;
-		default:
-			return false;
-		}
+	    switch (currentStatus.toLowerCase()) {
+	        case "pending":
+	            return "processed".equalsIgnoreCase(newStatus);
+	        case "processed":
+	            return "shipped".equalsIgnoreCase(newStatus);
+	        case "shipped":
+	            return "delivered".equalsIgnoreCase(newStatus);
+	        case "delivered":
+	            return false;
+	        case "cancelled":
+	            return false;
+	        case "temp":
+	            return "cancelled".equalsIgnoreCase(newStatus);
+	        default:
+	            return false;
+	    }
 	}
 
-	//Lấy tổng là số lượng của product version cộng với cancel và đã....
-	private Boolean updateProductVersionsForOrder(List<OrderDetail> orderDetailList) {
-		for (OrderDetail orderDetail : orderDetailList) {
-			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-				Integer orderDetailProductQuantity = orderDetail.getQuantity();
-				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-						.orElse(null);
+	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
+	    List<String> insufficientStockMessages = new ArrayList<>();
+	    for (OrderDetail orderDetail : orderDetailList) {
+	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+	                    .orElse(null);
 
-				if (productVersion != null) {
-					Integer productVersionQuantity = productVersion.getQuantity();
-					Integer totalQuantityProcessedOrders = productVersionJpa
-							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-					Integer totalQuantityCancelledOrders = productVersionJpa
-							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	            if (productVersion != null) {
+	                Integer productVersionStock = productVersion.getQuantity();
+	                Integer processedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	                Integer cancelledOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	                Integer shippedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	                Integer deliveredOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-					totalQuantityProcessedOrders = (totalQuantityProcessedOrders != null) ? totalQuantityProcessedOrders
-							: 0;
-					totalQuantityCancelledOrders = (totalQuantityCancelledOrders != null) ? totalQuantityCancelledOrders
-							: 0;
+	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-					Integer totalQuantityProductVersionInOrder = totalQuantityProcessedOrders
-							+ totalQuantityCancelledOrders;
-					Integer inventoryProductVersion = productVersionQuantity - totalQuantityProductVersionInOrder;
-					if (inventoryProductVersion < orderDetailProductQuantity) {
-						return false;
-					}
-				} else {
-					return false;
-				}
-			}
-		}
-		return true;
+	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+	                Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
+
+	                Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
+
+	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
+	                    insufficientStockMessages.add("Product version ID " + productVersion.getId() + ": Available stock " 
+	                        + availableProductVersionStock + ", Requested quantity: " + orderDetailRequestedQuantity);
+	                }
+	            } else {
+	                insufficientStockMessages.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+	            }
+	        }
+	    }
+	    return insufficientStockMessages;
 	}
+
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {

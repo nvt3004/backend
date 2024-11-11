@@ -14,32 +14,35 @@ import com.repositories.OrderStatusJPA;
 @Service
 public class OrderStatusService {
 
-    @Autowired
-    private OrderStatusJPA orderStatusJpa;
+	@Autowired
+	private OrderStatusJPA orderStatusJpa;
 
-    public List<OrderStatus> getAllOrderStatuses() {
-        return orderStatusJpa.findAll();
-    }
-    
-    public Optional<OrderStatus> getOrderStatusById(Integer statusId){
-    	return orderStatusJpa.findById(statusId);
-    }
-    
-    public List<OrderStatusDTO> convertToDTO(List<OrderStatus> orderStatuses) {
-        List<OrderStatusDTO> orderStatusDTOList = new ArrayList<>();
-        
-        for (OrderStatus orderStatus : orderStatuses) {
-            OrderStatusDTO dto = new OrderStatusDTO();
-            dto.setStatusId(orderStatus.getStatusId());
-            dto.setStatusName(orderStatus.getStatusName());
-            orderStatusDTOList.add(dto);
-        }
+	public List<OrderStatusDTO> getAllOrderStatusDTOs() {
+	    List<OrderStatus> orderStatuses = orderStatusJpa.findAll();
+	    List<OrderStatusDTO> orderStatusDTOList = new ArrayList<>();
 
-        return orderStatusDTOList;
-    }
-    
-    public OrderStatus findByName(String statusName) {
-        return orderStatusJpa.findByStatusName(statusName)
-                .orElseThrow(() -> new RuntimeException("Order status not found"));
-    }
+	    for (OrderStatus orderStatus : orderStatuses) {
+	       
+	        if ("Temp".equalsIgnoreCase(orderStatus.getStatusName())) {
+	            continue;
+	        }
+	        
+	        OrderStatusDTO dto = new OrderStatusDTO();
+	        dto.setStatusId(orderStatus.getStatusId());
+	        dto.setStatusName(orderStatus.getStatusName());
+	        orderStatusDTOList.add(dto);
+	    }
+
+	    return orderStatusDTOList;
+	}
+
+
+	public Optional<OrderStatus> getOrderStatusById(Integer statusId) {
+		return orderStatusJpa.findById(statusId);
+	}
+
+	public OrderStatus findByName(String statusName) {
+		return orderStatusJpa.findByStatusName(statusName)
+				.orElseThrow(() -> new RuntimeException("Order status not found"));
+	}
 }
