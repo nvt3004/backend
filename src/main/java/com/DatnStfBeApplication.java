@@ -11,7 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableScheduling 
 public class DatnStfBeApplication {
 
-
 	public static void main(String[] args) {
 		SpringApplication.run(DatnStfBeApplication.class, args);
 	}

@@ -42,9 +42,10 @@ public class SupplierService {
 		supplier.setAddress(supplierDetails.getAddress());
 		supplier.setContactName(supplierDetails.getContactName());
 		supplier.setEmail(supplierDetails.getEmail());
-		supplier.setStatus(supplierDetails.isActive());
+		supplier.setStatus(supplierDetails.getIsActive());
 		supplier.setPhone(supplierDetails.getPhone());
 		supplier.setSupplierName(supplierDetails.getSupplierName());
+		
 		return supplierJpa.save(supplier);
 	}
 
@@ -53,7 +54,7 @@ public class SupplierService {
 		supplier.setAddress(supplierDetails.getAddress());
 		supplier.setContactName(supplierDetails.getContactName());
 		supplier.setEmail(supplierDetails.getEmail());
-		supplier.setStatus(supplierDetails.isActive());
+		supplier.setStatus(supplierDetails.getIsActive());
 		supplier.setPhone(supplierDetails.getPhone());
 		supplier.setSupplierName(supplierDetails.getSupplierName());
 		return supplierJpa.save(supplier);

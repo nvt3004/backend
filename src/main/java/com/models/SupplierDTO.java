@@ -1,13 +1,12 @@
 package com.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -27,7 +26,7 @@ public class SupplierDTO {
     private String email;
 
     @NotNull(message = "Active status cannot be null")
-    private boolean isActive;
+    private Boolean isActive;
 
     @NotBlank(message = "Phone number cannot be blank")
     @Size(max = 20, message = "Phone number cannot be longer than 20 characters")
@@ -36,4 +35,6 @@ public class SupplierDTO {
     @NotBlank(message = "Supplier name cannot be blank")
     @Size(max = 100, message = "Supplier name cannot be longer than 100 characters")
     private String supplierName;
+
+    private int id;
 }
