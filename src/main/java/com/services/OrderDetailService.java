@@ -2,8 +2,10 @@ package com.services;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -110,37 +112,40 @@ public class OrderDetailService {
 	}
 
 	private List<AttributeDTO> createAttributeListByProductId(Integer productId) {
-		List<AttributeDTO> attributeList = new ArrayList<>();
-		List<ColorDTO> colorList = new ArrayList<>();
-		List<SizeDTO> sizeList = new ArrayList<>();
-		List<ProductVersion> productVersions = productVersionJpa.findByProductId(productId);
+	    List<AttributeDTO> attributeList = new ArrayList<>();
+	    Set<ColorDTO> colorSet = new HashSet<>();
+	    Set<SizeDTO> sizeSet = new HashSet<>();
+	    List<ProductVersion> productVersions = productVersionJpa.findByProductId(productId);
 
-		if (productVersions != null) {
-			for (ProductVersion productVersion : productVersions) {
-				for (AttributeOptionsVersion aov : productVersion.getAttributeOptionsVersions()) {
-					String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-					String attributeValue = aov.getAttributeOption().getAttributeValue();
-					Integer attributeId = aov.getAttributeOption().getId();
-					if ("Color".equalsIgnoreCase(attributeName)) {
-						ColorDTO colorDTO = new ColorDTO();
-						colorDTO.setColorId(attributeId);
-						colorDTO.setColor(attributeValue);
-						colorList.add(colorDTO);
-					} else if ("Size".equalsIgnoreCase(attributeName)) {
-						SizeDTO sizeDTO = new SizeDTO();
-						sizeDTO.setSizeId(attributeId);
-						sizeDTO.setSize(attributeValue);
-						sizeList.add(sizeDTO);
-					}
-				}
-			}
-		}
+	    if (productVersions != null) {
+	        for (ProductVersion productVersion : productVersions) {
+	            for (AttributeOptionsVersion aov : productVersion.getAttributeOptionsVersions()) {
+	                String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	                String attributeValue = aov.getAttributeOption().getAttributeValue();
+	                Integer attributeId = aov.getAttributeOption().getId();
+	                if ("Color".equalsIgnoreCase(attributeName)) {
+	                    ColorDTO colorDTO = new ColorDTO();
+	                    colorDTO.setColorId(attributeId);
+	                    colorDTO.setColor(attributeValue);
+	                    colorSet.add(colorDTO);
+	                } else if ("Size".equalsIgnoreCase(attributeName)) {
+	                    SizeDTO sizeDTO = new SizeDTO();
+	                    sizeDTO.setSizeId(attributeId);
+	                    sizeDTO.setSize(attributeValue);
+	                    sizeSet.add(sizeDTO);
+	                }
+	            }
+	        }
+	    }
 
-		AttributeDTO attributeDTO = new AttributeDTO(colorList, sizeList);
-		attributeList.add(attributeDTO);
+	    List<ColorDTO> colorList = new ArrayList<>(colorSet);
+	    List<SizeDTO> sizeList = new ArrayList<>(sizeSet);
+	    AttributeDTO attributeDTO = new AttributeDTO(colorList, sizeList);
+	    attributeList.add(attributeDTO);
 
-		return attributeList;
+	    return attributeList;
 	}
+
 
 	private String formatDiscount(BigDecimal discount) {
 		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;

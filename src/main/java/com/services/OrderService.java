@@ -204,12 +204,12 @@ public class OrderService {
 	    }
 
 	    Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
-	    if (newOrderStatus.isEmpty()) {
+	    if (!newOrderStatus.isPresent()) {
 	        return new ApiResponse<>(400, "The provided status does not exist.", null);
 	    }
 
 	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
-	    if (updatedOrder.isEmpty()) {
+	    if (!updatedOrder.isPresent()) {
 	        return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
 	    }
 
@@ -371,7 +371,6 @@ public class OrderService {
 		Order order = orderJpa.findById(id).get();
 
 		BigDecimal total = BigDecimal.ZERO;
-
 		for (OrderDetail detail : order.getOrderDetails()) {
 			total = total.add(detail.getPrice());
 		}
