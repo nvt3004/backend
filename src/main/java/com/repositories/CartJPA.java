@@ -13,6 +13,6 @@ public interface CartJPA extends JpaRepository<Cart, Integer> {
 	@Query("SELECT o FROM Cart o WHERE o.user.userId=:userId")
 	public Cart getCartByUser(@Param("userId") int userId);
 	
-	@Query("SELECT o FROM CartProduct o WHERE o.cart.user.userId =:userId")
+	@Query("SELECT o FROM CartProduct o WHERE o.cart.user.userId =:userId ORDER BY o.cartPrdId DESC")
 	public List<CartProduct> getAllCartItemByUser(@Param("userId") int userId);
 }

@@ -18,4 +18,5 @@ public class ProductHomeResponse {
 	private BigDecimal maxPrice;
 	private boolean active;
 	private long inStock;
+	private String description;
 }

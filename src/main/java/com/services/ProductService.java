@@ -1,5 +1,6 @@
 package com.services;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -202,13 +203,31 @@ public class ProductService {
 
 		productParrent.setId(product.getProductId());
 		productParrent.setProductName(product.getProductName());
-//		productParrent.setMinPrice(null);
 		productParrent.setImage(uploadService.getUrlImage(product.getProductImg()));
 		productParrent.setDiscount(sales.size() <= 0 ? 0 : sales.get(0).getDiscount());
+		productParrent.setDescription(product.getDescription());
+		productParrent.setActive(product.isStatus());
 
+		int inStockProductParent = 0;
+		BigDecimal minPrice = product.getProductVersions().get(0).getRetailPrice();
+		BigDecimal maxPrice = product.getProductVersions().get(0).getRetailPrice();
+		
 		for (ProductVersion vs : product.getProductVersions()) {
 			Version versionDto = new Version();
+			
+			//Tồn kho
 			int stock = vsService.getTotalStockQuantityVersion(vs.getId());
+			inStockProductParent += stock;
+			
+			//Min price
+			if(vs.getRetailPrice().compareTo(minPrice) == -1) {
+				minPrice = vs.getRetailPrice();
+			}
+			//Max price
+			if(vs.getRetailPrice().compareTo(minPrice) == 1) {
+				maxPrice = vs.getRetailPrice();
+			}
+			
 
 			List<Attribute> attributes = getAllAttributeByVersion(vs);
 			String imageUrl = null;
@@ -227,6 +246,9 @@ public class ProductService {
 
 			versions.add(versionDto);
 		}
+		productParrent.setMinPrice(minPrice);
+		productParrent.setMaxPrice(maxPrice);
+		productParrent.setInStock(Long.valueOf(inStockProductParent));
 
 		return new ProductDetailResponse(productParrent, versions, productAttributes);
 	}

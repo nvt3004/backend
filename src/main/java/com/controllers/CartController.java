@@ -1,6 +1,7 @@
 package com.controllers;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -102,8 +103,8 @@ public class CartController {
 
 	@Autowired
 	UserCouponJPA userCouponJPA;
-	
-	@Autowired 
+
+	@Autowired
 	VersionService vsService;
 
 	// @RequestHeader("Authorization") Optional<String> authHeader
@@ -159,7 +160,7 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
+
 		int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
 
 		if (stockQuantity <= 0) {
@@ -168,10 +169,10 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
-		
+
 		if (productCartModel.getQuantity() > stockQuantity) {
 			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
+			response.setMessage("The product currently has only " + stockQuantity + " versions left");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
@@ -375,12 +376,6 @@ public class CartController {
 				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 			}
 
-			if (detail.getIdVersion() == null) {
-				response.setCode(422);
-				response.setMessage("Price canot be null");
-
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
-			}
 
 			if (detail.getQuantity() <= 0) {
 				response.setCode(422);
@@ -396,7 +391,7 @@ public class CartController {
 				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 			}
 
-			if (!version.getProduct().isStatus()) {
+			if (!version.getProduct().isStatus() || !version.isStatus()) {
 				response.setCode(404);
 				response.setMessage(String.format("Product id %s does not exist", detail.getIdVersion()));
 
@@ -411,10 +406,11 @@ public class CartController {
 
 				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 			}
-			
+
 			if (detail.getQuantity() > stockQuantity) {
 				response.setCode(422);
-				response.setMessage("The product version id "+detail.getIdVersion()+" currently has only "+stockQuantity+" versions left");
+				response.setMessage("The product version id " + detail.getIdVersion() + " currently has only "
+						+ stockQuantity + " versions left");
 
 				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 			}
@@ -588,29 +584,38 @@ public class CartController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		ProductVersion version = versionService.getProductVersionById(cartItemModel.getVersionId());
+		ProductVersion version = versionService.getProductVersionById(cartItem.getProductVersionBean().getId());
 		// False: nếu sản phẩm gốc bị xóa hoặc phiên bản sản phẩm này không tồn tại
-		if (!versionService.isValidProductVersion(version)) {
+		if (version == null) {
 			response.setCode(404);
 			response.setMessage("Products version not found");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
+
+		if (!version.isStatus() && !version.getProduct().isStatus()) {
+			response.setCode(404);
+			response.setMessage("Products version not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
 		int stockQuantity = vsService.getTotalStockQuantityVersion(cartItem.getProductVersionBean().getId());
 
 		if (stockQuantity <= 0) {
-			response.setCode(422);
+			response.setCode(999);
 			response.setMessage("Products that exceed the quantity in stock");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
-		
-		if (cartItemModel.getQuantity() > stockQuantity) {
-			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		if (cartItemModel.getQuantity() > stockQuantity) {
+			response.setCode(999);
+			response.setMessage("The product currently has only " + stockQuantity + " versions left");
+			cartItem.setQuantity(stockQuantity);
+			cartProductService.updateCartItem(cartItem);
+
+			return ResponseEntity.status(999).body(response);
 		}
 
 		cartItem.setQuantity(cartItemModel.getQuantity());
@@ -683,8 +688,7 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
-		
+
 		int stockQuantity = vsService.getTotalStockQuantityVersion(versionCheck.getId());
 
 		if (stockQuantity <= 0) {
@@ -693,10 +697,10 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
-		
+
 		if (cartItem.getQuantity() > stockQuantity) {
 			response.setCode(422);
-			response.setMessage("The product currently has only "+stockQuantity+" versions left");
+			response.setMessage("The product currently has only " + stockQuantity + " versions left");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
@@ -782,12 +786,12 @@ public class CartController {
 				return response;
 			}
 
-//			long now = new Date().getTime();
-//			if (now < coupon.getStartDate().getTime() || now > coupon.getEndDate().getTime()) {
-//				response.setCode(402);
-//				response.setMessage("Coupon code expired");
-//				return response;
-//			}
+			LocalDateTime now = LocalDateTime.now();
+			if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
+				response.setCode(402);
+				response.setMessage("Coupon code expired");
+				return response;
+			}
 		}
 
 		response.setCode(200);

@@ -35,7 +35,8 @@ public class ProductCustomJPA {
 			+ "       MIN(vs.retail_price) AS minPrice,\r\n"
 			+ "       MAX(vs.retail_price) AS maxPrice,\r\n"
 			+ "		  pd.status AS active, \r\n"		
-			+ "		  1 AS inStock \r\n"		
+			+ "		  1 AS inStock, \r\n"	
+			+ "		  pd.description AS description \r\n"
 			+ "FROM products pd \r\n"
 			+ "LEFT JOIN product_sales sale ON pd.product_id = sale.product_id \r\n"
 			+ "INNER JOIN product_version vs ON pd.product_id = vs.product_id\r\n"
@@ -50,7 +51,7 @@ public class ProductCustomJPA {
 			+ "         vs.product_id;";
 
 	private final String SQL_GET_ALL_PRODUCT_BY_CATEGORY = "SELECT pd.product_id AS id, pd.product_name AS productName, pd.product_price AS price,"	
-			+ " pd.product_img AS image, IFNULL(discount,0) AS discount," + " pd.status AS active,"+ " 1 AS inStock"+ " FROM products pd"
+			+ " pd.product_img AS image, IFNULL(discount,0) AS discount," + " pd.status AS active,"+ " 1 AS inStock,"+ " pd.description as description"+ " FROM products pd"
 			+ " INNER JOIN product_categories pdcat" + " ON pd.product_id = pdcat.product_id"
 			+ " INNER JOIN categories cat" + " ON cat.category_id = pdcat.category_id" + " LEFT JOIN product_sales sale"
 			+ " ON pd.product_id  = sale.product_id" + " WHERE cat.category_id =:idCat AND pd.status = true";
