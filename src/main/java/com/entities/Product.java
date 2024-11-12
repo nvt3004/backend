@@ -29,7 +29,7 @@ public class Product implements Serializable {
 	@Column(name = "product_price")
 	private BigDecimal productPrice;
 
-	private boolean status;
+	private Boolean status;
 
 	@OneToMany(fetch = FetchType.EAGER,mappedBy = "product")
 	@JsonManagedReference("product-feedbacks")

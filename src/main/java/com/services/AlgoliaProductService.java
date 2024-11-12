@@ -120,15 +120,20 @@ public class AlgoliaProductService {
 	    }
 	}
 
-	// Thêm sản phẩm vào Algolia
+	// Thêm sản phẩm vào Algolia sau khi xóa tất cả các sản phẩm cũ
 	public void addProduct(ProductDTO product) {
-		try {
-			productIndex.saveObject(product).waitTask();
-			logger.info("Thêm sản phẩm thành công: " + product);
-		} catch (Exception e) {
-			logger.severe("Lỗi khi thêm sản phẩm vào Algolia: " + e.getMessage());
-		}
+	    try {
+	        // Xóa tất cả sản phẩm trước khi thêm mới
+	        productIndex.clearObjects().waitTask();
+	        
+	        // Thêm sản phẩm mới vào Algolia
+	        productIndex.saveObject(product).waitTask();
+	        logger.info("Thêm sản phẩm thành công: " + product);
+	    } catch (Exception e) {
+	        logger.severe("Lỗi khi thêm sản phẩm vào Algolia: " + e.getMessage());
+	    }
 	}
+
 
 	public List<ProductDTO> searchProducts(Query query) {
 		try {

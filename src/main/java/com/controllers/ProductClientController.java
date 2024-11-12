@@ -164,15 +164,15 @@ public class ProductClientController {
 			@RequestParam(required = false) Integer sizeID, @RequestParam(defaultValue = "ASC") String sortMaxPrice,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int pageSize) {
 
-		System.out.println("Query: " + query);
-		System.out.println("Category ID: " + categoryID);
-		System.out.println("Min Price: " + minPrice);
-		System.out.println("Max Price: " + maxPrice);
-		System.out.println("Color ID: " + colorID);
-		System.out.println("Size ID: " + sizeID);
-		System.out.println("Sort Max Price: " + sortMaxPrice);
-		System.out.println("Page: " + page);
-		System.out.println("Page Size: " + pageSize);
+//		System.out.println("Query: " + query);
+//		System.out.println("Category ID: " + categoryID);
+//		System.out.println("Min Price: " + minPrice);
+//		System.out.println("Max Price: " + maxPrice);
+//		System.out.println("Color ID: " + colorID);
+//		System.out.println("Size ID: " + sizeID);
+//		System.out.println("Sort Max Price: " + sortMaxPrice);
+//		System.out.println("Page: " + page);
+//		System.out.println("Page Size: " + pageSize);
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
 		List<Wishlist> wishlist = new ArrayList<>();
 
