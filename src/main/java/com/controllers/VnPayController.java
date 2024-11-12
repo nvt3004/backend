@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -58,6 +59,7 @@ import com.services.ProductService;
 import com.services.ProductVersionService;
 import com.services.UserCouponService;
 import com.services.UserService;
+import com.services.VersionService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -107,6 +109,9 @@ public class VnPayController {
 	
 	@Autowired
 	UserCouponJPA userCouponJPA;
+	
+	@Autowired
+	VersionService vsService;
 
 	@PostMapping("/create-payment")
 	public ResponseEntity<ResponseAPI<String>> createPayment(
@@ -338,12 +343,6 @@ public class VnPayController {
 				return response;
 			}
 
-			if (detail.getIdVersion() == null) {
-				response.setCode(422);
-				response.setMessage("Price canot be null");
-
-				return response;
-			}
 
 			if (detail.getQuantity() <= 0) {
 				response.setCode(422);
@@ -359,16 +358,26 @@ public class VnPayController {
 				return response;
 			}
 
-			if (!version.getProduct().isStatus()) {
+			if (!version.getProduct().isStatus() || !version.isStatus()) {
 				response.setCode(404);
 				response.setMessage("Product not found");
 
 				return response;
 			}
 
-			if (detail.getQuantity() > version.getQuantity()) {
+			int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
+
+			if (stockQuantity <= 0) {
 				response.setCode(422);
-				response.setMessage("Exceeded stock quantity");
+				response.setMessage("Products that exceed the quantity in stock");
+
+				return response;
+			}
+
+			if (detail.getQuantity() > stockQuantity) {
+				response.setCode(422);
+				response.setMessage("The product version id " + detail.getIdVersion() + " currently has only "
+						+ stockQuantity + " versions left");
 
 				return response;
 			}
@@ -499,12 +508,12 @@ public class VnPayController {
 				return response;
 			}
 
-//			long now = new Date().getTime();
-//			if (now < coupon.getStartDate().getTime() || now > coupon.getEndDate().getTime()) {
-//				response.setCode(402);
-//				response.setMessage("Coupon code expired");
-//				return response;
-//			}
+			LocalDateTime now = LocalDateTime.now();
+			if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
+				response.setCode(402);
+				response.setMessage("Coupon code expired");
+				return response;
+			}
 		}
 
 		response.setCode(200);
