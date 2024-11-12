@@ -2,28 +2,33 @@ package com.services;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOption;
-import com.entities.AttributeOptionsVersion;
 import com.entities.Category;
 import com.entities.Feedback;
+import com.entities.Image;
 import com.entities.Product;
 import com.entities.ProductCategory;
+import com.entities.ProductSale;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.Wishlist;
 import com.repositories.AttributeOptionJPA;
-import com.repositories.AttributeOptionsVersionJPA;
 import com.repositories.CategoryJPA;
-import com.repositories.FeedbackJPA;
-import com.repositories.ProductCategoryJPA;
 import com.repositories.ProductJPA;
-import com.repositories.ProductVersionJPA;
 import com.repositories.UserJPA;
 import com.responsedto.ProductDTO;
 
@@ -35,16 +40,6 @@ public class ProductClientService {
 	UserJPA userJPA;
 	@Autowired
 	CategoryJPA categoryJPA;
-	@Autowired
-	FeedbackJPA feedbackJPA;
-	@Autowired
-	ProductCategoryJPA categoryJPA2;
-	@Autowired
-	ProductVersionJPA productVersionJPA;
-	@Autowired
-	AttributeOptionsVersionJPA attributeOptionsVersionJPA;
-	
-	
 	@Autowired
 	AttributeOptionJPA attributeOptionJPA;
 	@Autowired
@@ -116,102 +111,140 @@ public class ProductClientService {
 	}
 
 	// còn sử dụng
-	public List<ProductDTO> getAllProducts(User user) {
-	    List<ProductDTO> productDTOs = new ArrayList<>();
-	    try {
-	        // Lấy tất cả sản phẩm
-	        List<Product> products = productJPA.findAll();
-	        if (products == null || products.isEmpty()) {
-	            return productDTOs;
-	        }
+	public List<ProductDTO> getALLProduct(User user) {
+		List<ProductDTO> productDTOs = new ArrayList<>();
+		try {
+			List<Product> products = productJPA.findAll();
+			if (products == null || products.isEmpty()) {
+				return productDTOs;
+			}
 
-	        List<Wishlist> wishlist = user != null ? user.getWishlists() : null;
+			List<Wishlist> wishlist = null;
+			if (user != null) {
+				wishlist = user.getWishlists();
+			}
 
-	        for (Product product : products) {
+			for (Product product : products) {
 				ProductDTO productDTO = new ProductDTO();
-	        	productDTO.setObjectID(String.valueOf(product.getProductId()));
+				if (wishlist != null) {
+					for (Wishlist wishlistItem : wishlist) {
+						if (wishlistItem.getProduct().getProductId() == product.getProductId()) {
+							productDTO.setLike(true);
+							break;
+						}
+					}
+				}
+
+				List<ProductSale> productSales = product.getProductSales();
+				if (productSales != null && !productSales.isEmpty()) {
+					ProductSale productSale = productSales.get(0);
+					Date now = new Date();
+
+					if (productSale.getEndDate() != null && productSale.getEndDate().after(now)) {
+						productDTO.setDiscount(productSale.getDiscount());
+					}
+				}
+
+				productDTO.setObjectID(String.valueOf(product.getProductId()));
 				productDTO.setId(String.valueOf(product.getProductId()));
 				productDTO.setName(product.getProductName());
 				productDTO.setDescription(product.getDescription());
-	            if (wishlist != null) {
-	                productDTO.setLike(wishlist.stream()
-	                    .anyMatch(wishlistItem -> wishlistItem.getProduct().getProductId() == product.getProductId()));
-	            }
 
-	            // Truy vấn rating của Feedback theo productId
-	            Double averageRating = feedbackJPA.getAverageRatingByProductId(product.getProductId());
-	            productDTO.setRating(averageRating != null ? averageRating : -1);
+				// Xử lý rating từ feedbacks
+				List<Feedback> feedbacks = product.getFeedbacks();
+				if (feedbacks != null && !feedbacks.isEmpty()) {
+					int totalRating = 0;
+					for (Feedback fd : feedbacks) {
+						totalRating += fd.getRating();
+					}
+					double averageRating = (double) totalRating / feedbacks.size();
+					productDTO.setRating(averageRating);
+				} else {
+					productDTO.setRating(-1); // Không có feedback, giá trị mặc định là -1
+				}
 
-	            // Truy vấn danh mục (category) theo productId
-	            List<ProductCategory> productCategories = categoryJPA2.findByProductId(product.getProductId());
-	            productDTO.setCategories(productCategories.stream()
-	                .map(category -> category.getCategory().getCategoryName())
-	                .collect(Collectors.toList()));
-	            productDTO.setCategoryID(productCategories.stream()
-	                .map(category -> category.getCategory().getCategoryId())
-	                .collect(Collectors.toList()));
+				// Set danh sách categories và ID
+				List<String> categories = new ArrayList<>();
+				List<Integer> categoryID = new ArrayList<>();
+				for (ProductCategory category : product.getProductCategories()) {
+					categories.add(category.getCategory().getCategoryName());
+					categoryID.add(category.getCategory().getCategoryId());
+				}
+				productDTO.setCategories(categories);
+				productDTO.setCategoryID(categoryID);
 
-	            // Truy vấn phiên bản sản phẩm (versions), colors, sizes, images
-	            List<ProductVersion> productVersions = productVersionJPA.findByProductId(product.getProductId());
-	            List<String> versionName = new ArrayList<>();
-	            List<String> colors = new ArrayList<>();
-	            List<String> sizes = new ArrayList<>();
-	            List<String> images = new ArrayList<>();
-	            List<Integer> colorID = new ArrayList<>();
-	            List<Integer> sizeID = new ArrayList<>();
-	            BigDecimal minPrice = null;
-	            BigDecimal maxPrice = new BigDecimal("0.00");
+				// Set phiên bản sản phẩm (versions), colors, sizes, images
+				List<String> versionName = new ArrayList<>();
+				List<String> colors = new ArrayList<>();
+				List<String> sizes = new ArrayList<>();
+				List<String> images = new ArrayList<>();
+				List<Integer> colorID = new ArrayList<>();
+				List<Integer> sizeID = new ArrayList<>();
 
-	            for (ProductVersion productVer : productVersions) {
-	                versionName.add(productVer.getVersionName());
+				BigDecimal minPrice = null;
+				BigDecimal maxPrice = new BigDecimal("0.00");
 
-	                // Lấy color và size từ AttributeOptionsVersions
-	                List<AttributeOptionsVersion> options = attributeOptionsVersionJPA.findByProductVersionId(productVer.getId());
-	                if (options.size() >= 2) {
-	                    AttributeOptionsVersion colorOption = options.get(0);
-	                    AttributeOptionsVersion sizeOption = options.get(1);
+				for (ProductVersion productVer : product.getProductVersions()) {
+					versionName.add(productVer.getVersionName());
 
-	                    if (colorOption.getAttributeOption().getAttribute().getAttributeName().equalsIgnoreCase("color")) {
-	                        colors.add(colorOption.getAttributeOption().getAttributeValue());
-	                        colorID.add(colorOption.getAttributeOption().getId());
-	                        sizes.add(sizeOption.getAttributeOption().getAttributeValue());
-	                        sizeID.add(sizeOption.getAttributeOption().getId());
-	                    } else {
-	                        sizes.add(colorOption.getAttributeOption().getAttributeValue());
-	                        sizeID.add(colorOption.getAttributeOption().getId());
-	                        colors.add(sizeOption.getAttributeOption().getAttributeValue());
-	                        colorID.add(sizeOption.getAttributeOption().getId());
-	                    }
-	                }
+					// Xử lý thuộc tính màu sắc và kích thước
+					if (productVer.getAttributeOptionsVersions() != null
+							&& productVer.getAttributeOptionsVersions().size() >= 2) {
+						String color = null;
+						String size = null;
 
-	                // Thêm ảnh và cập nhật min/max price
-	                if (productVer.getImage() != null) {
-	                    images.add(productVer.getImage().getImageUrl());
-	                }
-	                minPrice = minPrice == null ? productVer.getRetailPrice() : minPrice.min(productVer.getRetailPrice());
-	                maxPrice = maxPrice.max(productVer.getRetailPrice());
-	            }
+						// Phân biệt giữa color và size
+						if (productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getAttribute()
+								.getAttributeName().toLowerCase().equals("color")) {
+							color = productVer.getAttributeOptionsVersions().get(0).getAttributeOption()
+									.getAttributeValue();
+							size = productVer.getAttributeOptionsVersions().get(1).getAttributeOption()
+									.getAttributeValue();
+							colorID.add(productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getId());
+							sizeID.add(productVer.getAttributeOptionsVersions().get(1).getAttributeOption().getId());
+						} else {
+							color = productVer.getAttributeOptionsVersions().get(1).getAttributeOption()
+									.getAttributeValue();
+							size = productVer.getAttributeOptionsVersions().get(0).getAttributeOption()
+									.getAttributeValue();
+							colorID.add(productVer.getAttributeOptionsVersions().get(1).getAttributeOption().getId());
+							sizeID.add(productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getId());
+						}
 
-	            productDTO.setVersionName(versionName);
-	            productDTO.setColors(colors);
-	            productDTO.setSizes(sizes);
-	            productDTO.setMinPrice(minPrice);
-	            productDTO.setMaxPrice(maxPrice);
-	            productDTO.setImages(images);
-	            productDTO.setImgName(images.isEmpty() ? null : images.get(0));
-	            productDTO.setColorID(colorID);
-	            productDTO.setSizeID(sizeID);
+						colors.add(color);
+						sizes.add(size);
+					}
 
-	            if (product.isStatus()) {
-	                productDTOs.add(productDTO);
-	            }
-	        }
-	        return productDTOs;
-	    } catch (Exception e) {
-	        System.out.println("Error: " + e);
-	        return productDTOs;
-	    }
+					// Thêm ảnh sản phẩm và cập nhật min/max price
+					if (productVer.getImage() != null) {
+						images.add(productVer.getImage().getImageUrl());
+					}
+					if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+						minPrice = productVer.getRetailPrice();
+					}
+					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+						maxPrice = productVer.getRetailPrice();
+					}
+				}
+
+				productDTO.setVersionName(versionName);
+				productDTO.setColors(colors);
+				productDTO.setSizes(sizes);
+				productDTO.setMinPrice(minPrice);
+				productDTO.setMaxPrice(maxPrice);
+				productDTO.setImages(images);
+				productDTO.setImgName(images.isEmpty() ? null : images.get(0));
+				productDTO.setColorID(colorID);
+				productDTO.setSizeID(sizeID);
+				if (product.isStatus()) {
+					productDTOs.add(productDTO);
+				}
+
+			}
+			return productDTOs;
+		} catch (Exception e) {
+			System.out.println("Error: " + e);
+			return productDTOs;
+		}
 	}
-
-
 }

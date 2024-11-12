@@ -23,14 +23,11 @@ public class ProductUpdateScheduler {
 	private ProductClientService inforService;
 
 	//@Scheduled(cron = "*/10 * * * * ?") // 10s
-	// Lên lịch thực hiện mỗi ngày vào lúc 23:55
 	@Scheduled(cron = "0 55 23 * * ?") // Giờ - Phút - Giây, mỗi ngày vào lúc
 	// 23:55
 	public void updateProductsToAlgolia() {
 		try {
-			// Lấy danh sách tất cả các sản phẩm từ dịch vụ
-			List<ProductDTO> products = inforService.getAllProducts(null);
-			// Thêm hoặc cập nhật tất cả sản phẩm vào Algolia
+			List<ProductDTO> products = inforService.getALLProduct(null);
 			for (ProductDTO product : products) {
 				algoliaProductService.addProduct(product);
 			}

@@ -123,8 +123,6 @@ public class AlgoliaProductService {
 	// Thêm sản phẩm vào Algolia sau khi xóa tất cả các sản phẩm cũ
 	public void addProduct(ProductDTO product) {
 	    try {
-	        // Xóa tất cả sản phẩm trước khi thêm mới
-	        productIndex.clearObjects().waitTask();
 	        
 	        // Thêm sản phẩm mới vào Algolia
 	        productIndex.saveObject(product).waitTask();
