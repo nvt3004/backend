@@ -57,7 +57,7 @@ import com.services.UserService;
 import com.services.VersionService;
 
 @RestController
-@RequestMapping("api/user/cart")
+@RequestMapping("/api/user/cart")
 public class CartController {
 	@Autowired
 	AuthService authService;
@@ -326,7 +326,7 @@ public class CartController {
 			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody CartOrderModel orderModel) {
 		ResponseAPI<CartOrderResponse> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
-
+		System.out.println("ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss");
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {

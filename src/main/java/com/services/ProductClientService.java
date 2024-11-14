@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOption;
+import com.entities.AttributeOptionsVersion;
 import com.entities.Category;
 import com.entities.Feedback;
 import com.entities.Image;
@@ -83,23 +85,21 @@ public class ProductClientService {
 
 	}
 
-	public List<AttributeOption> getListByAttributeNameProduct(String attributeName) {
-		List<AttributeOption> attributeOptions = new ArrayList<>();
+	public List<String> getListAttName() {
+		List<String> attName = new ArrayList<String>();
 		for (AttributeOption attOp : attributeOptionJPA.findAll()) {
-			if (attOp.getAttribute().getAttributeName().equalsIgnoreCase(attributeName)) {
-				attributeOptions.add(attOp);
-			}
-			attOp.setAttributeOptionsVersions(null);
+			attName.add(attOp.getAttributeValue());
 		}
-		return attributeOptions;
+		return attName;
+
 	}
 
-	public List<AttributeOption> getListColor() {
-		return getListByAttributeNameProduct("color");
-	}
-
-	public List<AttributeOption> getListSize() {
-		return getListByAttributeNameProduct("size");
+	public List<Integer> getListAttId() {
+		List<Integer> attName = new ArrayList<Integer>();
+		for (AttributeOption attOp : attributeOptionJPA.findAll()) {
+			attName.add(attOp.getId());
+		}
+		return attName;
 	}
 
 	public List<Category> getListCategory() {
@@ -175,11 +175,9 @@ public class ProductClientService {
 
 				// Set phiên bản sản phẩm (versions), colors, sizes, images
 				List<String> versionName = new ArrayList<>();
-				List<String> colors = new ArrayList<>();
-				List<String> sizes = new ArrayList<>();
+				List<String> attName = new ArrayList<>();
 				List<String> images = new ArrayList<>();
-				List<Integer> colorID = new ArrayList<>();
-				List<Integer> sizeID = new ArrayList<>();
+				List<Integer> attId = new ArrayList<>();
 
 				BigDecimal minPrice = null;
 				BigDecimal maxPrice = new BigDecimal("0.00");
@@ -189,30 +187,13 @@ public class ProductClientService {
 
 					// Xử lý thuộc tính màu sắc và kích thước
 					if (productVer.getAttributeOptionsVersions() != null
-							&& productVer.getAttributeOptionsVersions().size() >= 2) {
-						String color = null;
-						String size = null;
+							&& productVer.getAttributeOptionsVersions().size() >= 1) {
 
-						// Phân biệt giữa color và size
-						if (productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getAttribute()
-								.getAttributeName().toLowerCase().equals("color")) {
-							color = productVer.getAttributeOptionsVersions().get(0).getAttributeOption()
-									.getAttributeValue();
-							size = productVer.getAttributeOptionsVersions().get(1).getAttributeOption()
-									.getAttributeValue();
-							colorID.add(productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getId());
-							sizeID.add(productVer.getAttributeOptionsVersions().get(1).getAttributeOption().getId());
-						} else {
-							color = productVer.getAttributeOptionsVersions().get(1).getAttributeOption()
-									.getAttributeValue();
-							size = productVer.getAttributeOptionsVersions().get(0).getAttributeOption()
-									.getAttributeValue();
-							colorID.add(productVer.getAttributeOptionsVersions().get(1).getAttributeOption().getId());
-							sizeID.add(productVer.getAttributeOptionsVersions().get(0).getAttributeOption().getId());
+						for (AttributeOptionsVersion att : productVer.getAttributeOptionsVersions()) {
+							attName.add(att.getAttributeOption().getAttributeValue());
+							attId.add(att.getAttributeOption().getId());
 						}
 
-						colors.add(color);
-						sizes.add(size);
 					}
 
 					// Thêm ảnh sản phẩm và cập nhật min/max price
@@ -228,14 +209,16 @@ public class ProductClientService {
 				}
 
 				productDTO.setVersionName(versionName);
-				productDTO.setColors(colors);
-				productDTO.setSizes(sizes);
+
+				productDTO.setAttributeName(attName);
+
 				productDTO.setMinPrice(minPrice);
 				productDTO.setMaxPrice(maxPrice);
 				productDTO.setImages(images);
 				productDTO.setImgName(images.isEmpty() ? null : images.get(0));
-				productDTO.setColorID(colorID);
-				productDTO.setSizeID(sizeID);
+
+				productDTO.setAttributeId(attId);
+
 				if (product.isStatus()) {
 					productDTOs.add(productDTO);
 				}
