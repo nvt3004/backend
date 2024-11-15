@@ -38,8 +38,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
-	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "order_date", nullable = false, updatable = false, insertable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
+	@Column(name = "order_date", nullable = false, updatable = false, insertable = false)
 	private Date orderDate;
 
 	@Column(name = "creator_is_admin")
