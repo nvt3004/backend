@@ -24,19 +24,23 @@ public class OrderUtilsService {
 	    }
 
 	    public BigDecimal calculateDiscountedPrice(Order order) {
+	        // Tính tổng đơn hàng ban đầu (trước giảm giá)
 	        BigDecimal total = calculateOrderTotal(order);
-	        BigDecimal discountedPrice = total;
+	        BigDecimal discountAmount = BigDecimal.ZERO;  // Số tiền giảm
 
+	        // Kiểm tra và tính toán số tiền giảm theo giá trị cố định (disPrice)
 	        if (order.getDisPrice() != null && order.getDisPrice().compareTo(BigDecimal.ZERO) > 0) {
-	            discountedPrice = total.subtract(order.getDisPrice());
+	            discountAmount = order.getDisPrice();
 	        } 
+	        // Kiểm tra và tính toán số tiền giảm theo phần trăm (disPercent)
 	        else if (order.getDisPercent() != null && order.getDisPercent().compareTo(BigDecimal.ZERO) > 0) {
-	            BigDecimal discount = total.multiply(order.getDisPercent().divide(BigDecimal.valueOf(100)));
-	            discountedPrice = total.subtract(discount);
+	            discountAmount = total.multiply(order.getDisPercent().divide(BigDecimal.valueOf(100)));
 	        }
 
-	        return discountedPrice.max(BigDecimal.ZERO);
+	        // Trả về số tiền giảm, đảm bảo không có giá trị âm
+	        return discountAmount.max(BigDecimal.ZERO);
 	    }
+
 
 
 }

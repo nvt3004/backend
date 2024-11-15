@@ -11,6 +11,7 @@ public class OrderDetailProductDetailsDTO {
 	private Integer productId;
 	private String productName;
 	private Integer productVersionId;
+	private String productVersionName;
 	private BigDecimal price;
 	private Integer quantity;
 	private String imageUrl;
@@ -20,11 +21,12 @@ public class OrderDetailProductDetailsDTO {
 	private AttributeProductVersionDTO attributeProductVersion;
 	private List<AttributeDTO> attributeProducts;
 
-	public OrderDetailProductDetailsDTO(Integer productId, Integer productVersionId, BigDecimal price, Integer quantity,
+	public OrderDetailProductDetailsDTO(Integer productId, Integer productVersionId,String productVersionName, BigDecimal price, Integer quantity,
 			String imageUrl, String description, BigDecimal total, Integer orderDetailId,AttributeProductVersionDTO attributeProductVersion,
 			List<AttributeDTO> attributeProducts, String productName) {
 		this.productId = productId;
 		this.productVersionId = productVersionId;
+		this.productVersionName = productVersionName;
 		this.price = price;
 		this.quantity = quantity;
 		this.imageUrl = imageUrl;

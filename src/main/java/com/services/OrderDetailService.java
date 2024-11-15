@@ -2,8 +2,10 @@ package com.services;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,28 +45,32 @@ public class OrderDetailService {
 	private UploadService uploadService;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
-		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
+	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
 
-		OrderDetail orderDetail = orderDetailList.get(0);
-		String disPercent = formatDiscount(orderDetail.getOrder().getDisPercent());
-		String disPrice = formatDiscount(orderDetail.getOrder().getDisPrice());
+	    OrderDetail orderDetail = orderDetailList.get(0);
 
-		Integer couponId = (orderDetail.getOrder().getCoupon() != null)
-				? orderDetail.getOrder().getCoupon().getCouponId()
-				: null;
+	    Integer couponId = (orderDetail.getOrder().getCoupon() != null)
+	            ? orderDetail.getOrder().getCoupon().getCouponId()
+	            : null;
 
-		String paymentMethod = (orderDetail.getOrder().getPayments() != null
-				&& orderDetail.getOrder().getPayments().getPaymentMethod() != null)
-						? orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName()
-						: null;
+	    String paymentMethod = (orderDetail.getOrder().getPayments() != null
+	            && orderDetail.getOrder().getPayments().getPaymentMethod() != null)
+	                    ? orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName()
+	                    : null;
 
-		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
-				orderDetail.getOrder().getDeliveryDate(), disPercent, disPrice, orderDetail.getOrder().getFullname(),
-				orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
-				orderDetail.getOrder().getOrderStatus().getStatusName(),
-				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,
-				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getUser().getEmail(), productDetails);
+	    String email = (orderDetail.getOrder().getUser() != null
+	            && orderDetail.getOrder().getUser().getEmail() != null)
+	                    ? orderDetail.getOrder().getUser().getEmail()
+	                    : "N/A"; 
+
+	    return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
+	            orderDetail.getOrder().getDeliveryDate(),orderUtilsService.calculateDiscountedPrice(orderDetailList.get(0).getOrder()) ,orderDetail.getOrder().getFullname(),
+	            orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
+	            orderDetail.getOrder().getOrderStatus().getStatusName(),
+	            orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,
+	            orderDetail.getOrder().getPhone(), email, productDetails);
 	}
+
 
 	private List<OrderDetailProductDetailsDTO> createProductDetailsList(List<OrderDetail> orderDetails) {
 		List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
@@ -101,7 +107,7 @@ public class OrderDetailService {
 			}
 
 			productDetails.add(new OrderDetailProductDetailsDTO(
-					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
+					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),item.getProductVersionBean().getVersionName(),
 					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
 					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
 					attributeProductVersion, attributesProducts, item.getProductVersionBean().getProduct().getProductName()));
@@ -110,37 +116,40 @@ public class OrderDetailService {
 	}
 
 	private List<AttributeDTO> createAttributeListByProductId(Integer productId) {
-		List<AttributeDTO> attributeList = new ArrayList<>();
-		List<ColorDTO> colorList = new ArrayList<>();
-		List<SizeDTO> sizeList = new ArrayList<>();
-		List<ProductVersion> productVersions = productVersionJpa.findByProductId(productId);
+	    List<AttributeDTO> attributeList = new ArrayList<>();
+	    Set<ColorDTO> colorSet = new HashSet<>();
+	    Set<SizeDTO> sizeSet = new HashSet<>();
+	    List<ProductVersion> productVersions = productVersionJpa.findByProductId(productId);
 
-		if (productVersions != null) {
-			for (ProductVersion productVersion : productVersions) {
-				for (AttributeOptionsVersion aov : productVersion.getAttributeOptionsVersions()) {
-					String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-					String attributeValue = aov.getAttributeOption().getAttributeValue();
-					Integer attributeId = aov.getAttributeOption().getId();
-					if ("Color".equalsIgnoreCase(attributeName)) {
-						ColorDTO colorDTO = new ColorDTO();
-						colorDTO.setColorId(attributeId);
-						colorDTO.setColor(attributeValue);
-						colorList.add(colorDTO);
-					} else if ("Size".equalsIgnoreCase(attributeName)) {
-						SizeDTO sizeDTO = new SizeDTO();
-						sizeDTO.setSizeId(attributeId);
-						sizeDTO.setSize(attributeValue);
-						sizeList.add(sizeDTO);
-					}
-				}
-			}
-		}
+	    if (productVersions != null) {
+	        for (ProductVersion productVersion : productVersions) {
+	            for (AttributeOptionsVersion aov : productVersion.getAttributeOptionsVersions()) {
+	                String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	                String attributeValue = aov.getAttributeOption().getAttributeValue();
+	                Integer attributeId = aov.getAttributeOption().getId();
+	                if ("Color".equalsIgnoreCase(attributeName)) {
+	                    ColorDTO colorDTO = new ColorDTO();
+	                    colorDTO.setColorId(attributeId);
+	                    colorDTO.setColor(attributeValue);
+	                    colorSet.add(colorDTO);
+	                } else if ("Size".equalsIgnoreCase(attributeName)) {
+	                    SizeDTO sizeDTO = new SizeDTO();
+	                    sizeDTO.setSizeId(attributeId);
+	                    sizeDTO.setSize(attributeValue);
+	                    sizeSet.add(sizeDTO);
+	                }
+	            }
+	        }
+	    }
 
-		AttributeDTO attributeDTO = new AttributeDTO(colorList, sizeList);
-		attributeList.add(attributeDTO);
+	    List<ColorDTO> colorList = new ArrayList<>(colorSet);
+	    List<SizeDTO> sizeList = new ArrayList<>(sizeSet);
+	    AttributeDTO attributeDTO = new AttributeDTO(colorList, sizeList);
+	    attributeList.add(attributeDTO);
 
-		return attributeList;
+	    return attributeList;
 	}
+
 
 	private String formatDiscount(BigDecimal discount) {
 		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;
