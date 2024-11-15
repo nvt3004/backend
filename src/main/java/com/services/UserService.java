@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.entities.Product;
 import com.entities.User;
+import com.entities.UserRole;
 import com.repositories.UserJPA;
 import com.responsedto.ProductResponse;
 import com.responsedto.UserResponse;
@@ -26,7 +27,7 @@ public class UserService {
 
 	@Autowired
 	UploadService uploadService;
-	
+
 	DateUtils dateUtil = new DateUtils();
 
 	public User getUserByUsername(String username) {
@@ -37,24 +38,14 @@ public class UserService {
 		return userJPA.save(user);
 	}
 
-	public PageImpl<UserResponse> getUserByKeyword(int page, int size, String keyword) {
+	public PageImpl<UserResponse> getUserByKeyword(int page, int size, String keyword, byte status, int role) {
 		Sort sort = Sort.by(Sort.Direction.DESC, "userId");
 		Pageable pageable = PageRequest.of(page, size, sort);
-
-		Boolean isActive = keyword.equalsIgnoreCase("active") ? Boolean.TRUE
-				: keyword.equalsIgnoreCase("inactive") ? Boolean.FALSE : null;
-
-		byte statusNum = Byte.valueOf(Boolean.TRUE.equals(isActive) || isActive == null ? "1" : "0");
-
-		Page<User> users = null;
 		keyword = "%" + keyword + "%";
 
-		if (isActive != null) {
-			users = userJPA.getAllUserByKeywordAndStatus(statusNum, pageable);
-		} else {
-			users = userJPA.getAllUserByKeyword(keyword, pageable);
-		}
+		Page<User> users = userJPA.getAllUserByKeyword(keyword, status,role, pageable);
 
+		//Chỉ lấy quyền là staff
 		List<UserResponse> userResponses = users.getContent().stream().map(this::createUserResponse).toList();
 
 		PageImpl<UserResponse> result = new PageImpl<UserResponse>(userResponses, pageable, users.getTotalElements());

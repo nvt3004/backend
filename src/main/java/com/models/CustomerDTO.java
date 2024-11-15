@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserModel {
+public class CustomerDTO {
 	private int id;
 	private String fullName;
 	private String username;
@@ -17,4 +17,6 @@ public class UserModel {
 	private String image;
 	private Date birthday;
 	private int gender;
+	private String email;
+	private String phone;
 }

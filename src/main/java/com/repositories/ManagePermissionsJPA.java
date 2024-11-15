@@ -15,11 +15,16 @@ import java.util.List;
 @Repository
 public interface ManagePermissionsJPA extends JpaRepository<ManagePermission, Integer> {
 
-    @Query("SELECT p.permissionName FROM ManagePermission mp JOIN mp.permission p WHERE mp.user.userId = ?1")
-    List<String> findPermissionsByUserId(int userId);
+	@Query("SELECT p.permissionName FROM ManagePermission mp JOIN mp.permission p WHERE mp.user.userId = ?1")
+	List<String> findPermissionsByUserId(int userId);
 
-    @Modifying
-    @Query("DELETE FROM ManagePermission mp WHERE mp.user = :user")
-    void deleteByUser(User user);
+	@Modifying
+	@Query("DELETE FROM ManagePermission mp WHERE mp.user = :user")
+	void deleteByUser(User user);
 
+	@Query("SELECT p FROM ManagePermission mp JOIN mp.permission p WHERE mp.user.userId = ?1")
+	List<Permission> findPermissionsByUser(int userId);
+
+	@Query("SELECT o FROM ManagePermission o WHERE o.user.userId=:userId AND o.permission.permissionId=:perId")
+	ManagePermission findOneManagePermission(@Param("userId") int userId, @Param("perId") int perId);
 }

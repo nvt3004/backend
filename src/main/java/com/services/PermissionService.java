@@ -1,8 +1,14 @@
 package com.services;
 
+import java.awt.image.ImageProducer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -17,12 +23,16 @@ import com.entities.Role;
 import com.entities.User;
 import com.entities.UserRole;
 import com.models.AuthDTO;
+import com.models.CustomerDTO;
 import com.models.UserModel;
 import com.repositories.ManagePermissionsJPA;
 import com.repositories.PermissionJPA;
 import com.repositories.RoleJPA;
 import com.repositories.UserJPA;
 import com.repositories.UserRoleJPA;
+import com.responsedto.PermissionDto;
+import com.responsedto.PermissionResponse;
+import com.responsedto.UserPermissionDto;
 import com.utils.DateTimeUtil;
 import com.utils.JWTUtils;
 import com.utils.UploadService;
@@ -52,6 +62,9 @@ public class PermissionService {
 
 	@Autowired
 	private PermissionJPA permissionRepo;
+
+	@Autowired
+	PasswordEncoder passEncoder;
 
 	Date datecurrent = DateTimeUtil.getCurrentDateInVietnam();
 
@@ -257,25 +270,212 @@ public class PermissionService {
 		userEntity.setBirthday(userModel.getBirthday());
 		userEntity.setGender(userModel.getGender());
 		userEntity.setStatus(Byte.valueOf("1"));
-		if(userModel.getUsername().matches(emailRegex)) {
+		if (userModel.getUsername().matches(emailRegex)) {
 			userEntity.setEmail(userModel.getUsername());
-		}else {
+		} else {
 			userEntity.setPhone(userModel.getUsername());
 		}
-		
+
 		User userSaved = userRepo.save(userEntity);
-		
-		//Set quyền là staff
+
+		// Set quyền là staff
 		Role role = new Role();
 		role.setId(3);
 		UserRole userRole = new UserRole();
 		userRole.setRole(role);
 		userRole.setUser(userSaved);
-		
-		//Save quyền staff cho user
+
+		// Save quyền staff cho user
 		userRoleRepo.save(userRole);
 
 		return userRepo.save(userEntity);
+	}
+	
+	public User addCustomer(CustomerDTO userModel) {
+		User userEntity = new User();
+		String imageName = uploadService.save(userModel.getImage(), "images");
+
+		userEntity.setUsername(userModel.getUsername());
+		userEntity.setFullName(userModel.getFullName());
+		userEntity.setPassword(passwordEncoder.encode(userModel.getPassword()));
+		userEntity.setImage(imageName);
+		userEntity.setBirthday(userModel.getBirthday());
+		userEntity.setGender(userModel.getGender());
+		userEntity.setStatus(Byte.valueOf("1"));
+		userEntity.setEmail(userModel.getEmail());
+		userEntity.setPhone(userModel.getPhone());
+		
+
+		User userSaved = userRepo.save(userEntity);
+
+		// Set quyền là staff
+		Role role = new Role();
+		role.setId(2);
+		UserRole userRole = new UserRole();
+		userRole.setRole(role);
+		userRole.setUser(userSaved);
+
+		// Save quyền staff cho user
+		userRoleRepo.save(userRole);
+
+		return userRepo.save(userEntity);
+	}
+
+	public User updateUser(UserModel userModel, User user) {
+
+		user.setFullName(userModel.getFullName());
+		user.setGender(userModel.getGender());
+		user.setBirthday(userModel.getBirthday());
+
+		if (userModel.getPassword() != null && userModel.getPassword().trim().length() > 0) {
+			user.setPassword(passEncoder.encode(userModel.getPassword()));
+		}
+
+		if (userModel.getImage() != null && !userModel.getImage().isBlank() && !userModel.getImage().isEmpty()) {
+			String image = user.getImage();
+
+			if (image != null && !image.isBlank()) {
+				uploadService.delete(image, "images");
+			}
+			user.setImage(uploadService.save(userModel.getImage(), "images"));
+		}
+
+		return userRepo.save(user);
+	}
+
+	public User deleteUser(int userId) {
+		User user = userRepo.findById(userId).orElse(null);
+
+		user.setStatus(Byte.valueOf("0"));
+		return userRepo.save(user);
+	}
+
+	public List<PermissionResponse> getAllPermissionByUser(Integer userId) {
+		User user = userRepo.findById(userId).orElse(null);
+		List<Permission> permissions = permissionRepo.findAll();
+		Map<String, List<PermissionDto>> responsePermissions = new LinkedHashMap<>();
+		List<Permission> permissionOfUser = maPerJPA.findPermissionsByUser(user.getUserId());
+
+		for (Permission pms : permissions) {
+			String title = extractTitleForSpecialPermissions(pms.getPermissionName());
+			if (title.equalsIgnoreCase("user")) {
+				continue;
+			}
+			responsePermissions.put(title, new ArrayList<PermissionDto>());
+		}
+
+		for (Permission pms : permissions) {
+			String title = extractTitleForSpecialPermissions(pms.getPermissionName());
+			String action = extractActionForSpecialPermissions(pms.getPermissionName());
+
+			if (title.equalsIgnoreCase("user")) {
+				continue;
+			}
+
+			responsePermissions.get(title).add(new PermissionDto(pms.getPermissionId(), action, false));
+			responsePermissions.put(title, responsePermissions.get(title));
+		}
+
+		List<PermissionResponse> list = new ArrayList<>();
+
+		for (Map.Entry<String, List<PermissionDto>> entry : responsePermissions.entrySet()) {
+			for (PermissionDto permission : entry.getValue()) {
+				if (isPermissionUserExit(permissionOfUser, permission)) {
+					permission.setUse(true);
+				}
+			}
+
+			list.add(new PermissionResponse(entry.getKey(), entry.getValue()));
+		}
+
+		return list;
+	}
+
+	public boolean saveUserPermission(List<PermissionDto> pers, User user) {
+
+		try {
+			for (PermissionDto p : pers) {
+				ManagePermission managePermissions = userPermissionRepo.findOneManagePermission(user.getUserId(),
+						p.getId());
+
+				// Nếu có rồi mà bỏ quyền thì xóa
+				if (managePermissions != null && !p.isUse()) {
+					userPermissionRepo.delete(managePermissions);
+				} else if (managePermissions == null && p.isUse()) { // Nếu quyền chưa có thì thêm mới
+					ManagePermission mangePerEntity = new ManagePermission();
+					Permission perEntity = new Permission();
+					perEntity.setPermissionId(p.getId());
+
+					mangePerEntity.setUser(user);
+					mangePerEntity.setPermission(perEntity);
+
+					userPermissionRepo.save(mangePerEntity);
+				}
+				// Ngược lại quyền tồn tại thì kh làm gì hết
+			}
+
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
+	public boolean isPermissionExit(int idPer) {
+		Permission permission = permissionRepo.findById(idPer).orElse(null);
+		
+		return permission != null;
+	}
+
+	public boolean isPermissionUserExit(List<Permission> permissionOfUser, PermissionDto perdto) {
+		for (Permission pu : permissionOfUser) {
+			if (pu.getPermissionId() == perdto.getId()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private String extractTitleForSpecialPermissions(String permissionName) {
+		permissionName = permissionName.toLowerCase();
+
+		if (permissionName.contains("user")) {
+			return "User";
+		} else if (permissionName.contains("product")) {
+			return "Product";
+		} else if (permissionName.contains("order")) {
+			return "Order";
+		} else if (permissionName.contains("receipt")) {
+			return "Receipt";
+		} else if (permissionName.contains("advertisement")) {
+			return "Advertisement";
+		} else if (permissionName.contains("attribute")) {
+			return "Attribute";
+		} else if (permissionName.contains("coupon")) {
+			return "Coupon";
+		} else if (permissionName.contains("feedback")) {
+			return "Feedback";
+		} else if (permissionName.contains("supplier")) {
+			return "Supplier";
+		} else {
+			return "None"; // Default title
+		}
+	}
+
+	private String extractActionForSpecialPermissions(String permissionName) {
+		permissionName = permissionName.toLowerCase();
+
+		if (permissionName.contains("add")) {
+			return "Add";
+		} else if (permissionName.contains("update")) {
+			return "Update";
+		} else if (permissionName.contains("view")) {
+			return "View";
+		} else if (permissionName.contains("delete")) {
+			return "Delete";
+		} else {
+			return "Unknown Action"; // Default action
+		}
 	}
 
 }
