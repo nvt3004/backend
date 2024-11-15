@@ -6,7 +6,9 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +34,12 @@ import com.services.JWTService;
 import com.services.OrderDetailService;
 import com.services.OrderService;
 import com.services.OrderStatusService;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ByteArrayResource;
+import org.apache.poi.ss.usermodel.Cell;
 
 @RestController
 @RequestMapping("/api")
@@ -450,7 +458,7 @@ public class OrderController {
 	}
 
 	@DeleteMapping("/staff/orders/remove-orderdetail")
-	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_REMOVE')")
+//	@PreAuthorize("hasPermission(#userid, 'STAFF_ORDER_DETAIL_REMOVE')")
 	public ResponseEntity<ApiResponse<?>> deleteOrderDetailsByOrderDetailId(@RequestParam Integer orderId,
 			@RequestParam Integer orderDetailId, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -551,5 +559,31 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(errorResponse.getErrorCode())).body(errorResponse);
 		}
 	}
+	
+	@GetMapping("/staff/orders/export")
+//	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
+	public ResponseEntity<?> exportOrdersToExcel(
+	        @RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
+	        @RequestParam(value = "keyword", required = false) String keyword,
+	        @RequestParam(value = "statusId", required = false) Integer statusId,
+	        @RequestParam(value = "page", defaultValue = "0") int page,
+	        @RequestParam(value = "size", defaultValue = "5") int size) {
+		 ApiResponse<ByteArrayResource> apiResponse = new ApiResponse<>();
+	    try {
+
+	    	ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
+
+	    	return ResponseEntity.ok()
+	                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
+	                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+	                .body(file);
+	    } catch (Exception e) {
+	    	 apiResponse.setErrorCode(500);
+	         apiResponse.setMessage(e.getMessage());
+	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
+	    }
+	}
+
+	
 
 }

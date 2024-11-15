@@ -1,5 +1,6 @@
 package com.services;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,7 +11,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -428,5 +441,99 @@ public class OrderService {
 	private boolean isCancellable(String currentStatus) {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
+	
+	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page, int size) {
+	    try {
+	        ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(isAdminOrder, keyword, statusId, page, size);
+
+	        if (ordersResponse.getErrorCode() != 200) {
+	            throw new RuntimeException(ordersResponse.getMessage());
+	        }
+
+	        PageImpl<OrderDTO> orders = ordersResponse.getData();
+
+	        // Tạo file Excel
+	        Workbook workbook = new XSSFWorkbook();
+	        Sheet sheet = workbook.createSheet("Orders");
+
+	        // Tạo các style cho cột header
+	        CellStyle headerStyle = workbook.createCellStyle();
+	        Font headerFont = workbook.createFont();
+	        headerFont.setBold(true);
+	        headerFont.setColor(IndexedColors.WHITE.getIndex());
+	        headerStyle.setFont(headerFont);
+	        headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+	        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+	        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+	        // Tạo các style cho dữ liệu
+	        CellStyle dataStyle = workbook.createCellStyle();
+	        dataStyle.setAlignment(HorizontalAlignment.CENTER);  // Căn giữa theo chiều ngang
+	        dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);  // Căn giữa theo chiều dọc
+
+	        // Tạo header row
+	        Row headerRow = sheet.createRow(0);
+	        headerRow.createCell(0).setCellValue("Order ID");
+	        headerRow.createCell(1).setCellValue("Order Date");
+	        headerRow.createCell(2).setCellValue("Customer");
+	        headerRow.createCell(3).setCellValue("Status");
+	        headerRow.createCell(4).setCellValue("Amount");
+
+	        for (int i = 0; i < 5; i++) {
+	            headerRow.getCell(i).setCellStyle(headerStyle);
+	        }
+
+	        // Đặt độ rộng cho các cột
+	        sheet.setColumnWidth(0, 6000);
+	        sheet.setColumnWidth(1, 8000);
+	        sheet.setColumnWidth(2, 12000); 
+	        sheet.setColumnWidth(3, 6000); 
+	        sheet.setColumnWidth(4, 6000); 
+
+	        int rowNum = 1;
+	        for (OrderDTO order : orders.getContent()) {
+	            Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
+	            if (orderEntityOpt.isPresent()) {
+	                Order orderEntity = orderEntityOpt.get();
+	                Row row = sheet.createRow(rowNum++);
+
+	                // Thêm dữ liệu vào các cột và áp dụng style cho dữ liệu
+	                Cell cell0 = row.createCell(0);
+	                cell0.setCellValue(order.getOrderId());
+	                cell0.setCellStyle(dataStyle);
+
+	                Cell cell1 = row.createCell(1);
+	                cell1.setCellValue(order.getOrderDate().toString());
+	                cell1.setCellStyle(dataStyle);
+
+	                Cell cell2 = row.createCell(2);
+	                cell2.setCellValue(order.getFullname());
+	                cell2.setCellStyle(dataStyle);
+
+	                Cell cell3 = row.createCell(3);
+	                cell3.setCellValue(order.getStatusName());
+	                cell3.setCellStyle(dataStyle);
+
+	                Cell cell4 = row.createCell(4);
+	                cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
+	                cell4.setCellStyle(dataStyle);
+	            }
+	        }
+
+	        // Tạo file Excel và trả về
+	        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+	        workbook.write(outputStream);
+	        workbook.close();
+
+	        // Chuyển đổi output stream thành resource để trả về
+	        return new ByteArrayResource(outputStream.toByteArray());
+
+	    } catch (Exception e) {
+	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
+	    }
+	}
+
+
 
 }

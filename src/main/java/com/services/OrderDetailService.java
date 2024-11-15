@@ -45,28 +45,34 @@ public class OrderDetailService {
 	private UploadService uploadService;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
-		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
+	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
 
-		OrderDetail orderDetail = orderDetailList.get(0);
-		String disPercent = formatDiscount(orderDetail.getOrder().getDisPercent());
-		String disPrice = formatDiscount(orderDetail.getOrder().getDisPrice());
+	    OrderDetail orderDetail = orderDetailList.get(0);
+	    String disPercent = formatDiscount(orderDetail.getOrder().getDisPercent());
+	    String disPrice = formatDiscount(orderDetail.getOrder().getDisPrice());
 
-		Integer couponId = (orderDetail.getOrder().getCoupon() != null)
-				? orderDetail.getOrder().getCoupon().getCouponId()
-				: null;
+	    Integer couponId = (orderDetail.getOrder().getCoupon() != null)
+	            ? orderDetail.getOrder().getCoupon().getCouponId()
+	            : null;
 
-		String paymentMethod = (orderDetail.getOrder().getPayments() != null
-				&& orderDetail.getOrder().getPayments().getPaymentMethod() != null)
-						? orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName()
-						: null;
+	    String paymentMethod = (orderDetail.getOrder().getPayments() != null
+	            && orderDetail.getOrder().getPayments().getPaymentMethod() != null)
+	                    ? orderDetail.getOrder().getPayments().getPaymentMethod().getMethodName()
+	                    : null;
 
-		return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
-				orderDetail.getOrder().getDeliveryDate(), disPercent, disPrice, orderDetail.getOrder().getFullname(),
-				orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
-				orderDetail.getOrder().getOrderStatus().getStatusName(),
-				orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,
-				orderDetail.getOrder().getPhone(), orderDetail.getOrder().getUser().getEmail(), productDetails);
+	    String email = (orderDetail.getOrder().getUser() != null
+	            && orderDetail.getOrder().getUser().getEmail() != null)
+	                    ? orderDetail.getOrder().getUser().getEmail()
+	                    : "N/A"; 
+
+	    return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
+	            orderDetail.getOrder().getDeliveryDate(), disPercent, disPrice, orderDetail.getOrder().getFullname(),
+	            orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
+	            orderDetail.getOrder().getOrderStatus().getStatusName(),
+	            orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,
+	            orderDetail.getOrder().getPhone(), email, productDetails);
 	}
+
 
 	private List<OrderDetailProductDetailsDTO> createProductDetailsList(List<OrderDetail> orderDetails) {
 		List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
@@ -103,7 +109,7 @@ public class OrderDetailService {
 			}
 
 			productDetails.add(new OrderDetailProductDetailsDTO(
-					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
+					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),item.getProductVersionBean().getVersionName(),
 					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
 					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
 					attributeProductVersion, attributesProducts));

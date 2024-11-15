@@ -48,7 +48,7 @@ public class Order implements Serializable {
 	private String phone;
 
 	// bi-directional many-to-one association to OrderDetail
-	@OneToMany(mappedBy = "order")
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "order")
 	@JsonManagedReference("order-orderDetails")
 	private List<OrderDetail> orderDetails;
 
@@ -65,8 +65,8 @@ public class Order implements Serializable {
 
 	// bi-directional many-to-one association to Payment
 	@OneToOne(mappedBy = "order")
-    @JsonManagedReference("order-payment")
-    private Payment payment;
+	@JsonManagedReference("order-payment")
+	private Payment payment;
 
 	@ManyToOne
 	@JoinColumn(name = "user_id")

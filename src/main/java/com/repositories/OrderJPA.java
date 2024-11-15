@@ -1,5 +1,8 @@
 package com.repositories;
 
+import java.util.Date;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,8 +19,7 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("SELECT o FROM Order o " + "WHERE (:isAdminOrder IS NULL OR o.isAdminOrder = :isAdminOrder) AND "
 			+ "(:keyword IS NULL OR :keyword = '' OR (o.fullname LIKE CONCAT('%', :keyword, '%') "
 			+ "OR o.address LIKE CONCAT('%', :keyword, '%') " + "OR o.phone LIKE CONCAT('%', :keyword, '%'))) AND "
-			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) "
-			+ "ORDER BY o.orderStatus.sortOrder ASC")
+			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) " + "ORDER BY o.orderStatus.sortOrder ASC")
 	Page<Order> findOrdersByCriteria(@Param("isAdminOrder") Boolean isAdminOrder, @Param("keyword") String keyword,
 			@Param("statusId") Integer statusId, Pageable pageable);
 
@@ -36,8 +38,11 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o WHERE o.coupon.id = :couponId")
 	boolean existsByCouponId(@Param("couponId") Integer couponId);
 
-	@Query("SELECT CASE WHEN COUNT(od) = 0 THEN true ELSE false END FROM OrderDetail od WHERE od.order.orderId = :orderId") 
+	@Query("SELECT CASE WHEN COUNT(od) = 0 THEN true ELSE false END FROM OrderDetail od WHERE od.order.orderId = :orderId")
 	boolean existsByOrderDetail(@Param("orderId") Integer orderId);
 
+	@Query("SELECT o FROM Order o WHERE o.orderDate < :createdAt AND o.orderStatus.statusName = :statusName")
+	List<Order> findAllByCreatedAtBeforeAndOrderStatusStatusName(@Param("createdAt") Date createdAt,
+			@Param("statusName") String statusName);
 
 }
