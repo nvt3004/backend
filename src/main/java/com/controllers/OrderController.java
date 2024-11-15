@@ -115,7 +115,6 @@ public class OrderController {
 	}
 
 	@GetMapping("/user/orders/username")
-//	@PreAuthorize("hasPermission(#userId, 'USER_ORDER_VIEW_SELF')")
 	public ResponseEntity<ApiResponse<?>> getOrdersByUsername(
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,

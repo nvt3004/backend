@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.Coupon;
@@ -27,26 +28,25 @@ import com.services.UserService;
 @RestController
 @RequestMapping("api/user")
 public class UserCouponController {
-	
+
 	@Autowired
 	AuthService authService;
 
 	@Autowired
 	JWTService jwtService;
-	
+
 	@Autowired
 	UserService userService;
-	
+
 	@Autowired
 	UserCouponService userCouponService;
-	
+
 	@Autowired
 	UserCouponJPA userCouponJPA;
-	
-	
+
 	@GetMapping("/get-all-coupon")
-	public ResponseEntity<ResponseAPI<List<UserCouponResponse>>> getAllCouponByUser(@RequestHeader("Authorization") Optional<String> authHeader)
-	{	
+	public ResponseEntity<ResponseAPI<List<UserCouponResponse>>> getAllCouponByUser(
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 		ResponseAPI<List<UserCouponResponse>> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
 
@@ -80,24 +80,27 @@ public class UserCouponController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
-		
-		
+
 		List<UserCouponResponse> list = userCouponService.getAllCouponByUser(user.getUserId());
-		
+
 		response.setCode(200);
 		response.setMessage("Success");
 		response.setData(list);
-		
+
 		return ResponseEntity.ok(response);
 	}
-	
-	@GetMapping("/coupon/{code}")
-	public ResponseEntity<ResponseAPI<UserCouponResponse>> getCoupon(@RequestHeader("Authorization") Optional<String> authHeader,
-			@PathVariable("code") String code)
-	{	
+
+	@GetMapping("/coupon")
+	public ResponseEntity<ResponseAPI<UserCouponResponse>> getCoupon(
+			@RequestHeader("Authorization") Optional<String> authHeader,
+			@RequestParam(value = "code", defaultValue = "") String code) {
 		ResponseAPI<UserCouponResponse> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
-
+		if (code.isEmpty() || code.isBlank()) {
+			response.setCode(400);
+			response.setMessage("Invalid coupon code");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+		}
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
@@ -128,17 +131,16 @@ public class UserCouponController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
-		
-		
+
 		Coupon coupon = userCouponJPA.findCouponByCode(code);
-		
-		if(coupon == null) {
+
+		if (coupon == null) {
 			response.setCode(404);
 			response.setMessage("Coupon not found!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
-		
+
 		UserCouponResponse couponResponse = new UserCouponResponse();
 		couponResponse.setId(coupon.getCouponId());
 		couponResponse.setCouponCode(coupon.getCouponCode());
@@ -146,11 +148,11 @@ public class UserCouponController {
 		couponResponse.setPrice(coupon.getDisPrice());
 		couponResponse.setStartDate(coupon.getStartDate());
 		couponResponse.setEndDate(coupon.getEndDate());
-		
+
 		response.setCode(200);
 		response.setMessage("Success");
 		response.setData(couponResponse);
-		
+
 		return ResponseEntity.ok(response);
 	}
 }

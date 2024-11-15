@@ -2,6 +2,8 @@ package com.controllers;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -9,7 +11,6 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +41,6 @@ import com.repositories.CartProductJPA;
 import com.repositories.UserCouponJPA;
 import com.responsedto.CartItemResponse;
 import com.responsedto.CartOrderResponse;
-import com.responsedto.ProductCartResponse;
 import com.services.AuthService;
 import com.services.CartProductService;
 import com.services.CartService;
@@ -57,7 +57,7 @@ import com.services.UserService;
 import com.services.VersionService;
 
 @RestController
-@RequestMapping("/api/user/cart")
+@RequestMapping("api/user/cart")
 public class CartController {
 	@Autowired
 	AuthService authService;
@@ -326,7 +326,7 @@ public class CartController {
 			@RequestHeader("Authorization") Optional<String> authHeader, @RequestBody CartOrderModel orderModel) {
 		ResponseAPI<CartOrderResponse> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
-		System.out.println("ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss");
+
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
@@ -432,8 +432,20 @@ public class CartController {
 			}
 		}
 
-		orderEntity.setOrderDate(new Date());
-		orderEntity.setDeliveryDate(new Date());
+		LocalDateTime localDateTime = LocalDateTime.now();
+
+		// Chuyển LocalDateTime sang múi giờ UTC+7 (Việt Nam)
+		ZonedDateTime vietnamTime = localDateTime.atZone(ZoneId.of("Asia/Ho_Chi_Minh"));
+
+		// Trừ đi 8 giờ
+		ZonedDateTime adjustedTime = vietnamTime.minusHours(8);
+
+		// Chuyển về java.util.Date
+		Date date = Date.from(adjustedTime.toInstant());
+
+		// Gán vào orderEntity
+		orderEntity.setOrderDate(date);
+		orderEntity.setDeliveryDate(date);
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
