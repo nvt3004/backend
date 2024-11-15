@@ -14,11 +14,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.entities.User;
 import com.errors.ResponseAPI;
+import com.models.CustomerDTO;
 import com.models.UserModel;
 import com.repositories.UserJPA;
 import com.responsedto.PermissionDto;
@@ -31,7 +33,8 @@ import com.services.PermissionService;
 import com.services.UserService;
 
 @RestController
-public class PermissionUserController {
+@RequestMapping("/api/admin/customer")
+public class CustomerController {
 
 	@Autowired
 	private PermissionService permissionService;
@@ -48,39 +51,10 @@ public class PermissionUserController {
 	@Autowired
 	private UserJPA userRepo;
 
-	// Lấy toàn bộ quyền của user
-	@GetMapping("/api/admin/userpermissions/{userId}")
-	public ResponseEntity<ResponseAPI<List<PermissionResponse>>> getPermissions(
-			@RequestHeader("Authorization") Optional<String> authHeader, @PathVariable Integer userId) {
-		ResponseAPI<List<PermissionResponse>> response = new ResponseAPI<>();
-		List<PermissionResponse> userPermissions = permissionService.getAllPermissionByUser(userId);
-
-		String token = authService.readTokenFromHeader(authHeader);
-
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
-
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
-
-		if (user.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
-
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
-
-		response.setData(userPermissions);
-		response.setCode(200);
-		response.setMessage("Success");
-		return ResponseEntity.ok(response);
-	}
+	
 
 	// Lấy danh sách user
-	@GetMapping("/api/admin/user/all")
+	@GetMapping("/all")
 	public ResponseEntity<ResponseAPI<PageImpl<UserResponse>>> getAllUser(
 			@RequestHeader("Authorization") Optional<String> authHeader,
 			@RequestParam(value = "keyword", defaultValue = "") String keywword,
@@ -121,7 +95,7 @@ public class PermissionUserController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		PageImpl<UserResponse> data = userService.getUserByKeyword(page - 1, size, keywword, status, 3);
+		PageImpl<UserResponse> data = userService.getUserByKeyword(page - 1, size, keywword, status, 2);
 
 		response.setCode(200);
 		response.setMessage("Success");
@@ -130,15 +104,14 @@ public class PermissionUserController {
 		return ResponseEntity.ok(response);
 	}
 
-	@PostMapping("/api/admin/userpermissions/add")
-	public ResponseEntity<ResponseAPI<Boolean>> addUser(@RequestBody UserModel userModel) {
+	@PostMapping("/add")
+	public ResponseEntity<ResponseAPI<Boolean>> addUser(@RequestBody CustomerDTO userModel) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 
 		String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
 		String phoneRegex = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$";
 		String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
-		String nameRegex = "^([A-ZÀ-Ỹ][a-zà-ỹ]*(\\s[A-ZÀ-Ỹ][a-zà-ỹ]*)*)$";
 
 		String username = userModel.getUsername();
 
@@ -158,7 +131,10 @@ public class PermissionUserController {
 				return ResponseEntity.status(999).body(response);
 			}
 
-		} else if (username.matches(phoneRegex)) {
+		} 
+		
+		
+		if (username.matches(phoneRegex)) {
 			Optional<User> existingUser = userRepo.findByPhoneAndProvider(username, "Guest");
 			if (existingUser.isPresent()) {
 				response.setCode(999);
@@ -166,11 +142,6 @@ public class PermissionUserController {
 
 				return ResponseEntity.status(999).body(response);
 			}
-		} else {
-			response.setCode(999);
-			response.setMessage("Invalid username format. Must be a valid email or phone number");
-
-			return ResponseEntity.status(999).body(response);
 		}
 
 		if (userModel.getPassword() == null || userModel.getPassword().isEmpty()) {
@@ -203,14 +174,14 @@ public class PermissionUserController {
 			return ResponseEntity.status(999).body(response);
 		}
 
-		permissionService.addUser(userModel);
+		permissionService.addCustomer(userModel);
 		response.setCode(200);
 		response.setMessage("Success");
 		response.setData(true);
 		return ResponseEntity.ok(response);
 	}
 
-	@PutMapping("/api/admin/userpermissions/update")
+	@PutMapping("/update")
 	public ResponseEntity<ResponseAPI<Boolean>> updateUser(@RequestHeader("Authorization") Optional<String> authHeader,
 			@RequestBody UserModel userModel) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
@@ -275,82 +246,8 @@ public class PermissionUserController {
 		return ResponseEntity.ok(response);
 	}
 
-	// Đây xong rôi
-	@PostMapping("/api/admin/userpermissions/save-per")
-	public ResponseEntity<ResponseAPI<Boolean>> savePermissonUser(@RequestBody PermissionResponse userPermissions,
-			@RequestHeader("Authorization") Optional<String> authHeader) {
 
-		ResponseAPI<Boolean> response = new ResponseAPI<>();
-		response.setData(false);
-		String token = authService.readTokenFromHeader(authHeader);
-		String username = jwtService.extractUsername(token);
-		User userLogin = userService.getUserByUsername(username);
-
-		if (userLogin == null) {
-			response.setCode(403);
-			response.setMessage("Account not found");
-
-			return ResponseEntity.status(403).body(response);
-		}
-
-		if (userLogin.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Your account has been locked");
-
-			return ResponseEntity.status(403).body(response);
-		}
-
-		if (userPermissions.getUserId() == null) {
-			response.setCode(999);
-			response.setMessage("Save role failed because user id is null!");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		User user = userRepo.findById(userPermissions.getUserId()).orElse(null);
-
-		if (user == null) {
-			response.setCode(999);
-			response.setMessage("Save role failed because user does not exist!");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		if (user.getStatus() == 0) {
-			response.setCode(999);
-			response.setMessage("Save role failed because user does not exist!");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		if (user.getUserRoles().get(0).getRole().getId() != 3) {
-			response.setCode(999);
-			response.setMessage("Can only be assigned to accounts with employee roles!");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		for (PermissionDto per : userPermissions.getPermission()) {
-			boolean isExitPer = permissionService.isPermissionExit(per.getId());
-
-			if (!isExitPer) {
-				response.setCode(999);
-				response.setMessage(
-						String.format("Save role failed because role id %s does not exist!", per.getId() + ""));
-
-				return ResponseEntity.status(999).body(response);
-			}
-		}
-
-		permissionService.saveUserPermission(userPermissions.getPermission(), user);
-
-		response.setCode(200);
-		response.setMessage("Success");
-		response.setData(true);
-		return ResponseEntity.ok(response);
-	}
-
-	@DeleteMapping("/api/admin/userpermissions/delete/{userId}")
+	@DeleteMapping("/delete/{userId}")
 	public ResponseEntity<ResponseAPI<Boolean>> deleteUser(@RequestHeader("Authorization") Optional<String> authHeader,
 			@PathVariable Integer userId) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
