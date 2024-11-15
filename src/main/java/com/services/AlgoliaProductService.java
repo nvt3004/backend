@@ -4,13 +4,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.algolia.search.DefaultSearchClient;
@@ -125,11 +124,36 @@ public class AlgoliaProductService {
 		}
 	}
 
-	// Thêm sản phẩm vào Algolia sau khi xóa tất cả các sản phẩm cũ
+	public List<ProductDTO> getTop50Products() {
+		List<String> attributesToRetrieve = Arrays.asList("id", "name", "imgName", "rating", "minPrice", "maxPrice",
+				"reviewCount");
+
+		Query query = new Query().setQuery("").setAttributesToRetrieve(attributesToRetrieve).setHitsPerPage(50);
+
+		try {
+
+			SearchResult<ProductDTO> searchResult = productIndex.search(query);
+			List<ProductDTO> products = searchResult.getHits();
+
+			return products;
+		} catch (Exception e) {
+			logger.severe("Lỗi khi lấy sản phẩm từ Algolia: " + e.getMessage());
+			return List.of();
+		}
+	}
+
+	@Async
+	public void addProductToAlgolia(ProductDTO product) {
+		try {
+			addProduct(product);
+		} catch (Exception e) {
+			System.out.println("Error adding product to Algolia: " + e.getMessage());
+		}
+	}
+
 	public void addProduct(ProductDTO product) {
 		try {
 
-			// Thêm sản phẩm mới vào Algolia
 			productIndex.saveObject(product).waitTask();
 			logger.info("Thêm sản phẩm thành công: " + product);
 		} catch (Exception e) {

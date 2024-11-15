@@ -2,26 +2,21 @@ package com.services;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOption;
 import com.entities.AttributeOptionsVersion;
 import com.entities.Category;
 import com.entities.Feedback;
-import com.entities.Image;
 import com.entities.Product;
 import com.entities.ProductCategory;
 import com.entities.ProductSale;
@@ -29,7 +24,9 @@ import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.Wishlist;
 import com.repositories.AttributeOptionJPA;
+import com.repositories.CartJPA;
 import com.repositories.CategoryJPA;
+import com.repositories.OrderJPA;
 import com.repositories.ProductJPA;
 import com.repositories.UserJPA;
 import com.responsedto.ProductDTO;
@@ -46,6 +43,89 @@ public class ProductClientService {
 	AttributeOptionJPA attributeOptionJPA;
 	@Autowired
 	WishlistService wishlistService;
+	@Autowired
+	CartJPA cartJPA;
+	@Autowired
+	OrderJPA orderJPA;
+	@Autowired
+	AlgoliaProductService algoliaProductService;
+
+	public List<ProductDTO> getRecommendedProducts(User user) {
+
+		List<ProductDTO> topProducts = algoliaProductService.getTop50Products();
+		topProducts = getRandomProducts(topProducts, 25);
+
+		if (user == null) {
+			System.out.println("User is null. Returning top products only.");
+			return topProducts.stream().limit(24).collect(Collectors.toList());
+		}
+
+		List<Product> prodFromCart = cartJPA.getProductsByUserId(user.getUserId());
+		List<Product> prodFromOrder = orderJPA.getProductsByUserId(user.getUserId());
+
+		List<ProductDTO> wishlistProducts = getProductWish(user);
+		List<ProductDTO> productsFromCart = getProductCart(prodFromCart);
+		List<ProductDTO> productsFromOrder = getProductCart(prodFromOrder);
+
+		wishlistProducts = getRandomProducts(wishlistProducts, 25);
+		productsFromCart = getRandomProducts(productsFromCart, 25);
+		productsFromOrder = getRandomProducts(productsFromOrder, 25);
+
+		Set<String> uniqueProductIds = new HashSet<>();
+		List<ProductDTO> combinedProducts = new ArrayList<>();
+
+		for (ProductDTO product : Stream
+				.concat(Stream.concat(topProducts.stream(), wishlistProducts.stream()),
+						Stream.concat(productsFromCart.stream(), productsFromOrder.stream()))
+				.collect(Collectors.toList())) {
+			if (uniqueProductIds.add(product.getId())) {
+				combinedProducts.add(product);
+			}
+		}
+		Collections.shuffle(combinedProducts);
+		return combinedProducts.stream().limit(24).collect(Collectors.toList());
+	}
+
+	private List<ProductDTO> getRandomProducts(List<ProductDTO> productList, int limit) {
+		Collections.shuffle(productList);
+		return productList.stream().limit(limit).collect(Collectors.toList());
+	}
+
+	public List<ProductDTO> getProductCart(List<Product> prods) {
+		List<ProductDTO> productDTOs = new ArrayList<>();
+
+		for (Product pro : prods) {
+
+			ProductDTO productDTO = new ProductDTO();
+			productDTO.setId(String.valueOf(pro.getProductId()));
+			productDTO.setName(pro.getProductName());
+
+			BigDecimal minPrice = null;
+			BigDecimal maxPrice = BigDecimal.ZERO;
+			List<String> images = new ArrayList<>();
+
+			for (ProductVersion productVer : pro.getProductVersions()) {
+
+				if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+					minPrice = productVer.getRetailPrice();
+				}
+				if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+					maxPrice = productVer.getRetailPrice();
+				}
+
+				images.add(productVer.getImage() == null ? null : productVer.getImage().getImageUrl());
+			}
+
+			productDTO.setMinPrice(minPrice);
+			productDTO.setMaxPrice(maxPrice);
+			productDTO.setImgName(images.isEmpty() ? null : images.get(0));
+			productDTO.setImages(images);
+			productDTO.setLike(true);
+
+			productDTOs.add(productDTO);
+		}
+		return productDTOs;
+	}
 
 	public List<ProductDTO> getProductWish(User user) {
 		List<Wishlist> wls = wishlistService.getAllWisListByUser(user);

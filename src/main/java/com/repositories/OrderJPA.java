@@ -1,5 +1,7 @@
 package com.repositories;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.entities.Order;
 import com.entities.OrderStatus;
+import com.entities.Product;
 
 public interface OrderJPA extends JpaRepository<Order, Integer> {
 
@@ -39,5 +42,12 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("SELECT CASE WHEN COUNT(od) = 0 THEN true ELSE false END FROM OrderDetail od WHERE od.order.orderId = :orderId") 
 	boolean existsByOrderDetail(@Param("orderId") Integer orderId);
 
+	@Query("SELECT p FROM Product p " +
+		       "JOIN ProductVersion pv ON p.productId = pv.product.productId " +
+		       "JOIN OrderDetail od ON pv.id = od.productVersionBean.id " +
+		       "JOIN Order o ON o.orderId = od.order.orderId " +  // Thêm khoảng trống trước WHERE
+		       "WHERE o.user.userId = :userId " +
+		       "GROUP BY p.productId")
+		public List<Product> getProductsByUserId(@Param("userId") int userId);
 
 }
