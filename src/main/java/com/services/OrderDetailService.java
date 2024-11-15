@@ -48,8 +48,6 @@ public class OrderDetailService {
 	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
 
 	    OrderDetail orderDetail = orderDetailList.get(0);
-	    String disPercent = formatDiscount(orderDetail.getOrder().getDisPercent());
-	    String disPrice = formatDiscount(orderDetail.getOrder().getDisPrice());
 
 	    Integer couponId = (orderDetail.getOrder().getCoupon() != null)
 	            ? orderDetail.getOrder().getCoupon().getCouponId()
@@ -66,7 +64,7 @@ public class OrderDetailService {
 	                    : "N/A"; 
 
 	    return new OrderDetailDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getAddress(), couponId,
-	            orderDetail.getOrder().getDeliveryDate(), disPercent, disPrice, orderDetail.getOrder().getFullname(),
+	            orderDetail.getOrder().getDeliveryDate(),orderUtilsService.calculateDiscountedPrice(orderDetailList.get(0).getOrder()) ,orderDetail.getOrder().getFullname(),
 	            orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(),
 	            orderDetail.getOrder().getOrderStatus().getStatusName(),
 	            orderUtilsService.calculateOrderTotal(orderDetail.getOrder()), paymentMethod,

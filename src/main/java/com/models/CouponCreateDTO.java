@@ -49,4 +49,14 @@ public class CouponCreateDTO {
     public boolean isDiscountValid() {
         return (disPercent == null && disPrice != null) || (disPercent != null && disPrice == null);
     }
+
+    // Hàm kiểm tra xem disPercent có rỗng hoặc null không
+    public boolean isDisPercentValid() {
+        return disPercent != null && !disPercent.toString().trim().isEmpty();
+    }
+
+    // Hàm kiểm tra xem disPrice có rỗng hoặc null không
+    public boolean isDisPriceValid() {
+        return disPrice != null && !disPrice.toString().trim().isEmpty();
+    }
 }

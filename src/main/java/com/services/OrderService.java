@@ -131,8 +131,6 @@ public class OrderService {
 		if (ordersPage.isEmpty()) {
 			return new ApiResponse<>(404, "No orders found", null);
 		}
-		
-		
 
 		List<OrderByUserDTO> orderDtos = new ArrayList<>();
 		for (Order order : ordersPage) {
@@ -192,7 +190,8 @@ public class OrderService {
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, order.getDeliveryDate(),
+		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId,
+				orderUtilsService.calculateDiscountedPrice(order), order.getShippingFee(), order.getDeliveryDate(),
 				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethodName);
 	}
 
@@ -212,108 +211,108 @@ public class OrderService {
 	}
 
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
-	    if (statusId == null) {
-	        return new ApiResponse<>(400, "Status is required.", null);
-	    }
+		if (statusId == null) {
+			return new ApiResponse<>(400, "Status is required.", null);
+		}
 
-	    Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
-	    if (!newOrderStatus.isPresent()) {
-	        return new ApiResponse<>(400, "The provided status does not exist.", null);
-	    }
+		Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
+		if (!newOrderStatus.isPresent()) {
+			return new ApiResponse<>(400, "The provided status does not exist.", null);
+		}
 
-	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
-	    if (!updatedOrder.isPresent()) {
-	        return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
-	    }
+		Optional<Order> updatedOrder = orderJpa.findById(orderId);
+		if (!updatedOrder.isPresent()) {
+			return new ApiResponse<>(404, "The order with the provided ID does not exist.", null);
+		}
 
-	    Order order = updatedOrder.get();
-	    String currentStatus = order.getOrderStatus().getStatusName();
-	    String newStatus = newOrderStatus.get().getStatusName();
+		Order order = updatedOrder.get();
+		String currentStatus = order.getOrderStatus().getStatusName();
+		String newStatus = newOrderStatus.get().getStatusName();
 
-	    if (!isValidStatusTransition(currentStatus, newStatus)) {
-	        return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
-	    }
+		if (!isValidStatusTransition(currentStatus, newStatus)) {
+			return new ApiResponse<>(400, "Invalid status transition from " + currentStatus + " to " + newStatus, null);
+		}
 
-	    if (isOrderStatusChanged(order, newStatus)) {
-	        if ("Processed".equalsIgnoreCase(newStatus)) {
-	            List<String> insufficientStockMessages = checkProductVersionsStock(order.getOrderDetails());
-	            if (!insufficientStockMessages.isEmpty()) {
-	                return new ApiResponse<>(400, String.join(", ", insufficientStockMessages), null);
-	            }
-	        }
-	        order.setOrderStatus(newOrderStatus.get());
-	        orderJpa.save(order);
-	    }
+		if (isOrderStatusChanged(order, newStatus)) {
+			if ("Processed".equalsIgnoreCase(newStatus)) {
+				List<String> insufficientStockMessages = checkProductVersionsStock(order.getOrderDetails());
+				if (!insufficientStockMessages.isEmpty()) {
+					return new ApiResponse<>(400, String.join(", ", insufficientStockMessages), null);
+				}
+			}
+			order.setOrderStatus(newOrderStatus.get());
+			orderJpa.save(order);
+		}
 
-	    return new ApiResponse<>(200, "Order status updated successfully", null);
+		return new ApiResponse<>(200, "Order status updated successfully", null);
 	}
-
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
 		return !statusName.equalsIgnoreCase(order.getOrderStatus().getStatusName());
 	}
 
 	private boolean isValidStatusTransition(String currentStatus, String newStatus) {
-	    switch (currentStatus.toLowerCase()) {
-	        case "pending":
-	            return "processed".equalsIgnoreCase(newStatus) || "cancelled".equalsIgnoreCase(newStatus);
-	        case "processed":
-	            return "shipped".equalsIgnoreCase(newStatus);
-	        case "shipped":
-	            return "delivered".equalsIgnoreCase(newStatus);
-	        case "delivered":
-	            return false;
-	        case "cancelled":
-	            return false;
-	        case "temp":
-	            return "cancelled".equalsIgnoreCase(newStatus);
-	        default:
-	            return false;
-	    }
+		switch (currentStatus.toLowerCase()) {
+		case "pending":
+			return "processed".equalsIgnoreCase(newStatus) || "cancelled".equalsIgnoreCase(newStatus);
+		case "processed":
+			return "shipped".equalsIgnoreCase(newStatus);
+		case "shipped":
+			return "delivered".equalsIgnoreCase(newStatus);
+		case "delivered":
+			return false;
+		case "cancelled":
+			return false;
+		case "temp":
+			return "cancelled".equalsIgnoreCase(newStatus);
+		default:
+			return false;
+		}
 	}
-
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
-	    List<String> insufficientStockMessages = new ArrayList<>();
-	    for (OrderDetail orderDetail : orderDetailList) {
-	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
-	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-	                    .orElse(null);
+		List<String> insufficientStockMessages = new ArrayList<>();
+		for (OrderDetail orderDetail : orderDetailList) {
+			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+				Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+						.orElse(null);
 
-	            if (productVersion != null) {
-	                Integer productVersionStock = productVersion.getQuantity();
-	                Integer processedOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-	                Integer cancelledOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-	                Integer shippedOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-	                Integer deliveredOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+				if (productVersion != null) {
+					Integer productVersionStock = productVersion.getQuantity();
+					Integer processedOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+					Integer cancelledOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+					Integer shippedOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+					Integer deliveredOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+					processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+					cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+					shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+					deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-	                Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
+					Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+					Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
 
-	                Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
+					Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock
+							- totalQuantitySold;
 
-	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
-	                    insufficientStockMessages.add("Product version ID " + productVersion.getId() + ": Available stock " 
-	                        + availableProductVersionStock + ", Requested quantity: " + orderDetailRequestedQuantity);
-	                }
-	            } else {
-	                insufficientStockMessages.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
-	            }
-	        }
-	    }
-	    return insufficientStockMessages;
+					if (availableProductVersionStock < orderDetailRequestedQuantity) {
+						insufficientStockMessages.add("Product version ID " + productVersion.getId()
+								+ ": Available stock " + availableProductVersionStock + ", Requested quantity: "
+								+ orderDetailRequestedQuantity);
+					}
+				} else {
+					insufficientStockMessages
+							.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+				}
+			}
+		}
+		return insufficientStockMessages;
 	}
-
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {
@@ -441,99 +440,99 @@ public class OrderService {
 	private boolean isCancellable(String currentStatus) {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
-	
-	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page, int size) {
-	    try {
-	        ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(isAdminOrder, keyword, statusId, page, size);
 
-	        if (ordersResponse.getErrorCode() != 200) {
-	            throw new RuntimeException(ordersResponse.getMessage());
-	        }
+	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
+			int size) {
+		try {
+			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(isAdminOrder, keyword, statusId, page,
+					size);
 
-	        PageImpl<OrderDTO> orders = ordersResponse.getData();
+			if (ordersResponse.getErrorCode() != 200) {
+				throw new RuntimeException(ordersResponse.getMessage());
+			}
 
-	        // Tạo file Excel
-	        Workbook workbook = new XSSFWorkbook();
-	        Sheet sheet = workbook.createSheet("Orders");
+			PageImpl<OrderDTO> orders = ordersResponse.getData();
 
-	        // Tạo các style cho cột header
-	        CellStyle headerStyle = workbook.createCellStyle();
-	        Font headerFont = workbook.createFont();
-	        headerFont.setBold(true);
-	        headerFont.setColor(IndexedColors.WHITE.getIndex());
-	        headerStyle.setFont(headerFont);
-	        headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-	        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-	        headerStyle.setAlignment(HorizontalAlignment.CENTER);
-	        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+			// Tạo file Excel
+			Workbook workbook = new XSSFWorkbook();
+			Sheet sheet = workbook.createSheet("Orders");
 
-	        // Tạo các style cho dữ liệu
-	        CellStyle dataStyle = workbook.createCellStyle();
-	        dataStyle.setAlignment(HorizontalAlignment.CENTER);  // Căn giữa theo chiều ngang
-	        dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);  // Căn giữa theo chiều dọc
+			// Tạo các style cho cột header
+			CellStyle headerStyle = workbook.createCellStyle();
+			Font headerFont = workbook.createFont();
+			headerFont.setBold(true);
+			headerFont.setColor(IndexedColors.WHITE.getIndex());
+			headerStyle.setFont(headerFont);
+			headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+			headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			headerStyle.setAlignment(HorizontalAlignment.CENTER);
+			headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
-	        // Tạo header row
-	        Row headerRow = sheet.createRow(0);
-	        headerRow.createCell(0).setCellValue("Order ID");
-	        headerRow.createCell(1).setCellValue("Order Date");
-	        headerRow.createCell(2).setCellValue("Customer");
-	        headerRow.createCell(3).setCellValue("Status");
-	        headerRow.createCell(4).setCellValue("Amount");
+			// Tạo các style cho dữ liệu
+			CellStyle dataStyle = workbook.createCellStyle();
+			dataStyle.setAlignment(HorizontalAlignment.CENTER); // Căn giữa theo chiều ngang
+			dataStyle.setVerticalAlignment(VerticalAlignment.CENTER); // Căn giữa theo chiều dọc
 
-	        for (int i = 0; i < 5; i++) {
-	            headerRow.getCell(i).setCellStyle(headerStyle);
-	        }
+			// Tạo header row
+			Row headerRow = sheet.createRow(0);
+			headerRow.createCell(0).setCellValue("Order ID");
+			headerRow.createCell(1).setCellValue("Order Date");
+			headerRow.createCell(2).setCellValue("Customer");
+			headerRow.createCell(3).setCellValue("Status");
+			headerRow.createCell(4).setCellValue("Amount");
 
-	        // Đặt độ rộng cho các cột
-	        sheet.setColumnWidth(0, 6000);
-	        sheet.setColumnWidth(1, 8000);
-	        sheet.setColumnWidth(2, 12000); 
-	        sheet.setColumnWidth(3, 6000); 
-	        sheet.setColumnWidth(4, 6000); 
+			for (int i = 0; i < 5; i++) {
+				headerRow.getCell(i).setCellStyle(headerStyle);
+			}
 
-	        int rowNum = 1;
-	        for (OrderDTO order : orders.getContent()) {
-	            Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
-	            if (orderEntityOpt.isPresent()) {
-	                Order orderEntity = orderEntityOpt.get();
-	                Row row = sheet.createRow(rowNum++);
+			// Đặt độ rộng cho các cột
+			sheet.setColumnWidth(0, 6000);
+			sheet.setColumnWidth(1, 8000);
+			sheet.setColumnWidth(2, 12000);
+			sheet.setColumnWidth(3, 6000);
+			sheet.setColumnWidth(4, 6000);
 
-	                // Thêm dữ liệu vào các cột và áp dụng style cho dữ liệu
-	                Cell cell0 = row.createCell(0);
-	                cell0.setCellValue(order.getOrderId());
-	                cell0.setCellStyle(dataStyle);
+			int rowNum = 1;
+			for (OrderDTO order : orders.getContent()) {
+				Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
+				if (orderEntityOpt.isPresent()) {
+					Order orderEntity = orderEntityOpt.get();
+					Row row = sheet.createRow(rowNum++);
 
-	                Cell cell1 = row.createCell(1);
-	                cell1.setCellValue(order.getOrderDate().toString());
-	                cell1.setCellStyle(dataStyle);
+					// Thêm dữ liệu vào các cột và áp dụng style cho dữ liệu
+					Cell cell0 = row.createCell(0);
+					cell0.setCellValue(order.getOrderId());
+					cell0.setCellStyle(dataStyle);
 
-	                Cell cell2 = row.createCell(2);
-	                cell2.setCellValue(order.getFullname());
-	                cell2.setCellStyle(dataStyle);
+					Cell cell1 = row.createCell(1);
+					cell1.setCellValue(order.getOrderDate().toString());
+					cell1.setCellStyle(dataStyle);
 
-	                Cell cell3 = row.createCell(3);
-	                cell3.setCellValue(order.getStatusName());
-	                cell3.setCellStyle(dataStyle);
+					Cell cell2 = row.createCell(2);
+					cell2.setCellValue(order.getFullname());
+					cell2.setCellStyle(dataStyle);
 
-	                Cell cell4 = row.createCell(4);
-	                cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
-	                cell4.setCellStyle(dataStyle);
-	            }
-	        }
+					Cell cell3 = row.createCell(3);
+					cell3.setCellValue(order.getStatusName());
+					cell3.setCellStyle(dataStyle);
 
-	        // Tạo file Excel và trả về
-	        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-	        workbook.write(outputStream);
-	        workbook.close();
+					Cell cell4 = row.createCell(4);
+					cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
+					cell4.setCellStyle(dataStyle);
+				}
+			}
 
-	        // Chuyển đổi output stream thành resource để trả về
-	        return new ByteArrayResource(outputStream.toByteArray());
+			// Tạo file Excel và trả về
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			workbook.write(outputStream);
+			workbook.close();
 
-	    } catch (Exception e) {
-	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
-	    }
+			// Chuyển đổi output stream thành resource để trả về
+			return new ByteArrayResource(outputStream.toByteArray());
+
+		} catch (Exception e) {
+			throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
+		}
 	}
-
-
 
 }

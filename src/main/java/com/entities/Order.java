@@ -46,6 +46,10 @@ public class Order implements Serializable {
 	private Boolean isAdminOrder;
 
 	private String phone;
+	
+	@Column(name = "shipping_fee", nullable = false)
+	private BigDecimal shippingFee;
+
 
 	// bi-directional many-to-one association to OrderDetail
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "order")
@@ -74,6 +78,14 @@ public class Order implements Serializable {
 	private User user;
 
 	public Order() {
+	}
+
+	public BigDecimal getShippingFee() {
+	    return this.shippingFee;
+	}
+
+	public void setShippingFee(BigDecimal shippingFee) {
+	    this.shippingFee = shippingFee;
 	}
 
 	public int getOrderId() {

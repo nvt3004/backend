@@ -13,8 +13,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,7 +37,6 @@ import com.models.CouponDTO;
 import com.services.AuthService;
 import com.services.CouponService;
 import com.services.JWTService;
-import com.services.UserService;
 import com.utils.ValidationUtil;
 
 import jakarta.validation.Valid;
@@ -51,7 +53,7 @@ public class CouponController {
 
 	@Autowired
 	private JWTService jwtService;
-
+	
 	@PostMapping
 	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_CREATE')")
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
@@ -92,12 +94,14 @@ public class CouponController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		List<FieldErrorDTO> validationErrors = ValidationUtil.validateErrors(errors);
+		List<FieldErrorDTO> validationErrors = couponService.validateCoupon(couponCreateDTO, errors);
 		if (!validationErrors.isEmpty()) {
+			System.out.println("Có chạy vào đây");
 			errorResponse = new ApiResponse<>(400, "Validation failed.", validationErrors);
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
 		}
 
+		System.out.println(validationErrors.size() + " SizeError");
 		try {
 			Coupon savedCoupon = couponService.saveCoupon(couponCreateDTO);
 			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", savedCoupon);

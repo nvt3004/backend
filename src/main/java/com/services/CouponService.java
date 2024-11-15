@@ -43,6 +43,8 @@ public class CouponService {
 	public List<FieldErrorDTO> validateCoupon(CouponCreateDTO couponCreateDTO, BindingResult errors) {
 		List<FieldErrorDTO> fieldErrors = new ArrayList<>();
 
+		System.out.println("Đã vào ValidateCoupon");
+		// Kiểm tra lỗi từ BindingResult
 		if (errors.hasErrors()) {
 			for (ObjectError error : errors.getAllErrors()) {
 				String field = ((FieldError) error).getField();
@@ -54,10 +56,18 @@ public class CouponService {
 		if (!couponCreateDTO.isDatesValid()) {
 			fieldErrors.add(new FieldErrorDTO("startDate", "Start date must be before the end date."));
 		}
+
 		if (!couponCreateDTO.isDiscountValid()) {
 			fieldErrors
 					.add(new FieldErrorDTO("discount", "Only one discount type (percentage or price) can be applied."));
 		}
+
+		if ((couponCreateDTO.getDisPercent() == null || couponCreateDTO.getDisPercent().toString().trim().isEmpty())
+				&& (couponCreateDTO.getDisPrice() == null
+						|| couponCreateDTO.getDisPrice().toString().trim().isEmpty())) {
+			fieldErrors.add(new FieldErrorDTO("discount", "Either discount percentage or price must be provided."));
+		}
+		
 
 		return fieldErrors;
 	}
@@ -87,21 +97,22 @@ public class CouponService {
 
 		boolean isCouponApplied = orderJpa.existsByCouponId(id);
 
-	    if (isCouponApplied) {
-	        if (!(existingCoupon.getQuantity() == (couponCreateDTO.getQuantity()))) {
-	            throw new InvalidException("Cannot update quantity because the coupon has already been applied to an order.");
-	        }
-	    }
+		if (isCouponApplied) {
+			if (!(existingCoupon.getQuantity() == (couponCreateDTO.getQuantity()))) {
+				throw new InvalidException(
+						"Cannot update quantity because the coupon has already been applied to an order.");
+			}
+		}
 
-	    existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
-	    existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
-	    existingCoupon.setDescription(couponCreateDTO.getDescription());
-	    existingCoupon.setStartDate(couponCreateDTO.getStartDate());
-	    existingCoupon.setEndDate(couponCreateDTO.getEndDate());
+		existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
+		existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
+		existingCoupon.setDescription(couponCreateDTO.getDescription());
+		existingCoupon.setStartDate(couponCreateDTO.getStartDate());
+		existingCoupon.setEndDate(couponCreateDTO.getEndDate());
 
-	    if (!isCouponApplied) {
-	        existingCoupon.setQuantity(couponCreateDTO.getQuantity());
-	    }
+		if (!isCouponApplied) {
+			existingCoupon.setQuantity(couponCreateDTO.getQuantity());
+		}
 
 		return couponJpa.save(existingCoupon);
 	}
