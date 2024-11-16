@@ -29,6 +29,7 @@ import com.responsedto.UserPermissionDto;
 import com.responsedto.UserResponse;
 import com.services.AuthService;
 import com.services.JWTService;
+import com.services.MailService;
 import com.services.PermissionService;
 import com.services.UserService;
 
@@ -51,7 +52,8 @@ public class CustomerController {
 	@Autowired
 	private UserJPA userRepo;
 
-	
+	@Autowired
+	MailService mailService;
 
 	// Lấy danh sách user
 	@GetMapping("/all")
@@ -104,152 +106,164 @@ public class CustomerController {
 		return ResponseEntity.ok(response);
 	}
 
-	@PostMapping("/add")
-	public ResponseEntity<ResponseAPI<Boolean>> addUser(@RequestBody CustomerDTO userModel) {
-		ResponseAPI<Boolean> response = new ResponseAPI<>();
-		response.setData(false);
+//	@PostMapping("/add")
+//	public ResponseEntity<ResponseAPI<Boolean>> addUser(@RequestBody CustomerDTO userModel) {
+//		ResponseAPI<Boolean> response = new ResponseAPI<>();
+//		response.setData(false);
+//
+//		String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+//		String phoneRegex = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$";
+//		String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
+//
+//		String username = userModel.getUsername();
+//
+//		if (username == null || username.isEmpty()) {
+//			response.setCode(999);
+//			response.setMessage("Username cannot be empty");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		if (username.matches(emailRegex)) {
+//			Optional<User> existingUser = userRepo.findByEmailAndProvider(username, "Guest");
+//			if (existingUser.isPresent()) {
+//				response.setCode(999);
+//				response.setMessage("Email already exists with provider Guest");
+//
+//				return ResponseEntity.status(999).body(response);
+//			}
+//
+//		}
+//
+//		if (username.matches(phoneRegex)) {
+//			Optional<User> existingUser = userRepo.findByPhoneAndProvider(username, "Guest");
+//			if (existingUser.isPresent()) {
+//				response.setCode(999);
+//				response.setMessage("Phone number already exists with provider Guest");
+//
+//				return ResponseEntity.status(999).body(response);
+//			}
+//		}
+//
+//		if (userModel.getPassword() == null || userModel.getPassword().isEmpty()) {
+//			response.setCode(999);
+//			response.setMessage("Invalid password is empty");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		if (!userModel.getPassword().matches(passwordRegex)) {
+//			response.setCode(999);
+//			response.setMessage(
+//					"Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		if (userModel.getFullName() == null || userModel.getFullName().isEmpty()) {
+//
+//			response.setCode(999);
+//			response.setMessage("Invalid full name is empty");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		Optional<User> existingUser = userRepo.findByUsername(username);
+//		if (existingUser.isPresent()) {
+//			response.setCode(999);
+//			response.setMessage("Username already exists");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		permissionService.addCustomer(userModel);
+//		response.setCode(200);
+//		response.setMessage("Success");
+//		response.setData(true);
+//		return ResponseEntity.ok(response);
+//	}
+//
+//	@PutMapping("/update")
+//	public ResponseEntity<ResponseAPI<Boolean>> updateUser(@RequestHeader("Authorization") Optional<String> authHeader,
+//			@RequestBody UserModel userModel) {
+//		ResponseAPI<Boolean> response = new ResponseAPI<>();
+//		response.setData(false);
+//
+//		String token = authService.readTokenFromHeader(authHeader);
+//		String username = jwtService.extractUsername(token);
+//		User userLogin = userService.getUserByUsername(username);
+//
+//		if (userLogin == null) {
+//			response.setCode(404);
+//			response.setMessage("Account not found");
+//
+//			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+//		}
+//
+//		if (userLogin.getStatus() == 0) {
+//			response.setCode(403);
+//			response.setMessage("Account locked");
+//
+//			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+//		}
+//
+//		String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
+//		User user = userRepo.findById(userModel.getId()).orElse(null);
+//
+//		if (user == null) {
+//			response.setCode(404);
+//			response.setMessage("Update failed because user does not exist!");
+//
+//			return ResponseEntity.status(404).body(response);
+//		}
+//
+//		// Nếu cập nhật admin thì kh cho
+//		if (user.getUserRoles().get(0).getRole().getId() == 1) {
+//			response.setCode(404);
+//			response.setMessage("Update failed because user does not exist!");
+//
+//			return ResponseEntity.status(404).body(response);
+//		}
+//
+//		if (user.getStatus() == 0) {
+//			response.setCode(404);
+//			response.setMessage("Update failed because user does not exist!");
+//
+//			return ResponseEntity.status(404).body(response);
+//		}
+//
+//		if (userModel.getFullName() == null || userModel.getFullName().isEmpty()) {
+//
+//			response.setCode(999);
+//			response.setMessage("Invalid full name is empty");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//
+//		if (userModel.getPassword() != null && !userModel.getPassword().isBlank()
+//				&& !userModel.getPassword().matches(passwordRegex)) {
+//			response.setCode(999);
+//			response.setMessage(
+//					"Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
+//
+//			return ResponseEntity.status(999).body(response);
+//		}
+//		
+//		if(userModel.getEmail() != null && !userModel.getEmail().isBlank() && !userModel.getEmail().isEmpty()) {
+//			User exitEmail = userRepo.findByEmailAndProviderUpdate(username, passwordRegex, 0);
+//		}
+//
+//		permissionService.updateCustomer(userModel, user);
+//		response.setCode(200);
+//		response.setMessage("Success");
+//		response.setData(true);
+//		return ResponseEntity.ok(response);
+//	}
 
-		String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
-		String phoneRegex = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$";
-		String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
-
-		String username = userModel.getUsername();
-
-		if (username == null || username.isEmpty()) {
-			response.setCode(999);
-			response.setMessage("Username cannot be empty");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		if (username.matches(emailRegex)) {
-			Optional<User> existingUser = userRepo.findByEmailAndProvider(username, "Guest");
-			if (existingUser.isPresent()) {
-				response.setCode(999);
-				response.setMessage("Email already exists with provider Guest");
-
-				return ResponseEntity.status(999).body(response);
-			}
-
-		} 
-		
-		
-		if (username.matches(phoneRegex)) {
-			Optional<User> existingUser = userRepo.findByPhoneAndProvider(username, "Guest");
-			if (existingUser.isPresent()) {
-				response.setCode(999);
-				response.setMessage("Phone number already exists with provider Guest");
-
-				return ResponseEntity.status(999).body(response);
-			}
-		}
-
-		if (userModel.getPassword() == null || userModel.getPassword().isEmpty()) {
-			response.setCode(999);
-			response.setMessage("Invalid password is empty");
-
-			return ResponseEntity.status(999).body(response);
-		}
-		if (!userModel.getPassword().matches(passwordRegex)) {
-			response.setCode(999);
-			response.setMessage(
-					"Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		if (userModel.getFullName() == null || userModel.getFullName().isEmpty()) {
-
-			response.setCode(999);
-			response.setMessage("Invalid full name is empty");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		Optional<User> existingUser = userRepo.findByUsername(username);
-		if (existingUser.isPresent()) {
-			response.setCode(999);
-			response.setMessage("Username already exists");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		permissionService.addCustomer(userModel);
-		response.setCode(200);
-		response.setMessage("Success");
-		response.setData(true);
-		return ResponseEntity.ok(response);
-	}
-
-	@PutMapping("/update")
-	public ResponseEntity<ResponseAPI<Boolean>> updateUser(@RequestHeader("Authorization") Optional<String> authHeader,
-			@RequestBody UserModel userModel) {
-		ResponseAPI<Boolean> response = new ResponseAPI<>();
-		response.setData(false);
-
-		String token = authService.readTokenFromHeader(authHeader);
-		String username = jwtService.extractUsername(token);
-		User userLogin = userService.getUserByUsername(username);
-
-		if (userLogin == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
-
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
-
-		if (userLogin.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
-
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
-
-		String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
-		User user = userRepo.findById(userModel.getId()).orElse(null);
-
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Update failed because user does not exist!");
-
-			return ResponseEntity.status(404).body(response);
-		}
-
-		if (user.getStatus() == 0) {
-			response.setCode(404);
-			response.setMessage("Update failed because user does not exist!");
-
-			return ResponseEntity.status(404).body(response);
-		}
-
-		if (userModel.getFullName() == null || userModel.getFullName().isEmpty()) {
-
-			response.setCode(999);
-			response.setMessage("Invalid full name is empty");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		if (userModel.getPassword() != null && !userModel.getPassword().isBlank()
-				&& !userModel.getPassword().matches(passwordRegex)) {
-			response.setCode(999);
-			response.setMessage(
-					"Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
-		permissionService.updateUser(userModel, user);
-		response.setCode(200);
-		response.setMessage("Success");
-		response.setData(true);
-		return ResponseEntity.ok(response);
-	}
-
-
-	@DeleteMapping("/delete/{userId}")
+	@GetMapping("/delete")
 	public ResponseEntity<ResponseAPI<Boolean>> deleteUser(@RequestHeader("Authorization") Optional<String> authHeader,
-			@PathVariable Integer userId) {
+			@RequestParam(value = "reason", defaultValue = "") String reason,
+			@RequestParam(value = "id", defaultValue = "0") Integer userId) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
 		String username = jwtService.extractUsername(token);
@@ -278,21 +292,36 @@ public class CustomerController {
 			return ResponseEntity.status(999).body(response);
 		}
 
-		if (exitUser.getStatus() == 0) {
-			response.setCode(999);
-			response.setMessage("Cannot delete locked account");
-
-			return ResponseEntity.status(999).body(response);
-		}
-
 		if (user.getUserId() == exitUser.getUserId()) {
 			response.setCode(999);
-			response.setMessage("You cannot delete yourself!");
+			response.setMessage("You cannot block yourself!");
 
 			return ResponseEntity.status(999).body(response);
 		}
 
-		permissionService.deleteUser(exitUser.getUserId());
+		// Nếu cập nhật admin thì kh cho
+		if (exitUser.getUserRoles().get(0).getRole().getId() == 1) {
+			response.setCode(404);
+			response.setMessage("Block failed because user does not exist!");
+
+			return ResponseEntity.status(404).body(response);
+		}
+
+		if (reason.trim().length() == 0 && exitUser.getStatus() == 1) {
+			response.setCode(999);
+			response.setMessage("Reason cannot be left blank!");
+
+			return ResponseEntity.status(999).body(response);
+		}
+
+		// Nếu trước đó bị khóa thì mở khóa và ngược lại
+		String email = exitUser.getEmail() != null ? exitUser.getEmail() : "minhty295@gmail.com";
+		if (exitUser.getStatus() == 1) {
+			mailService.sendEmail(email, "Step To Future Shop Block Account",
+					"Step to future shop informs you that your account has been locked for the following reasons: "
+							+ reason);
+		}
+		permissionService.deleteCustomer(exitUser.getUserId());
 		response.setCode(200);
 		response.setMessage("Success");
 		return ResponseEntity.ok(response);

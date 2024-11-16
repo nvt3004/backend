@@ -59,9 +59,9 @@ public class Order implements Serializable {
 	private Boolean isAdminOrder;
 
 	private String phone;
-
-	@Column(name = "shipping_fee", nullable = false)
-	private BigDecimal shippingFee = BigDecimal.ZERO; // Giá trị mặc định
+	
+	@Column(name = "shipping_fee")
+	private BigDecimal shippingFee;
 
 	// bi-directional many-to-one association to OrderDetail
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "order")

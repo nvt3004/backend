@@ -14,6 +14,7 @@ public class UserModel {
 	private String fullName;
 	private String username;
 	private String password;
+	private String email;
 	private String image;
 	private Date birthday;
 	private int gender;

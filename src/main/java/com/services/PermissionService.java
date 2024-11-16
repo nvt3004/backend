@@ -308,14 +308,14 @@ public class PermissionService {
 
 		User userSaved = userRepo.save(userEntity);
 
-		// Set quyền là staff
+		// Set quyền là khách hàng
 		Role role = new Role();
 		role.setId(2);
 		UserRole userRole = new UserRole();
 		userRole.setRole(role);
 		userRole.setUser(userSaved);
 
-		// Save quyền staff cho user
+		// Save quyền khách hàng cho user
 		userRoleRepo.save(userRole);
 
 		return userRepo.save(userEntity);
@@ -342,11 +342,47 @@ public class PermissionService {
 
 		return userRepo.save(user);
 	}
+	
+	public User updateCustomer(UserModel userModel, User user) {
+
+		user.setFullName(userModel.getFullName());
+		user.setGender(userModel.getGender());
+		user.setPhone(user.getPhone());	
+		user.setEmail(userModel.getEmail());
+		user.setBirthday(userModel.getBirthday());
+
+		if (userModel.getPassword() != null && userModel.getPassword().trim().length() > 0) {
+			user.setPassword(passEncoder.encode(userModel.getPassword()));
+		}
+
+		if (userModel.getImage() != null && !userModel.getImage().isBlank() && !userModel.getImage().isEmpty()) {
+			String image = user.getImage();
+
+			if (image != null && !image.isBlank()) {
+				uploadService.delete(image, "images");
+			}
+			user.setImage(uploadService.save(userModel.getImage(), "images"));
+		}
+
+		return userRepo.save(user);
+	}
 
 	public User deleteUser(int userId) {
 		User user = userRepo.findById(userId).orElse(null);
 
 		user.setStatus(Byte.valueOf("0"));
+		return userRepo.save(user);
+	}
+	
+	public User deleteCustomer(int userId) {
+		User user = userRepo.findById(userId).orElse(null);
+
+		if(user.getStatus() == 1) {
+			user.setStatus(Byte.valueOf("0"));
+		}else {
+			user.setStatus(Byte.valueOf("1"));
+		}
+		
 		return userRepo.save(user);
 	}
 

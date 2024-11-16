@@ -451,6 +451,7 @@ public class CartController {
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
 		orderEntity.setCoupon(coupon);
+		orderEntity.setShippingFee(BigDecimal.valueOf(3.5));
 
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);

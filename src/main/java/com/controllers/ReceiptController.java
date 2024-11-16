@@ -48,7 +48,7 @@ public class ReceiptController {
 	private JWTService jwtService;
 
 	@GetMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userId, 'View Receipt')")
 	public ResponseEntity<ApiResponse<?>> getAllWarehouses(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -103,7 +103,7 @@ public class ReceiptController {
 	}
 
 	@GetMapping("/receipt-detail")
-	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_DETAIL_VIEW')")
+	@PreAuthorize("hasPermission(#userId, 'View Receipt')")
 	public ResponseEntity<ApiResponse<?>> getWarehouseById(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -154,7 +154,7 @@ public class ReceiptController {
 	}
 
 	@PostMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_RECEIPT_CREATE')")
+	@PreAuthorize("hasPermission(#userId, 'Add Receipt')")
 	public ResponseEntity<ApiResponse<?>> createReceipt(@Valid @RequestBody ReceiptCreateDTO receiptCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
