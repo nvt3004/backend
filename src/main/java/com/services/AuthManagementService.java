@@ -180,7 +180,7 @@ public class AuthManagementService {
             }
 
             // Tạo JWT token
-            long expirationTime = (5 * 60) * 60 * 1000;
+            long expirationTime = 600 * 1000;
             String jwt = jwtUtils.generateToken(user, "login", expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
@@ -214,9 +214,10 @@ public class AuthManagementService {
         AuthDTO response = new AuthDTO();
         try {
             String ourEmail = jwtUtils.extractUsername(refreshTokenReqiest.getToken());
+            System.out.println("Token la: "+refreshTokenReqiest.getToken());
             User users = usersRepo.findByEmail(ourEmail).orElseThrow();
             if (jwtUtils.isTokenValid(refreshTokenReqiest.getToken(), users)) {
-                long expirationTime = 7 * 24 * 60 * 60 * 1000;
+                long expirationTime = 600 * 1000;
                 var jwt = jwtUtils.generateToken(users, "login", expirationTime);
                 response.setStatusCode(200);
                 response.setToken(jwt);
