@@ -290,7 +290,7 @@ public class PermissionService {
 
 		return userRepo.save(userEntity);
 	}
-	
+
 	public User addCustomer(CustomerDTO userModel) {
 		User userEntity = new User();
 		String imageName = uploadService.save(userModel.getImage(), "images");
@@ -304,7 +304,6 @@ public class PermissionService {
 		userEntity.setStatus(Byte.valueOf("1"));
 		userEntity.setEmail(userModel.getEmail());
 		userEntity.setPhone(userModel.getPhone());
-		
 
 		User userSaved = userRepo.save(userEntity);
 
@@ -342,12 +341,12 @@ public class PermissionService {
 
 		return userRepo.save(user);
 	}
-	
+
 	public User updateCustomer(UserModel userModel, User user) {
 
 		user.setFullName(userModel.getFullName());
 		user.setGender(userModel.getGender());
-		user.setPhone(user.getPhone());	
+		user.setPhone(user.getPhone());
 		user.setEmail(userModel.getEmail());
 		user.setBirthday(userModel.getBirthday());
 
@@ -373,16 +372,16 @@ public class PermissionService {
 		user.setStatus(Byte.valueOf("0"));
 		return userRepo.save(user);
 	}
-	
+
 	public User deleteCustomer(int userId) {
 		User user = userRepo.findById(userId).orElse(null);
 
-		if(user.getStatus() == 1) {
+		if (user.getStatus() == 1) {
 			user.setStatus(Byte.valueOf("0"));
-		}else {
+		} else {
 			user.setStatus(Byte.valueOf("1"));
 		}
-		
+
 		return userRepo.save(user);
 	}
 
@@ -455,10 +454,10 @@ public class PermissionService {
 			return false;
 		}
 	}
-	
+
 	public boolean isPermissionExit(int idPer) {
 		Permission permission = permissionRepo.findById(idPer).orElse(null);
-		
+
 		return permission != null;
 	}
 
@@ -493,6 +492,8 @@ public class PermissionService {
 			return "Feedback";
 		} else if (permissionName.contains("supplier")) {
 			return "Supplier";
+		} else if (permissionName.contains("sale")) {
+			return "Sale";
 		} else {
 			return "None"; // Default title
 		}
