@@ -46,7 +46,7 @@ public class Order implements Serializable {
 
 	private String phone;
 	
-	@Column(name = "shipping_fee", nullable = false)
+	@Column(name = "shipping_fee")
 	private BigDecimal shippingFee;
 
 

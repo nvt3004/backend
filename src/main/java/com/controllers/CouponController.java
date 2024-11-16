@@ -55,7 +55,7 @@ public class CouponController {
 	private JWTService jwtService;
 	
 	@PostMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_CREATE')")
+	@PreAuthorize("hasPermission(#userId, 'Add Coupon')")
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -114,7 +114,7 @@ public class CouponController {
 	}
 
 	@PutMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_UPDATE')")
+	@PreAuthorize("hasPermission(#userId, 'Update Coupon')")
 	public ResponseEntity<ApiResponse<?>> updateCoupon(@RequestParam("id") Integer id,
 			@Valid @RequestBody CouponCreateDTO couponCreateDTO, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -176,7 +176,7 @@ public class CouponController {
 	}
 
 	@DeleteMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_REMOVE')")
+	@PreAuthorize("hasPermission(#userId, 'Delete Coupon')")
 	public ResponseEntity<ApiResponse<?>> deleteCoupon(@RequestParam("id") Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -231,7 +231,7 @@ public class CouponController {
 	}
 
 	@GetMapping
-	@PreAuthorize("hasPermission(#userId, 'STAFF_COUPON_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userId, 'View Coupon')")
 	public ResponseEntity<ApiResponse<?>> getAllCoupons(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestParam(value = "startDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,

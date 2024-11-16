@@ -7,6 +7,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -400,12 +402,25 @@ public class VnPayController {
 			}
 		}
 
-		orderEntity.setOrderDate(new Date());
-		orderEntity.setDeliveryDate(new Date());
+		LocalDateTime localDateTime = LocalDateTime.now();
+
+		// Chuyển LocalDateTime sang múi giờ UTC+7 (Việt Nam)
+		ZonedDateTime vietnamTime = localDateTime.atZone(ZoneId.of("Asia/Ho_Chi_Minh"));
+
+		// Trừ đi 8 giờ
+		ZonedDateTime adjustedTime = vietnamTime.minusHours(8);
+
+		// Chuyển về java.util.Date
+		Date date = Date.from(adjustedTime.toInstant());
+
+		// Gán vào orderEntity
+		orderEntity.setOrderDate(date);
+		orderEntity.setDeliveryDate(date);
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
+		orderEntity.setShippingFee(BigDecimal.valueOf(3.3));
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);
 
