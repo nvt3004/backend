@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.utils.TokenBlacklist;
 
+import io.jsonwebtoken.ExpiredJwtException;
+
 import java.io.IOException;
 
 @Component
@@ -49,7 +51,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             res.setErrorCode(401);
             res.setMessage("Token khong ton tai");
             res.setData(null);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); 
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             ObjectMapper mapper = new ObjectMapper();
@@ -60,10 +62,10 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        userEmail = jwtUtils.extractUsername(jwtToken);
+        try {
+            userEmail = jwtUtils.extractUsername(jwtToken);
 
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            try {
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = ourUserDetailsService.loadUserByUsername(userEmail);
 
                 if (jwtUtils.isTokenValid(jwtToken, userDetails)) {
@@ -72,11 +74,21 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                     token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(token);
                 }
-            } catch (UsernameNotFoundException e) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("User not found with email: " + userEmail);
-                return;
             }
+        } catch (ExpiredJwtException ex) {
+            // Nếu token hết hạn, trả về mã lỗi 999
+            ApiResponse<String> res = new ApiResponse<>();
+            res.setErrorCode(999);
+            res.setMessage("Token has expired");
+            res.setData(null);
+            response.setStatus(999); // Đặt mã trạng thái HTTP là 999
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResponse = mapper.writeValueAsString(res);
+            response.getWriter().write(jsonResponse);
+            response.getWriter().flush();
+            return;
         }
         filterChain.doFilter(request, response);
     }
