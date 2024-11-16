@@ -61,8 +61,7 @@ public class Order implements Serializable {
 	private String phone;
 
 	@Column(name = "shipping_fee", nullable = false)
-	private Double shippingFee = 0.0; // Giá trị mặc định
-
+	private BigDecimal shippingFee = BigDecimal.ZERO; // Giá trị mặc định
 
 	// bi-directional many-to-one association to OrderDetail
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "order")
