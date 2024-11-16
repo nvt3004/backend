@@ -187,7 +187,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/staff/orders/statuses")
-	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_STATUS_VIEW_ALL')")
+	//@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_STATUS_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllOrderStatus(
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
