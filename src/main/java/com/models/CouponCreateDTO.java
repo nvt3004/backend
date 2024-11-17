@@ -16,6 +16,7 @@ import lombok.Data;
 
 @Data
 public class CouponCreateDTO {
+    // private String code;
 
     @DecimalMin(value = "5.0", message = "Discount percentage must be at least 5%.")
     @DecimalMax(value = "50.0", message = "Discount percentage cannot exceed 50%.")

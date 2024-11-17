@@ -148,6 +148,7 @@ public class CouponService {
 			dto.setEndDate(coupon.getEndDate());
 			dto.setDisPercent(coupon.getDisPercent());
 			dto.setDisPrice(coupon.getDisPrice());
+			dto.setQuantity(coupon.getQuantity());
 			couponDTOs.add(dto);
 		}
 

@@ -16,5 +16,6 @@ public class CouponDTO {
     private BigDecimal disPrice;
     private String fullname;
     private LocalDateTime retrievalDate;
+    private int quantity;
 
 }
