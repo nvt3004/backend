@@ -105,7 +105,7 @@ public class Feedback implements Serializable {
 		return this.orderDetail;
 	}
 
-	public void setProduct(OrderDetail orderDetail) {
+	public void setOrderDetail(OrderDetail orderDetail) {
 		this.orderDetail = orderDetail;
 	}
 	
