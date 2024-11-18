@@ -32,9 +32,11 @@ import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
 import com.entities.Coupon;
+import com.entities.Feedback;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
+import com.entities.Product;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.errors.ApiResponse;
@@ -77,8 +79,7 @@ public class OrderService {
 	@Autowired
 	private UploadService uploadService;
 
-	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, Integer statusId,
-			Integer page, Integer size) {
+	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(String keyword, Integer statusId, Integer page, Integer size) {
 
 		if (keyword == null) {
 			keyword = "";
@@ -88,11 +89,11 @@ public class OrderService {
 		Page<Order> ordersPage;
 
 		if (statusId == null) {
-			ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, null, pageable);
+			ordersPage = orderJpa.findOrdersByCriteria(keyword, null, pageable);
 		} else {
 			Optional<OrderStatus> optionalOrderStatus = orderStatusService.getOrderStatusById(statusId);
 			if (optionalOrderStatus.isPresent()) {
-				ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, statusId, pageable);
+				ordersPage = orderJpa.findOrdersByCriteria(keyword, statusId, pageable);
 			} else {
 				return new ApiResponse<>(404, "No order status found", null);
 			}
@@ -142,18 +143,30 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
+
 		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
+		Integer feedBack = null;
+		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
+		for (OrderDetail orderDetail : order.getOrderDetails()) {
+			for (Feedback feedback : orderDetail.getFeedbacks()) {
+				feedBack = feedback.getOrderDetail().getOrderDetailId();
+			}
+			products.add(mapToProductDTO(orderDetail, feedBack));
 
-		List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
-			String variant = getVariantFromOrderDetail(orderDetail);
-			return new OrderByUserDTO.ProductDTO(orderDetail.getProductVersionBean().getProduct().getProductName(),
-					uploadService.getUrlImage(orderDetail.getProductVersionBean().getProduct().getProductImg()),
-					variant, orderDetail.getQuantity(), orderDetail.getPrice());
-		}).collect(Collectors.toList());
+		}
 
 		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
 				totalPrice, discountedPrice, products);
+	}
+
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer feedBack) {
+
+		String variant = getVariantFromOrderDetail(orderDetail);
+		Product product = orderDetail.getProductVersionBean().getProduct();
+		return new OrderByUserDTO.ProductDTO(product.getProductId(), product.getProductName(), feedBack,
+				uploadService.getUrlImage(product.getProductImg()), variant, orderDetail.getQuantity(),
+				orderDetail.getPrice());
 	}
 
 	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
@@ -444,8 +457,7 @@ public class OrderService {
 	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
 			int size) {
 		try {
-			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(isAdminOrder, keyword, statusId, page,
-					size);
+			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
 
 			if (ordersResponse.getErrorCode() != 200) {
 				throw new RuntimeException(ordersResponse.getMessage());

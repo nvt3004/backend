@@ -63,7 +63,6 @@ public class OrderController {
 	@GetMapping("/staff/orders")
 	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<ApiResponse<?>> getAllOrders(
-			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,
 			@RequestParam(value = "page", defaultValue = "0") int page,
@@ -112,7 +111,7 @@ public class OrderController {
 		}
 
 		try {
-			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(isAdminOrder, keyword, statusId,
+			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(keyword, statusId,
 					page, size);
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {

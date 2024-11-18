@@ -12,21 +12,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OrderByUserDTO {
-    private int orderId;
+    private Integer orderId;
     private Date orderDate;
     private String statusName;
-    private BigDecimal totalPrice; // total price of the order (before discount)
-    private BigDecimal discountedPrice; // total price after applying discounts
-    private List<ProductDTO> products; // list of products in the order
+    private BigDecimal totalPrice;
+    private BigDecimal discountedPrice;
+    private List<ProductDTO> products;
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
     public static class ProductDTO {
+        private Integer productId;
         private String productName;
+        private Integer feedBack;
         private String imageUrl;
-        private String variant; // combination of color and size
+        private String variant; 
         private Integer quantity;
-        private BigDecimal price; // price of individual product
+        private BigDecimal price; 
     }
 }

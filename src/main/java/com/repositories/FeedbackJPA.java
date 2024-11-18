@@ -19,4 +19,5 @@ public interface FeedbackJPA extends JpaRepository<Feedback, Integer> {
 			+ "WHERE o.user.userId=:idUser "
 			+ "AND o.product.productId=:idProduct")
 	public Integer countFeedback(@Param("idUser") int idUser,@Param("idProduct") int idProduct);
+	
 }
