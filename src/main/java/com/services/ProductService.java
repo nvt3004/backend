@@ -138,6 +138,8 @@ public class ProductService {
         response.setDiscription(product.getDescription());
         response.setDiscount(getDiscount(product));
         response.setImage(uploadService.getUrlImage(product.getProductImg()));
+        response.setStatus(product.isStatus());
+        
         response.setCategories(product.getProductCategories().stream().map(item -> {
             CategoryDTO cat = new CategoryDTO();
 
@@ -147,6 +149,15 @@ public class ProductService {
             return cat;
         }).toList());
 
+        Integer stockTotal = 0;
+        
+        for(ProductVersion vs : product.getProductVersions()) {
+        	 int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
+        	 stockTotal += stockQuantity;
+        }
+        
+        response.setTotalStock(stockTotal);
+        
         List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
             ProductVersionResponse version = new ProductVersionResponse();
             int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());

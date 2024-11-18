@@ -17,7 +17,9 @@ public class ProductResponse {
 	private BigDecimal price;
 	private String image;
 	private String discription;
+	private boolean status;
 	private double discount;
+	private Integer totalStock;
 	private List<CategoryDTO> categories;
 	private List<ProductVersionResponse> versions;
 }

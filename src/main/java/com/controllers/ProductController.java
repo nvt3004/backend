@@ -179,6 +179,7 @@ public class ProductController {
     }
 
     @GetMapping
+	@PreAuthorize("hasPermission(#userId, 'View Product')")
     public ResponseEntity<ResponseAPI<PageImpl<ProductResponse>>> getAllProduct(
             @RequestHeader("Authorization") Optional<String> authHeader,
             @RequestParam(value = "keyword", defaultValue = "") String keywword,
@@ -410,6 +411,7 @@ public class ProductController {
     }
 
     @GetMapping("refresh/{id}")
+	@PreAuthorize("hasPermission(#userId, 'View Product')")
     public ResponseEntity<ResponseAPI<ProductResponse>> refreshProduct(
             @RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("id") Integer idProduct) {
         ResponseAPI<ProductResponse> response = new ResponseAPI<>();

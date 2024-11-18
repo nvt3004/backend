@@ -327,6 +327,13 @@ public class VnPayController {
 	private ResponseAPI<CartOrderResponse> createOder(CartOrderModel orderModel, User user) {
 		ResponseAPI<CartOrderResponse> response = new ResponseAPI<>();
 		ResponseAPI<Boolean> validOrder = validDataOrder(orderModel);
+		
+		if(orderModel.getFee().compareTo(BigDecimal.ZERO)<0) {
+			response.setCode(422);
+			response.setMessage("Invalid shipping fee");
+
+			return response;
+		}
 
 		if (!validOrder.getData()) {
 			response.setCode(422);
@@ -334,6 +341,8 @@ public class VnPayController {
 
 			return response;
 		}
+		
+		
 
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			ProductVersion version = versionService.getProductVersionById(detail.getIdVersion());
@@ -420,7 +429,7 @@ public class VnPayController {
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
-		orderEntity.setShippingFee(BigDecimal.valueOf(3.3));
+		orderEntity.setShippingFee(orderModel.getFee());
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);
 

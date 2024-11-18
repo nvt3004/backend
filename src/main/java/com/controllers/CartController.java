@@ -357,6 +357,13 @@ public class CartController {
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
+		
+		if(orderModel.getFee().compareTo(BigDecimal.ZERO)<0) {
+			response.setCode(422);
+			response.setMessage("Invalid shipping fee");
+
+			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		}
 
 		ResponseAPI<Boolean> validOrder = validDataOrder(orderModel);
 		if (!validOrder.getData()) {
@@ -451,7 +458,7 @@ public class CartController {
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
 		orderEntity.setCoupon(coupon);
-		orderEntity.setShippingFee(BigDecimal.valueOf(3.5));
+		orderEntity.setShippingFee(orderModel.getFee());
 
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);
