@@ -85,10 +85,8 @@ public class FeedbackService {
 			FeedbackResponseDTO feedbackResponseDTO = new FeedbackResponseDTO();
 			UserResponseDTO userResponseDTO = new UserResponseDTO();
 
-			if (fb.getUser().getImages() != null && !fb.getUser().getImages().isEmpty()) {
-				String avarta = uploadService.getUrlImage(fb.getUser().getImages().get(0).getImageUrl());
-				userResponseDTO.setImage(avarta);
-			}
+			String avarta = uploadService.getUrlImage(fb.getUser().getImage());
+			userResponseDTO.setImage(avarta);
 			userResponseDTO.setFullName(fb.getUser().getFullName());
 			userResponseDTO.setId(fb.getUser().getUserId());
 

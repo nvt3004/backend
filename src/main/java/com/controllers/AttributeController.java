@@ -28,7 +28,7 @@ import com.services.JWTService;
 import com.services.UserService;
 
 @RestController
-@RequestMapping("api/admin/attribute")
+@RequestMapping("api/staff/attribute")
 public class AttributeController {
 	@Autowired
 	AttributeService attributeService;
