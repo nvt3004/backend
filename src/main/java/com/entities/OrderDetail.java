@@ -33,11 +33,11 @@ public class OrderDetail implements Serializable {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "order_detail_id")
-	private int orderDetailId;
+	private Integer orderDetailId;
 
 	private BigDecimal price;
 
-	private int quantity;
+	private Integer quantity;
 
 	// bi-directional many-to-one association to Order
 	@ManyToOne
@@ -66,11 +66,11 @@ public class OrderDetail implements Serializable {
 	public OrderDetail() {
 	}
 
-	public int getOrderDetailId() {
+	public Integer getOrderDetailId() {
 		return this.orderDetailId;
 	}
 
-	public void setOrderDetailId(int orderDetailId) {
+	public void setOrderDetailId(Integer orderDetailId) {
 		this.orderDetailId = orderDetailId;
 	}
 

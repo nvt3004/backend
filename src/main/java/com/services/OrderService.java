@@ -48,6 +48,7 @@ import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
 import com.repositories.UserJPA;
+import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
 @Service
@@ -147,12 +148,16 @@ public class OrderService {
 		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
 		Integer orderDetailId = null;
+		Boolean isFeedback = false;
 		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
 		for (OrderDetail orderDetail : order.getOrderDetails()) {
 			for (Feedback feedback : orderDetail.getFeedbacks()) {
-				orderDetailId = feedback.getOrderDetail().getOrderDetailId();
+				orderDetailId = orderDetail.getOrderDetailId();
+				if (feedback.getOrderDetail().getOrderDetailId() != null) {
+					isFeedback = true;
+				}
 			}
-			products.add(mapToProductDTO(orderDetail, orderDetailId));
+			products.add(mapToProductDTO(orderDetail, orderDetailId, isFeedback));
 
 		}
 
@@ -160,13 +165,14 @@ public class OrderService {
 				totalPrice, discountedPrice, products);
 	}
 
-	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId) {
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
+			Boolean isFeedback) {
 
 		String variant = getVariantFromOrderDetail(orderDetail);
 		Product product = orderDetail.getProductVersionBean().getProduct();
-		return new OrderByUserDTO.ProductDTO(product.getProductId(),orderDetailId, product.getProductName(),
-				uploadService.getUrlImage(product.getProductImg()), variant, orderDetail.getQuantity(),
-				orderDetail.getPrice());
+		return new OrderByUserDTO.ProductDTO(product.getProductId(), orderDetailId, isFeedback,
+				product.getProductName(), uploadService.getUrlImage(product.getProductImg()), variant,
+				orderDetail.getQuantity(), orderDetail.getPrice());
 	}
 
 	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
@@ -195,17 +201,28 @@ public class OrderService {
 	}
 
 	private OrderDTO createOrderDTO(Order order) {
-		BigDecimal total = orderUtilsService.calculateOrderTotal(order);
+
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
+
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
 		String statusName = order.getOrderStatus().getStatusName();
+
 		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+
+		String disCount = orderUtilsService.getDiscountDescription(order);
 
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId,
-				orderUtilsService.calculateDiscountedPrice(order), order.getShippingFee(), order.getDeliveryDate(),
-				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethodName);
+		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, disCount, discountValue, subTotal,
+				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
+				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
@@ -454,6 +471,7 @@ public class OrderService {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
 
+	// Trả về totol sau khi tính toán discount các kiểu
 	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
 			int size) {
 		try {

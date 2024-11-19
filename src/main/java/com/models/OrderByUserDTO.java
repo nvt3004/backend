@@ -25,6 +25,7 @@ public class OrderByUserDTO {
     public static class ProductDTO {
         private Integer productId;
         private Integer orderDetailId;
+        private Boolean isFeedback;
         private String productName;
         private String imageUrl;
         private String variant; 

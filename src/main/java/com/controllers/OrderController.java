@@ -581,8 +581,6 @@ public class OrderController {
 	         apiResponse.setMessage(e.getMessage());
 	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
 	    }
-	}
-
-	
+	}	
 
 }
