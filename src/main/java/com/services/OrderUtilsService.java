@@ -21,7 +21,7 @@ public class OrderUtilsService {
 			BigDecimal quantity = new BigDecimal(orderDetail.getQuantity());
 			total = total.add(retailPrice.multiply(quantity));
 		}
-		return total;
+		return total.setScale(0, RoundingMode.DOWN);
 	}
 
 	public BigDecimal calculateDiscountedPrice(Order order) {
@@ -36,7 +36,7 @@ public class OrderUtilsService {
 	    }
 
 	    // Làm tròn về số nguyên, bỏ phần thập phân
-	    return discountAmount.setScale(0, RoundingMode.HALF_UP).max(BigDecimal.ZERO);
+	    return discountAmount.setScale(0, RoundingMode.DOWN).max(BigDecimal.ZERO);
 	}
 
 

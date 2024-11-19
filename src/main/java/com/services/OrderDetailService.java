@@ -1,6 +1,7 @@
 package com.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.entities.AttributeOption;
 import com.entities.AttributeOptionsVersion;
 import com.entities.Image;
 import com.entities.Order;
@@ -22,6 +24,7 @@ import com.models.ColorDTO;
 import com.models.OrderDetailDTO;
 import com.models.OrderDetailProductDetailsDTO;
 import com.models.SizeDTO;
+import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
 import com.utils.UploadService;
@@ -43,6 +46,8 @@ public class OrderDetailService {
 
 	@Autowired
 	private UploadService uploadService;
+	
+	@Autowired AttributeOptionJPA attributeOptionJpa;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
 	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
@@ -73,46 +78,45 @@ public class OrderDetailService {
 
 
 	private List<OrderDetailProductDetailsDTO> createProductDetailsList(List<OrderDetail> orderDetails) {
-		List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
+	    List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
 
-		for (OrderDetail item : orderDetails) {
+	    for (OrderDetail item : orderDetails) {
+	        ColorDTO color = new ColorDTO();
+	        SizeDTO size = new SizeDTO();
 
-			ColorDTO color = new ColorDTO();
-			SizeDTO size = new SizeDTO();
-			for (AttributeOptionsVersion aov : item.getProductVersionBean().getAttributeOptionsVersions()) {
-				String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-				if ("Color".equalsIgnoreCase(attributeName)) {
-					color.setColor(aov.getAttributeOption().getAttributeValue());
-					color.setColorId(aov.getAttributeOption().getId());
-				} else if ("Size".equalsIgnoreCase(attributeName)) {
-					size.setSizeId(aov.getAttributeOption().getId());
-					size.setSize(aov.getAttributeOption().getAttributeValue());
+	        for (AttributeOptionsVersion aov : item.getProductVersionBean().getAttributeOptionsVersions()) {
+	            String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	            if ("Color".equalsIgnoreCase(attributeName)) {
+	                color.setColor(aov.getAttributeOption().getAttributeValue());
+	                color.setColorId(aov.getAttributeOption().getId());
+	            } else if ("Size".equalsIgnoreCase(attributeName)) {
+	                size.setSizeId(aov.getAttributeOption().getId());
+	                size.setSize(aov.getAttributeOption().getAttributeValue());
+	            }
+	        }
 
-				}
-			}
+	        AttributeProductVersionDTO attributeProductVersion = new AttributeProductVersionDTO(color, size);
 
-			AttributeProductVersionDTO attributeProductVersion = new AttributeProductVersionDTO(color, size);
+	        List<AttributeDTO> attributesProducts = createAttributeListByProductId(
+	                item.getProductVersionBean().getProduct().getProductId());
 
-			List<AttributeDTO> attributesProducts = createAttributeListByProductId(
-					item.getProductVersionBean().getProduct().getProductId());
+	        BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
+	        BigDecimal price = item.getPrice().setScale(0, RoundingMode.DOWN);
+	        BigDecimal total = price.multiply(quantity).setScale(0, RoundingMode.DOWN); 
 
-			BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
-			BigDecimal price = item.getPrice();
-			BigDecimal total = price.multiply(quantity);
+	        Image images = item.getProductVersionBean().getImage();
+	        String imageUrl = null;
+	        if (images != null) {
+	            imageUrl = images.getImageUrl();
+	        }
 
-			Image images = item.getProductVersionBean().getImage();
-			String imageUrl = null;
-			if (images != null) {
-				imageUrl = images.getImageUrl();
-			}
-
-			productDetails.add(new OrderDetailProductDetailsDTO(
-					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),item.getProductVersionBean().getVersionName(),
-					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
-					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
-					attributeProductVersion, attributesProducts));
-		}
-		return productDetails;
+	        productDetails.add(new OrderDetailProductDetailsDTO(
+	                item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
+	                item.getProductVersionBean().getVersionName(), price, item.getQuantity(),
+	                uploadService.getUrlImage(imageUrl), item.getProductVersionBean().getProduct().getDescription(),
+	                total, item.getOrderDetailId(), attributeProductVersion, attributesProducts));
+	    }
+	    return productDetails;
 	}
 
 	private List<AttributeDTO> createAttributeListByProductId(Integer productId) {
@@ -150,11 +154,6 @@ public class OrderDetailService {
 	    return attributeList;
 	}
 
-
-	private String formatDiscount(BigDecimal discount) {
-		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;
-	}
-
 	public Optional<OrderDetail> findOrderDetailById(Integer orderDetailId) {
 		return orderDetailJpa.findById(orderDetailId);
 	}
@@ -169,6 +168,7 @@ public class OrderDetailService {
 
 	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, Integer productId, Integer colorId,
 			Integer sizeId) {
+		
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
 			return new ApiResponse<>(404, "Order detail not found", null);
@@ -181,19 +181,36 @@ public class OrderDetailService {
 			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
 		}
 
+		String colorName = null;
+		String sizeName = null;
+		ProductVersion currentProductVersion = orderDetail.getProductVersionBean();
+		for (AttributeOptionsVersion aov : currentProductVersion.getAttributeOptionsVersions()) {
+			String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+			if ("Color".equalsIgnoreCase(attributeName)) {
+				colorName = aov.getAttributeOption().getAttributeValue();
+			} else if ("Size".equalsIgnoreCase(attributeName)) {
+				sizeName = aov.getAttributeOption().getAttributeValue();
+			}
+		}
+
 		Optional<ProductVersion> newProductVersion = getProductVersion(productId, colorId, sizeId);
 		if (!newProductVersion.isPresent()) {
-			return new ApiResponse<>(400, "The provided color and size combination is not valid.", null);
+			String productName = currentProductVersion.getProduct().getProductName();
+			return new ApiResponse<>(400, 
+				String.format("The product '%s', color '%s', and size '%s' combination does not exist.", 
+					productName, colorName, sizeName), 
+				null);
 		}
 
 		orderDetail.setProductVersionBean(newProductVersion.get());
-		orderDetail.setQuantity(1);
+		orderDetail.setQuantity(1); 
 		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
 
 		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
 
 		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
 	}
+
 
 	public boolean isValidQuantity(Integer quantity) {
 		return quantity != null && quantity > 0;
