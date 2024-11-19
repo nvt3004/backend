@@ -55,8 +55,10 @@ public class Feedback implements Serializable {
 	private List<Reply> replies;
 
 	@ManyToOne
-    @JoinColumn(name = "order_detail_id", nullable = false)
-    private OrderDetail orderDetail;
+	@JoinColumn(name = "order_detail_id", nullable = false)
+	@JsonBackReference("order-detail-feedbacks")
+	private OrderDetail orderDetail;
+
 	
 	public Feedback() {
 	}

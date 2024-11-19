@@ -51,8 +51,8 @@ public class OrderDetail implements Serializable {
 	@JsonBackReference("productVersionBean-orderDetails")
 	private ProductVersion productVersionBean;
 
-	@OneToMany(mappedBy = "orderDetail", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
+	@OneToMany(mappedBy = "orderDetail")
+	@JsonManagedReference("order-detail-feedbacks")
 	private List<Feedback> feedbacks = new ArrayList<>();
 
 	public List<Feedback> getFeedbacks() {

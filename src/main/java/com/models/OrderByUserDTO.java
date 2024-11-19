@@ -24,8 +24,8 @@ public class OrderByUserDTO {
     @NoArgsConstructor
     public static class ProductDTO {
         private Integer productId;
+        private Integer orderDetailId;
         private String productName;
-        private Integer feedBack;
         private String imageUrl;
         private String variant; 
         private Integer quantity;

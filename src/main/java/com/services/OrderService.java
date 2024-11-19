@@ -146,13 +146,13 @@ public class OrderService {
 
 		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
-		Integer feedBack = null;
+		Integer orderDetailId = null;
 		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
 		for (OrderDetail orderDetail : order.getOrderDetails()) {
 			for (Feedback feedback : orderDetail.getFeedbacks()) {
-				feedBack = feedback.getOrderDetail().getOrderDetailId();
+				orderDetailId = feedback.getOrderDetail().getOrderDetailId();
 			}
-			products.add(mapToProductDTO(orderDetail, feedBack));
+			products.add(mapToProductDTO(orderDetail, orderDetailId));
 
 		}
 
@@ -160,11 +160,11 @@ public class OrderService {
 				totalPrice, discountedPrice, products);
 	}
 
-	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer feedBack) {
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId) {
 
 		String variant = getVariantFromOrderDetail(orderDetail);
 		Product product = orderDetail.getProductVersionBean().getProduct();
-		return new OrderByUserDTO.ProductDTO(product.getProductId(), product.getProductName(), feedBack,
+		return new OrderByUserDTO.ProductDTO(product.getProductId(),orderDetailId, product.getProductName(),
 				uploadService.getUrlImage(product.getProductImg()), variant, orderDetail.getQuantity(),
 				orderDetail.getPrice());
 	}
