@@ -151,8 +151,8 @@ public class OrderService {
 		Boolean isFeedback = false;
 		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
 		for (OrderDetail orderDetail : order.getOrderDetails()) {
+			orderDetailId = orderDetail.getOrderDetailId();
 			for (Feedback feedback : orderDetail.getFeedbacks()) {
-				orderDetailId = orderDetail.getOrderDetailId();
 				if (feedback.getOrderDetail().getOrderDetailId() != null) {
 					isFeedback = true;
 				}
