@@ -12,8 +12,6 @@ import com.entities.OrderDetail;
 @Service
 public class OrderUtilsService {
 
-	private static final DecimalFormat decimalFormat = new DecimalFormat("#,##0.00");
-
 	public BigDecimal calculateOrderTotal(Order order) {
 		BigDecimal total = BigDecimal.ZERO;
 		for (OrderDetail orderDetail : order.getOrderDetails()) {

@@ -18,7 +18,7 @@ public interface SupplierJPA extends JpaRepository<Supplier, Integer> {
 	@Query("SELECT s FROM Supplier s WHERE s.status = :status")
 	Page<Supplier> findAllByStatus(Pageable pageable,@Param("status") Boolean status);
 	
-	@Query("SELECT new com.models.GetAllSupplierDTO(s.supplierId, s.supplierName) FROM Supplier s WHERE s.status = true ORDER BY s.supplierName ASC")
+	@Query("SELECT new com.models.GetAllSupplierDTO(s.supplierId, s.supplierName) FROM Supplier s WHERE s.status = true ORDER BY s.supplierName DESC")
 	List<GetAllSupplierDTO> findAllActiveSupplierNamesAndIds();
 
 }

@@ -47,6 +47,7 @@ import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
+import com.repositories.ReceiptDetailJPA;
 import com.repositories.UserJPA;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
@@ -67,6 +68,9 @@ public class OrderService {
 
 	@Autowired
 	private UserJPA userJpa;
+	
+	@Autowired
+	private ReceiptDetailJPA receiptDetailJpa;
 
 	@Autowired
 	private OrderUtilsService orderUtilsService;
@@ -301,48 +305,52 @@ public class OrderService {
 	}
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
-		List<String> insufficientStockMessages = new ArrayList<>();
-		for (OrderDetail orderDetail : orderDetailList) {
-			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-				Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
-				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-						.orElse(null);
+	    List<String> insufficientStockMessages = new ArrayList<>();
+	    for (OrderDetail orderDetail : orderDetailList) {
+	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+	                    .orElse(null);
 
-				if (productVersion != null) {
-					Integer productVersionStock = productVersion.getQuantity();
-					Integer processedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-					Integer cancelledOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-					Integer shippedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-					Integer deliveredOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	            if (productVersion != null) {
+	                Integer productVersionStock = receiptDetailJpa
+	                        .getTotalQuantityForProductVersion(productVersion.getId());
+	                productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-					processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-					cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-					shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-					deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	                Integer processedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	                Integer cancelledOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	                Integer shippedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	                Integer deliveredOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-					Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-					Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
+	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-					Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock
-							- totalQuantitySold;
+	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+	                Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
 
-					if (availableProductVersionStock < orderDetailRequestedQuantity) {
-						insufficientStockMessages.add("Product version ID " + productVersion.getId()
-								+ ": Available stock " + availableProductVersionStock + ", Requested quantity: "
-								+ orderDetailRequestedQuantity);
-					}
-				} else {
-					insufficientStockMessages
-							.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
-				}
-			}
-		}
-		return insufficientStockMessages;
+	                Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock
+	                        - totalQuantitySold;
+
+	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
+	                    insufficientStockMessages.add("Product version ID " + productVersion.getId()
+	                            + ": Available stock " + availableProductVersionStock + ", Requested quantity: "
+	                            + orderDetailRequestedQuantity);
+	                }
+	            } else {
+	                insufficientStockMessages
+	                        .add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+	            }
+	        }
+	    }
+	    return insufficientStockMessages;
 	}
+
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {
