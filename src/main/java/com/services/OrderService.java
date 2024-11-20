@@ -2,6 +2,9 @@ package com.services;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -306,25 +309,24 @@ public class OrderService {
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
 	    List<String> insufficientStockMessages = new ArrayList<>();
+	    
 	    for (OrderDetail orderDetail : orderDetailList) {
+	        
 	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+	            
 	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
 	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
 	                    .orElse(null);
 
 	            if (productVersion != null) {
-	                Integer productVersionStock = receiptDetailJpa
-	                        .getTotalQuantityForProductVersion(productVersion.getId());
+	                
+	                Integer productVersionStock = receiptDetailJpa.getTotalQuantityForProductVersion(productVersion.getId());
 	                productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-	                Integer processedOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-	                Integer cancelledOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-	                Integer shippedOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-	                Integer deliveredOrderQuantity = productVersionJpa
-	                        .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	                Integer processedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	                Integer cancelledOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	                Integer shippedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	                Integer deliveredOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
 	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
 	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
@@ -332,10 +334,8 @@ public class OrderService {
 	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
 	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-	                Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
 
-	                Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock
-	                        - totalQuantitySold;
+	                Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
 
 	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
 	                    insufficientStockMessages.add("Product version ID " + productVersion.getId()
@@ -343,8 +343,7 @@ public class OrderService {
 	                            + orderDetailRequestedQuantity);
 	                }
 	            } else {
-	                insufficientStockMessages
-	                        .add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+	                insufficientStockMessages.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
 	            }
 	        }
 	    }
@@ -490,7 +489,6 @@ public class OrderService {
 			}
 
 			PageImpl<OrderDTO> orders = ordersResponse.getData();
-
 			// Tạo file Excel
 			Workbook workbook = new XSSFWorkbook();
 			Sheet sheet = workbook.createSheet("Orders");
@@ -532,32 +530,37 @@ public class OrderService {
 
 			int rowNum = 1;
 			for (OrderDTO order : orders.getContent()) {
-				Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
-				if (orderEntityOpt.isPresent()) {
-					Order orderEntity = orderEntityOpt.get();
-					Row row = sheet.createRow(rowNum++);
+			    order.getOrderDate();
+			    Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
+			    if (orderEntityOpt.isPresent()) {
+			        Order orderEntity = orderEntityOpt.get();
+			        Row row = sheet.createRow(rowNum++);
+			        Cell cell0 = row.createCell(0);
+			        cell0.setCellValue(order.getOrderId());
+			        cell0.setCellStyle(dataStyle);
 
-					// Thêm dữ liệu vào các cột và áp dụng style cho dữ liệu
-					Cell cell0 = row.createCell(0);
-					cell0.setCellValue(order.getOrderId());
-					cell0.setCellStyle(dataStyle);
+			        ZonedDateTime orderDateWith7Hours = order.getOrderDate()
+			                .toInstant()
+			                .atZone(ZoneId.of("UTC"));
 
-					Cell cell1 = row.createCell(1);
-					cell1.setCellValue(order.getOrderDate().toString());
-					cell1.setCellStyle(dataStyle);
+			        String formattedOrderDate = orderDateWith7Hours.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+			        System.out.println(formattedOrderDate + " formattedOrderDate");
+			        Cell cell1 = row.createCell(1);
+			        cell1.setCellValue(formattedOrderDate);
+			        cell1.setCellStyle(dataStyle);
 
-					Cell cell2 = row.createCell(2);
-					cell2.setCellValue(order.getFullname());
-					cell2.setCellStyle(dataStyle);
+			        Cell cell2 = row.createCell(2);
+			        cell2.setCellValue(order.getFullname());
+			        cell2.setCellStyle(dataStyle);
 
-					Cell cell3 = row.createCell(3);
-					cell3.setCellValue(order.getStatusName());
-					cell3.setCellStyle(dataStyle);
+			        Cell cell3 = row.createCell(3);
+			        cell3.setCellValue(order.getStatusName());
+			        cell3.setCellStyle(dataStyle);
 
-					Cell cell4 = row.createCell(4);
-					cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
-					cell4.setCellStyle(dataStyle);
-				}
+			        Cell cell4 = row.createCell(4);
+			        cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
+			        cell4.setCellStyle(dataStyle);
+			    }
 			}
 
 			// Tạo file Excel và trả về

@@ -27,6 +27,7 @@ import com.models.SizeDTO;
 import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
+import com.repositories.ReceiptDetailJPA;
 import com.utils.UploadService;
 
 @Service
@@ -48,6 +49,9 @@ public class OrderDetailService {
 	private UploadService uploadService;
 	
 	@Autowired AttributeOptionJPA attributeOptionJpa;
+	
+	@Autowired
+	private ReceiptDetailJPA receiptDetailJpa;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
 	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
@@ -218,54 +222,57 @@ public class OrderDetailService {
 
 	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, Integer quantity) {
 
-		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
-		if (!existingOrderDetail.isPresent()) {
-			return new ApiResponse<>(404, "Order detail not found", null);
-		}
+	    Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
+	    if (!existingOrderDetail.isPresent()) {
+	        return new ApiResponse<>(404, "Order detail not found", null);
+	    }
 
-		OrderDetail orderDetail = existingOrderDetail.get();
-		String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
+	    OrderDetail orderDetail = existingOrderDetail.get();
+	    String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
 
-		if (!isValidOrderStatus(orderStatusName)) {
-			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
-		}
+	    if (!isValidOrderStatus(orderStatusName)) {
+	        return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
+	    }
 
-		if (!isValidQuantity(quantity)) {
-			return new ApiResponse<>(400, "Quantity must be positive.", null);
-		}
+	    if (!isValidQuantity(quantity)) {
+	        return new ApiResponse<>(400, "Quantity must be positive.", null);
+	    }
 
-		ProductVersion productVersion = orderDetail.getProductVersionBean();
-		Integer productVersionStock = productVersion.getQuantity();
+	    ProductVersion productVersion = orderDetail.getProductVersionBean();
+	    Integer productVersionStock = receiptDetailJpa
+	            .getTotalQuantityForProductVersion(productVersion.getId());
 
-		Integer processedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-		Integer cancelledOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-		Integer shippedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-		Integer deliveredOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	    Integer processedOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	    Integer cancelledOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	    Integer shippedOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	    Integer deliveredOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-		processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-		cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-		shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-		deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	    processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	    cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	    shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	    deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-		Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-		Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
-		Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
+	    Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
 
-		if (quantity > availableProductVersionStock) {
-			return new ApiResponse<>(400,
-					"Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
-					null);
-		}
+	    Integer availableProductVersionStock = productVersionStock - totalQuantitySold;
 
-		orderDetail.setQuantity(quantity);
-		orderDetailJpa.save(orderDetail);
+	    if (quantity > availableProductVersionStock) {
+	        return new ApiResponse<>(400,
+	                "Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
+	                null);
+	    }
 
-		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
+	    // Cập nhật số lượng cho OrderDetail
+	    orderDetail.setQuantity(quantity);
+	    orderDetailJpa.save(orderDetail);
+
+	    return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
 	}
+
 
 	// ty
 	public OrderDetail createOrderDetail(OrderDetail orderDetail) {
