@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,12 +41,13 @@ public class VersionController {
 	VersionService versionService;
 
 	@PostMapping("/add")
+	@PreAuthorize("hasPermission(#userId, 'Add Product') or hasPermission(#userId, 'Update Product')")
 	public ResponseEntity<ResponseAPI<Boolean>> addVersion(@RequestBody ProductVersionResponse versionModal) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String versionName = versionModal.getVersionName();
 		BigDecimal retailPrice = versionModal.getRetailPrice();
-		BigDecimal wholesalePrice = versionModal.getWholesalePrice();
+		BigDecimal importPrice = versionModal.getImportPrice();
 
 		Product product = productService.getProductById(versionModal.getIdProduct());
 
@@ -67,9 +69,9 @@ public class VersionController {
 			return ResponseEntity.status(999).body(response);
 		}
 
-		if (wholesalePrice == null || wholesalePrice.compareTo(BigDecimal.ZERO) <= 0) {
+		if (importPrice == null || importPrice.compareTo(BigDecimal.ZERO) <= 0) {
 			response.setCode(999);
-			response.setMessage("Wholesale price invalid!");
+			response.setMessage("ImportPrice price invalid!");
 			return ResponseEntity.status(999).body(response);
 		}
 
@@ -89,12 +91,13 @@ public class VersionController {
 	}
 
 	@PutMapping("/update")
+	@PreAuthorize("hasPermission(#userId, 'Add Product') or hasPermission(#userId, 'Update Product')")
 	public ResponseEntity<ResponseAPI<Boolean>> updateVersion(@RequestBody ProductVersionResponse versionModal) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);
 		String versionName = versionModal.getVersionName();
 		BigDecimal retailPrice = versionModal.getRetailPrice();
-		BigDecimal wholesalePrice = versionModal.getWholesalePrice();
+		BigDecimal wholesalePrice = versionModal.getImportPrice();
 
 		ProductVersion version = versionJPA.findById(versionModal.getId()).orElse(null);
 
@@ -138,6 +141,7 @@ public class VersionController {
 	}
 
 	@DeleteMapping("/remove/{id}")
+	@PreAuthorize("hasPermission(#userId, 'Add Product') or hasPermission(#userId, 'Update Product')")
 	public ResponseEntity<ResponseAPI<Boolean>> deleteVersion(@PathVariable("id") int id) {
 		ResponseAPI<Boolean> response = new ResponseAPI<>();
 		response.setData(false);

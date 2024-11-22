@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -143,15 +144,18 @@ public class AlgoliaProductService {
 	}
 
 	@Async
-	public void addProductToAlgolia(ProductDTO product) {
+	public CompletableFuture<Void> clearAllProductsAsync() {
 		try {
-			addProduct(product);
+			productIndex.clearObjects().waitTask(); // Đợi quá trình xóa hoàn thành
+			System.out.println("All products removed from Algolia.");
 		} catch (Exception e) {
-			System.out.println("Error adding product to Algolia: " + e.getMessage());
+			System.out.println("Error clearing products from Algolia: " + e.getMessage());
 		}
+		return CompletableFuture.completedFuture(null);
 	}
 
-	public void addProduct(ProductDTO product) {
+	@Async
+	public CompletableFuture<Void> addProductToAlgoliaAsync(ProductDTO product) {
 		try {
 
 			productIndex.saveObject(product).waitTask();
@@ -159,6 +163,7 @@ public class AlgoliaProductService {
 		} catch (Exception e) {
 			logger.severe("Lỗi khi thêm sản phẩm vào Algolia: " + e.getMessage());
 		}
+		return CompletableFuture.completedFuture(null);
 	}
 
 	public List<ProductDTO> searchProducts(Query query) {

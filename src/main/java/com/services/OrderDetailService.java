@@ -1,6 +1,7 @@
 package com.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,8 +23,10 @@ import com.models.ColorDTO;
 import com.models.OrderDetailDTO;
 import com.models.OrderDetailProductDetailsDTO;
 import com.models.SizeDTO;
+import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
+import com.repositories.ReceiptDetailJPA;
 import com.utils.UploadService;
 
 @Service
@@ -43,6 +46,11 @@ public class OrderDetailService {
 
 	@Autowired
 	private UploadService uploadService;
+	
+	@Autowired AttributeOptionJPA attributeOptionJpa;
+	
+	@Autowired
+	private ReceiptDetailJPA receiptDetailJpa;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
 	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
@@ -73,46 +81,45 @@ public class OrderDetailService {
 
 
 	private List<OrderDetailProductDetailsDTO> createProductDetailsList(List<OrderDetail> orderDetails) {
-		List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
+	    List<OrderDetailProductDetailsDTO> productDetails = new ArrayList<>();
 
-		for (OrderDetail item : orderDetails) {
+	    for (OrderDetail item : orderDetails) {
+	        ColorDTO color = new ColorDTO();
+	        SizeDTO size = new SizeDTO();
 
-			ColorDTO color = new ColorDTO();
-			SizeDTO size = new SizeDTO();
-			for (AttributeOptionsVersion aov : item.getProductVersionBean().getAttributeOptionsVersions()) {
-				String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-				if ("Color".equalsIgnoreCase(attributeName)) {
-					color.setColor(aov.getAttributeOption().getAttributeValue());
-					color.setColorId(aov.getAttributeOption().getId());
-				} else if ("Size".equalsIgnoreCase(attributeName)) {
-					size.setSizeId(aov.getAttributeOption().getId());
-					size.setSize(aov.getAttributeOption().getAttributeValue());
+	        for (AttributeOptionsVersion aov : item.getProductVersionBean().getAttributeOptionsVersions()) {
+	            String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	            if ("Color".equalsIgnoreCase(attributeName)) {
+	                color.setColor(aov.getAttributeOption().getAttributeValue());
+	                color.setColorId(aov.getAttributeOption().getId());
+	            } else if ("Size".equalsIgnoreCase(attributeName)) {
+	                size.setSizeId(aov.getAttributeOption().getId());
+	                size.setSize(aov.getAttributeOption().getAttributeValue());
+	            }
+	        }
 
-				}
-			}
+	        AttributeProductVersionDTO attributeProductVersion = new AttributeProductVersionDTO(color, size);
 
-			AttributeProductVersionDTO attributeProductVersion = new AttributeProductVersionDTO(color, size);
+	        List<AttributeDTO> attributesProducts = createAttributeListByProductId(
+	                item.getProductVersionBean().getProduct().getProductId());
 
-			List<AttributeDTO> attributesProducts = createAttributeListByProductId(
-					item.getProductVersionBean().getProduct().getProductId());
+	        BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
+	        BigDecimal price = item.getPrice().setScale(0, RoundingMode.DOWN);
+	        BigDecimal total = price.multiply(quantity).setScale(0, RoundingMode.DOWN); 
 
-			BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
-			BigDecimal price = item.getPrice();
-			BigDecimal total = price.multiply(quantity);
+	        Image images = item.getProductVersionBean().getImage();
+	        String imageUrl = null;
+	        if (images != null) {
+	            imageUrl = images.getImageUrl();
+	        }
 
-			Image images = item.getProductVersionBean().getImage();
-			String imageUrl = null;
-			if (images != null) {
-				imageUrl = images.getImageUrl();
-			}
-
-			productDetails.add(new OrderDetailProductDetailsDTO(
-					item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),item.getProductVersionBean().getVersionName(),
-					item.getPrice(), item.getQuantity(), uploadService.getUrlImage(imageUrl),
-					item.getProductVersionBean().getProduct().getDescription(), total, item.getOrderDetailId(),
-					attributeProductVersion, attributesProducts, item.getProductVersionBean().getProduct().getProductName()));
-		}
-		return productDetails;
+	        productDetails.add(new OrderDetailProductDetailsDTO(
+	                item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
+	                item.getProductVersionBean().getVersionName(), price, item.getQuantity(),
+	                uploadService.getUrlImage(imageUrl), item.getProductVersionBean().getProduct().getDescription(),
+	                total, item.getOrderDetailId(), attributeProductVersion, attributesProducts, item.getProductVersionBean().getProduct().getProductName()));
+	    }
+	    return productDetails;
 	}
 
 	private List<AttributeDTO> createAttributeListByProductId(Integer productId) {
@@ -150,11 +157,6 @@ public class OrderDetailService {
 	    return attributeList;
 	}
 
-
-	private String formatDiscount(BigDecimal discount) {
-		return discount != null ? discount.stripTrailingZeros().toPlainString() : null;
-	}
-
 	public Optional<OrderDetail> findOrderDetailById(Integer orderDetailId) {
 		return orderDetailJpa.findById(orderDetailId);
 	}
@@ -169,6 +171,7 @@ public class OrderDetailService {
 
 	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, Integer productId, Integer colorId,
 			Integer sizeId) {
+		
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
 			return new ApiResponse<>(404, "Order detail not found", null);
@@ -181,13 +184,29 @@ public class OrderDetailService {
 			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
 		}
 
+		String colorName = null;
+		String sizeName = null;
+		ProductVersion currentProductVersion = orderDetail.getProductVersionBean();
+		for (AttributeOptionsVersion aov : currentProductVersion.getAttributeOptionsVersions()) {
+			String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+			if ("Color".equalsIgnoreCase(attributeName)) {
+				colorName = aov.getAttributeOption().getAttributeValue();
+			} else if ("Size".equalsIgnoreCase(attributeName)) {
+				sizeName = aov.getAttributeOption().getAttributeValue();
+			}
+		}
+
 		Optional<ProductVersion> newProductVersion = getProductVersion(productId, colorId, sizeId);
 		if (!newProductVersion.isPresent()) {
-			return new ApiResponse<>(400, "The provided color and size combination is not valid.", null);
+			String productName = currentProductVersion.getProduct().getProductName();
+			return new ApiResponse<>(400, 
+				String.format("The product '%s', color '%s', and size '%s' combination does not exist.", 
+					productName, colorName, sizeName), 
+				null);
 		}
 
 		orderDetail.setProductVersionBean(newProductVersion.get());
-		orderDetail.setQuantity(1);
+		orderDetail.setQuantity(1); 
 		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
 
 		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
@@ -195,60 +214,64 @@ public class OrderDetailService {
 		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
 	}
 
+
 	public boolean isValidQuantity(Integer quantity) {
 		return quantity != null && quantity > 0;
 	}
 
 	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, Integer quantity) {
 
-		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
-		if (!existingOrderDetail.isPresent()) {
-			return new ApiResponse<>(404, "Order detail not found", null);
-		}
+	    Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
+	    if (!existingOrderDetail.isPresent()) {
+	        return new ApiResponse<>(404, "Order detail not found", null);
+	    }
 
-		OrderDetail orderDetail = existingOrderDetail.get();
-		String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
+	    OrderDetail orderDetail = existingOrderDetail.get();
+	    String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
 
-		if (!isValidOrderStatus(orderStatusName)) {
-			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
-		}
+	    if (!isValidOrderStatus(orderStatusName)) {
+	        return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
+	    }
 
-		if (!isValidQuantity(quantity)) {
-			return new ApiResponse<>(400, "Quantity must be positive.", null);
-		}
+	    if (!isValidQuantity(quantity)) {
+	        return new ApiResponse<>(400, "Quantity must be positive.", null);
+	    }
 
-		ProductVersion productVersion = orderDetail.getProductVersionBean();
-		Integer productVersionStock = productVersion.getQuantity();
+	    ProductVersion productVersion = orderDetail.getProductVersionBean();
+	    Integer productVersionStock = receiptDetailJpa
+	            .getTotalQuantityForProductVersion(productVersion.getId());
 
-		Integer processedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-		Integer cancelledOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-		Integer shippedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-		Integer deliveredOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	    Integer processedOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	    Integer cancelledOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	    Integer shippedOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	    Integer deliveredOrderQuantity = productVersionJpa
+	            .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-		processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-		cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-		shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-		deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	    processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	    cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	    shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	    deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-		Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-		Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
-		Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock - totalQuantitySold;
+	    Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
 
-		if (quantity > availableProductVersionStock) {
-			return new ApiResponse<>(400,
-					"Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
-					null);
-		}
+	    Integer availableProductVersionStock = productVersionStock - totalQuantitySold;
 
-		orderDetail.setQuantity(quantity);
-		orderDetailJpa.save(orderDetail);
+	    if (quantity > availableProductVersionStock) {
+	        return new ApiResponse<>(400,
+	                "Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
+	                null);
+	    }
 
-		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
+	    // Cập nhật số lượng cho OrderDetail
+	    orderDetail.setQuantity(quantity);
+	    orderDetailJpa.save(orderDetail);
+
+	    return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
 	}
+
 
 	// ty
 	public OrderDetail createOrderDetail(OrderDetail orderDetail) {

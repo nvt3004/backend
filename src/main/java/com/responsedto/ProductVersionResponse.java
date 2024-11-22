@@ -15,7 +15,7 @@ public class ProductVersionResponse {
 	private int idProduct;
 	private String versionName;
 	private BigDecimal retailPrice;
-	private BigDecimal wholesalePrice;
+	private BigDecimal importPrice;
 	private boolean active;
 	private int quantity;
 	private ImageResponse image;

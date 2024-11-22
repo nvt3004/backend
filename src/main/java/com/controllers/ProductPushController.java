@@ -18,40 +18,40 @@ import java.util.List;
 @RequestMapping("api/push/product")
 public class ProductPushController {
 
-    @Autowired
-    private AlgoliaProductService algoliaProductService;
+	@Autowired
+	private AlgoliaProductService algoliaProductService;
 
-    @Autowired
-    private ProductClientService inforService;
+	@Autowired
+	private ProductClientService inforService;
 
-    @PostMapping
-    public ResponseEntity<ResponseAPI<?>> pushProduct() {
-        ResponseAPI<Object> response = new ResponseAPI<>();
-        try {
-       
-            List<ProductDTO> products = inforService.getALLProduct(null);
-         
-            if (products.isEmpty()) {
-                response.setCode(204); 
-                response.setMessage("No products found");
-                response.setData(null);
-            } else {
-               
-                for (ProductDTO product : products) {
-                    algoliaProductService.addProductToAlgolia(product); 
-                }
-                response.setCode(200);
-                response.setMessage("Success");
-                response.setData(null);
-            }
-        } catch (Exception e) {
-          
-            response.setCode(500); 
-            response.setMessage("An error occurred while fetching products: " + e.getMessage());
-            response.setData(null);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
+	@PostMapping
+	public ResponseEntity<ResponseAPI<?>> pushProduct() {
+		ResponseAPI<Object> response = new ResponseAPI<>();
+		try {
 
-        return ResponseEntity.ok(response);
-    }
+			List<ProductDTO> products = inforService.getALLProduct(null);
+
+			if (products.isEmpty()) {
+				response.setCode(204);
+				response.setMessage("No products found");
+				response.setData(null);
+			} else {
+				algoliaProductService.clearAllProductsAsync().join();
+				for (ProductDTO product : products) {
+					algoliaProductService.addProductToAlgoliaAsync(product);
+				}
+				response.setCode(200);
+				response.setMessage("Success");
+				response.setData(null);
+			}
+		} catch (Exception e) {
+
+			response.setCode(500);
+			response.setMessage("An error occurred while fetching products: " + e.getMessage());
+			response.setData(null);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+		}
+
+		return ResponseEntity.ok(response);
+	}
 }
