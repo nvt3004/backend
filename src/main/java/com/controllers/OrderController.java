@@ -337,9 +337,8 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(validationResponse.getErrorCode()))
 					.body(validationResponse);
 		}
-		
-		return ResponseEntity
-				.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", null));
+
+		return ResponseEntity.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", null));
 	}
 
 	@PutMapping("/staff/orders/update-status")
@@ -552,31 +551,27 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(errorResponse.getErrorCode())).body(errorResponse);
 		}
 	}
-	
+
 	@GetMapping("/staff/orders/export")
 //	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<?> exportOrdersToExcel(
-	        @RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
-	        @RequestParam(value = "keyword", required = false) String keyword,
-	        @RequestParam(value = "statusId", required = false) Integer statusId,
-	        @RequestParam(value = "page", defaultValue = "0") int page,
-	        @RequestParam(value = "size", defaultValue = "5") int size) {
-		 ApiResponse<ByteArrayResource> apiResponse = new ApiResponse<>();
-	    try {
+			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
+			@RequestParam(value = "keyword", required = false) String keyword,
+			@RequestParam(value = "statusId", required = false) Integer statusId,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "5") int size) {
+		ApiResponse<ByteArrayResource> apiResponse = new ApiResponse<>();
+		try {
 
-	    	ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
+			ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
 
-	    	return ResponseEntity.ok()
-	                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
-	                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-	                .body(file);
-	    } catch (Exception e) {
-	    	 apiResponse.setErrorCode(500);
-	         apiResponse.setMessage(e.getMessage());
-	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
-	    }
+			return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
+					.contentType(MediaType.APPLICATION_OCTET_STREAM).body(file);
+		} catch (Exception e) {
+			apiResponse.setErrorCode(500);
+			apiResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
+		}
 	}
-
-	
 
 }
