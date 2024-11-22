@@ -54,6 +54,12 @@ public class Feedback implements Serializable {
 	@JsonManagedReference("feedback-replies")
 	private List<Reply> replies;
 
+	@ManyToOne
+	@JoinColumn(name = "order_detail_id", nullable = false)
+	@JsonBackReference("order-detail-feedbacks")
+	private OrderDetail orderDetail;
+
+	
 	public Feedback() {
 	}
 
@@ -97,6 +103,14 @@ public class Feedback implements Serializable {
 		this.product = product;
 	}
 
+	public OrderDetail getOrderDetail() {
+		return this.orderDetail;
+	}
+
+	public void setOrderDetail(OrderDetail orderDetail) {
+		this.orderDetail = orderDetail;
+	}
+	
 	public User getUser() {
 		return this.user;
 	}
