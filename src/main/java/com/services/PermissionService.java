@@ -494,6 +494,8 @@ public class PermissionService {
 			return "Supplier";
 		} else if (permissionName.contains("sale")) {
 			return "Sale";
+		} else if (permissionName.contains("category")) {
+			return "Category";
 		} else {
 			return "None"; // Default title
 		}

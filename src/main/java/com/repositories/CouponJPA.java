@@ -1,6 +1,7 @@
 package com.repositories;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,4 +25,9 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 
 	@Query("SELECT o FROM Coupon o WHERE o.couponCode =:code")
 	public Coupon getCouponByCode(@Param("code") String code);
+
+	@Query("SELECT o FROM Coupon o " + "LEFT JOIN UserCoupon uc ON o.couponId = uc.coupon.couponId AND uc.user.userId = :userId "
+			+ "WHERE o.endDate > :dateNow " + "AND uc.coupon.couponId IS NULL")
+	List<Coupon> getCouponHomeByUser(@Param("userId") Integer userId, @Param("dateNow") LocalDateTime dateNow);
+
 }

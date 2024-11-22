@@ -353,9 +353,9 @@ public class ProductController {
                 return response;
             }
 
-            if (vs.getWholesalePrice().compareTo(fiveHundred) < 0) {
+            if (vs.getImportPrice().compareTo(fiveHundred) < 0) {
                 response.setCode(422);
-                response.setMessage("Version wholesale price must be 500 or more");
+                response.setMessage("Version import price must be 500 or more");
 
                 return response;
             }
@@ -410,7 +410,7 @@ public class ProductController {
         return -1;
     }
 
-    @GetMapping("refresh/{id}")
+    @GetMapping("/refresh/{id}")
 	@PreAuthorize("hasPermission(#userId, 'View Product')")
     public ResponseEntity<ResponseAPI<ProductResponse>> refreshProduct(
             @RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("id") Integer idProduct) {
