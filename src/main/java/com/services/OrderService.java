@@ -3,7 +3,6 @@ package com.services;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,17 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
@@ -52,9 +40,11 @@ import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
 import com.repositories.ReceiptDetailJPA;
 import com.repositories.UserJPA;
+import com.utils.ExcelUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
-
+import java.text.NumberFormat;
+import java.util.Locale;
 @Service
 public class OrderService {
 	@Autowired
@@ -478,102 +468,46 @@ public class OrderService {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
 
-	// Trả về totol sau khi tính toán discount các kiểu
-	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
-			int size) {
-		try {
-			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
 
-			if (ordersResponse.getErrorCode() != 200) {
-				throw new RuntimeException(ordersResponse.getMessage());
-			}
+	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page, int size) {
+	    try {
+	        ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
 
-			PageImpl<OrderDTO> orders = ordersResponse.getData();
-			// Tạo file Excel
-			Workbook workbook = new XSSFWorkbook();
-			Sheet sheet = workbook.createSheet("Orders");
+	        if (ordersResponse.getErrorCode() != 200) {
+	            throw new RuntimeException(ordersResponse.getMessage());
+	        }
 
-			// Tạo các style cho cột header
-			CellStyle headerStyle = workbook.createCellStyle();
-			Font headerFont = workbook.createFont();
-			headerFont.setBold(true);
-			headerFont.setColor(IndexedColors.WHITE.getIndex());
-			headerStyle.setFont(headerFont);
-			headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-			headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			headerStyle.setAlignment(HorizontalAlignment.CENTER);
-			headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+	        PageImpl<OrderDTO> orders = ordersResponse.getData();
 
-			// Tạo các style cho dữ liệu
-			CellStyle dataStyle = workbook.createCellStyle();
-			dataStyle.setAlignment(HorizontalAlignment.CENTER); // Căn giữa theo chiều ngang
-			dataStyle.setVerticalAlignment(VerticalAlignment.CENTER); // Căn giữa theo chiều dọc
+	        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
 
-			// Tạo header row
-			Row headerRow = sheet.createRow(0);
-			headerRow.createCell(0).setCellValue("Order ID");
-			headerRow.createCell(1).setCellValue("Order Date");
-			headerRow.createCell(2).setCellValue("Customer");
-			headerRow.createCell(3).setCellValue("Status");
-			headerRow.createCell(4).setCellValue("Amount");
+	        String[] headers = {"Order ID", "Order Date", "Customer", "Status", "Amount"};
+	        Object[][] data = orders.getContent().stream().map(order -> {
+	            String formattedOrderDate = order.getOrderDate()
+	                    .toInstant()
+	                    .atZone(ZoneId.of("UTC"))
+	                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
-			for (int i = 0; i < 5; i++) {
-				headerRow.getCell(i).setCellStyle(headerStyle);
-			}
+	            String formattedAmount = currencyFormatter.format(order.getFinalTotal().doubleValue());
+	            formattedAmount = formattedAmount.replace("₫", "VND"); 
+	            return new Object[]{
+	                    order.getOrderId(),
+	                    formattedOrderDate,
+	                    order.getFullname(),
+	                    order.getStatusName(),
+	                    formattedAmount // Số tiền đã được format
+	            };
+	        }).toArray(Object[][]::new);
 
-			// Đặt độ rộng cho các cột
-			sheet.setColumnWidth(0, 6000);
-			sheet.setColumnWidth(1, 8000);
-			sheet.setColumnWidth(2, 12000);
-			sheet.setColumnWidth(3, 6000);
-			sheet.setColumnWidth(4, 6000);
+	        // Tạo file Excel
+	        ByteArrayOutputStream outputStream = ExcelUtil.createExcelFile("Orders", headers, data);
 
-			int rowNum = 1;
-			for (OrderDTO order : orders.getContent()) {
-			    order.getOrderDate();
-			    Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
-			    if (orderEntityOpt.isPresent()) {
-			        Order orderEntity = orderEntityOpt.get();
-			        Row row = sheet.createRow(rowNum++);
-			        Cell cell0 = row.createCell(0);
-			        cell0.setCellValue(order.getOrderId());
-			        cell0.setCellStyle(dataStyle);
-
-			        ZonedDateTime orderDateWith7Hours = order.getOrderDate()
-			                .toInstant()
-			                .atZone(ZoneId.of("UTC"));
-
-			        String formattedOrderDate = orderDateWith7Hours.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-			        System.out.println(formattedOrderDate + " formattedOrderDate");
-			        Cell cell1 = row.createCell(1);
-			        cell1.setCellValue(formattedOrderDate);
-			        cell1.setCellStyle(dataStyle);
-
-			        Cell cell2 = row.createCell(2);
-			        cell2.setCellValue(order.getFullname());
-			        cell2.setCellStyle(dataStyle);
-
-			        Cell cell3 = row.createCell(3);
-			        cell3.setCellValue(order.getStatusName());
-			        cell3.setCellStyle(dataStyle);
-
-			        Cell cell4 = row.createCell(4);
-			        cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
-			        cell4.setCellStyle(dataStyle);
-			    }
-			}
-
-			// Tạo file Excel và trả về
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			workbook.write(outputStream);
-			workbook.close();
-
-			// Chuyển đổi output stream thành resource để trả về
-			return new ByteArrayResource(outputStream.toByteArray());
-
-		} catch (Exception e) {
-			throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
-		}
+	        // Trả về resource
+	        return new ByteArrayResource(outputStream.toByteArray());
+	    } catch (Exception e) {
+	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
+	    }
 	}
+
 
 }
