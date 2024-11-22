@@ -53,7 +53,7 @@ public class SupplierController {
 	private JWTService jwtService;
 
 	@GetMapping
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userid, 'View Supplier')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestParam(value = "status", required = false) Boolean status,
@@ -110,7 +110,7 @@ public class SupplierController {
 	}
 
 	@GetMapping("/all")
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userid, 'View Supplier')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
