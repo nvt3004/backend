@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -58,6 +61,7 @@ import com.services.ProductService;
 import com.services.ProductVersionService;
 import com.services.UserCouponService;
 import com.services.UserService;
+import com.services.VersionService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -107,6 +111,9 @@ public class VnPayController {
 	
 	@Autowired
 	UserCouponJPA userCouponJPA;
+	
+	@Autowired
+	VersionService vsService;
 
 	@PostMapping("/create-payment")
 	public ResponseEntity<ResponseAPI<String>> createPayment(
@@ -320,6 +327,13 @@ public class VnPayController {
 	private ResponseAPI<CartOrderResponse> createOder(CartOrderModel orderModel, User user) {
 		ResponseAPI<CartOrderResponse> response = new ResponseAPI<>();
 		ResponseAPI<Boolean> validOrder = validDataOrder(orderModel);
+		
+		if(orderModel.getFee().compareTo(BigDecimal.ZERO)<0) {
+			response.setCode(422);
+			response.setMessage("Invalid shipping fee");
+
+			return response;
+		}
 
 		if (!validOrder.getData()) {
 			response.setCode(422);
@@ -327,6 +341,8 @@ public class VnPayController {
 
 			return response;
 		}
+		
+		
 
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			ProductVersion version = versionService.getProductVersionById(detail.getIdVersion());
@@ -338,12 +354,6 @@ public class VnPayController {
 				return response;
 			}
 
-			if (detail.getIdVersion() == null) {
-				response.setCode(422);
-				response.setMessage("Price canot be null");
-
-				return response;
-			}
 
 			if (detail.getQuantity() <= 0) {
 				response.setCode(422);
@@ -359,16 +369,26 @@ public class VnPayController {
 				return response;
 			}
 
-			if (!version.getProduct().isStatus()) {
+			if (!version.getProduct().isStatus() || !version.isStatus()) {
 				response.setCode(404);
 				response.setMessage("Product not found");
 
 				return response;
 			}
 
-			if (detail.getQuantity() > version.getQuantity()) {
+			int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
+
+			if (stockQuantity <= 0) {
 				response.setCode(422);
-				response.setMessage("Exceeded stock quantity");
+				response.setMessage("Products that exceed the quantity in stock");
+
+				return response;
+			}
+
+			if (detail.getQuantity() > stockQuantity) {
+				response.setCode(422);
+				response.setMessage("The product version id " + detail.getIdVersion() + " currently has only "
+						+ stockQuantity + " versions left");
 
 				return response;
 			}
@@ -391,12 +411,25 @@ public class VnPayController {
 			}
 		}
 
-		orderEntity.setOrderDate(new Date());
-		orderEntity.setDeliveryDate(new Date());
+		LocalDateTime localDateTime = LocalDateTime.now();
+
+		// Chuyển LocalDateTime sang múi giờ UTC+7 (Việt Nam)
+		ZonedDateTime vietnamTime = localDateTime.atZone(ZoneId.of("Asia/Ho_Chi_Minh"));
+
+		// Trừ đi 8 giờ
+		ZonedDateTime adjustedTime = vietnamTime.minusHours(8);
+
+		// Chuyển về java.util.Date
+		Date date = Date.from(adjustedTime.toInstant());
+
+		// Gán vào orderEntity
+		orderEntity.setOrderDate(date);
+		orderEntity.setDeliveryDate(date);
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
 		orderEntity.setOrderStatus(status);
+		orderEntity.setShippingFee(orderModel.getFee());
 		// Thay quyền lớn nhất của user vào
 		orderEntity.setIsCreator(false);
 
@@ -499,12 +532,12 @@ public class VnPayController {
 				return response;
 			}
 
-//			long now = new Date().getTime();
-//			if (now < coupon.getStartDate().getTime() || now > coupon.getEndDate().getTime()) {
-//				response.setCode(402);
-//				response.setMessage("Coupon code expired");
-//				return response;
-//			}
+			LocalDateTime now = LocalDateTime.now();
+			if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
+				response.setCode(402);
+				response.setMessage("Coupon code expired");
+				return response;
+			}
 		}
 
 		response.setCode(200);

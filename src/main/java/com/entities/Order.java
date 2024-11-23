@@ -1,13 +1,27 @@
 package com.entities;
 
 import java.io.Serializable;
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 
 /**
  * The persistent class for the orders database table.
@@ -38,8 +52,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
-	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "order_date", nullable = false, updatable = false, insertable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
+	@Column(name = "order_date", nullable = false, updatable = false, insertable = false)
 	private Date orderDate;
 
 	@Column(name = "creator_is_admin")
@@ -47,9 +60,8 @@ public class Order implements Serializable {
 
 	private String phone;
 	
-	@Column(name = "shipping_fee", nullable = false)
+	@Column(name = "shipping_fee")
 	private BigDecimal shippingFee;
-
 
 	// bi-directional many-to-one association to OrderDetail
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "order")
@@ -81,11 +93,11 @@ public class Order implements Serializable {
 	}
 
 	public BigDecimal getShippingFee() {
-	    return this.shippingFee;
+		return this.shippingFee;
 	}
 
 	public void setShippingFee(BigDecimal shippingFee) {
-	    this.shippingFee = shippingFee;
+		this.shippingFee = shippingFee;
 	}
 
 	public int getOrderId() {

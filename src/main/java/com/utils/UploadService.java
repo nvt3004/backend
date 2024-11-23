@@ -21,6 +21,10 @@ public class UploadService {
 	private final String URL_DOMAIN = "http://localhost:8080";
 
 	public String getUrlImage(String fileName) {
+		if(fileName == null) {
+			return null;
+		}
+		
 		return String.format("%s/images/%s", URL_DOMAIN, fileName);
 	}
 

@@ -23,17 +23,16 @@ public class ProductUpdateScheduler {
 	private ProductClientService inforService;
 
 	//@Scheduled(cron = "*/10 * * * * ?") // 10s
-	// Lên lịch thực hiện mỗi ngày vào lúc 23:55
-	@Scheduled(cron = "0 55 23 * * ?") // Giờ - Phút - Giây, mỗi ngày vào lúc
+	//@Scheduled(cron = "0 55 23 * * ?") // Giờ - Phút - Giây, mỗi ngày vào lúc
 	// 23:55
 	public void updateProductsToAlgolia() {
 		try {
-			// Lấy danh sách tất cả các sản phẩm từ dịch vụ
-			List<ProductDTO> products = inforService.getALLProduct(null);
-			// Thêm hoặc cập nhật tất cả sản phẩm vào Algolia
-			for (ProductDTO product : products) {
-				algoliaProductService.addProduct(product);
-			}
+		      algoliaProductService.clearAllProductsAsync().join();
+		        
+		        List<ProductDTO> products = inforService.getALLProduct(null);
+		        for (ProductDTO product : products) {
+		            algoliaProductService.addProductToAlgoliaAsync(product).join();
+		        }
 			logger.info("Cập nhật sản phẩm lên Algolia thành công.");
 		} catch (Exception e) {
 			logger.severe("Lỗi khi cập nhật sản phẩm lên Algolia: " + e.getMessage());

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -66,6 +67,7 @@ public class ProductController {
     AttributesOptionVersionService attributeOptionVersionService;
 
     @PostMapping("/add")
+	@PreAuthorize("hasPermission(#userId, 'Add Product')")
     public ResponseEntity<ResponseAPI<Boolean>> addProduct(@RequestHeader("Authorization") Optional<String> authHeader,
             @RequestBody com.models.ProductDTO productModel) {
         ResponseAPI<Boolean> response = new ResponseAPI<>();
@@ -119,6 +121,7 @@ public class ProductController {
     }
 
     @PutMapping("/update")
+    @PreAuthorize("hasPermission(#userId, 'Update Product')")
     public ResponseEntity<ResponseAPI<Boolean>> updateProduct(
             @RequestHeader("Authorization") Optional<String> authHeader,
             @RequestBody com.models.ProductDTO productModel) {
@@ -176,6 +179,7 @@ public class ProductController {
     }
 
     @GetMapping
+	@PreAuthorize("hasPermission(#userId, 'View Product')")
     public ResponseEntity<ResponseAPI<PageImpl<ProductResponse>>> getAllProduct(
             @RequestHeader("Authorization") Optional<String> authHeader,
             @RequestParam(value = "keyword", defaultValue = "") String keywword,
@@ -234,6 +238,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/remove/{id}")
+    @PreAuthorize("hasPermission(#userId, 'Delete Product')")
     public ResponseEntity<ResponseAPI<Boolean>> removeProduct(
             @RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("id") Integer idProduct) {
         ResponseAPI<Boolean> response = new ResponseAPI<>();
@@ -348,9 +353,9 @@ public class ProductController {
                 return response;
             }
 
-            if (vs.getWholesalePrice().compareTo(fiveHundred) < 0) {
+            if (vs.getImportPrice().compareTo(fiveHundred) < 0) {
                 response.setCode(422);
-                response.setMessage("Version wholesale price must be 500 or more");
+                response.setMessage("Version import price must be 500 or more");
 
                 return response;
             }
@@ -405,7 +410,8 @@ public class ProductController {
         return -1;
     }
 
-    @GetMapping("refresh/{id}")
+    @GetMapping("/refresh/{id}")
+	@PreAuthorize("hasPermission(#userId, 'View Product')")
     public ResponseEntity<ResponseAPI<ProductResponse>> refreshProduct(
             @RequestHeader("Authorization") Optional<String> authHeader, @PathVariable("id") Integer idProduct) {
         ResponseAPI<ProductResponse> response = new ResponseAPI<>();

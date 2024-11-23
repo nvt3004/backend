@@ -2,6 +2,7 @@ package com.services;
 
 import java.text.ParseException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,7 +66,6 @@ public class CouponService {
 						|| couponCreateDTO.getDisPrice().toString().trim().isEmpty())) {
 			fieldErrors.add(new FieldErrorDTO("discount", "Either discount percentage or price must be provided."));
 		}
-		
 
 		return fieldErrors;
 	}
@@ -146,6 +146,7 @@ public class CouponService {
 			dto.setEndDate(coupon.getEndDate());
 			dto.setDisPercent(coupon.getDisPercent());
 			dto.setDisPrice(coupon.getDisPrice());
+			dto.setQuantity(coupon.getQuantity());
 			couponDTOs.add(dto);
 		}
 
@@ -159,4 +160,30 @@ public class CouponService {
 
 		return couponJpa.getCouponByCode(code);
 	}
+
+	public List<CouponDTO> getCouponsHome(Integer userId) {
+
+		List<Coupon> couponPage = couponJpa.getCouponHomeByUser(userId, LocalDateTime.now());
+
+		List<CouponDTO> couponDTOs = new ArrayList<>();
+		for (Coupon coupon : couponPage) {
+		    CouponDTO dto = new CouponDTO();
+		    dto.setId(coupon.getCouponId());
+		    dto.setCode(coupon.getCouponCode());
+		    dto.setDescription(coupon.getDescription());
+
+		    // Trừ 7 tiếng
+		    dto.setStartDate(coupon.getStartDate().minusHours(7));
+		    dto.setEndDate(coupon.getEndDate().minusHours(7));
+
+		    dto.setDisPercent(coupon.getDisPercent());
+		    dto.setDisPrice(coupon.getDisPrice());
+		    dto.setQuantity(coupon.getQuantity());
+		    couponDTOs.add(dto);
+		}
+		
+		return couponDTOs;
+	}
+
+
 }

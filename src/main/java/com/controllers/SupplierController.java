@@ -53,7 +53,7 @@ public class SupplierController {
 	private JWTService jwtService;
 
 	@GetMapping
-//	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userid, 'View Supplier')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestParam(value = "status", required = false) Boolean status,
@@ -110,7 +110,7 @@ public class SupplierController {
 	}
 
 	@GetMapping("/all")
-//	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIERS_VIEW_ALL')")
+	@PreAuthorize("hasPermission(#userid, 'View Supplier')")
 	public ResponseEntity<ApiResponse<?>> getAllSuppliers(@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -156,7 +156,7 @@ public class SupplierController {
 	}
 
 	@GetMapping("/supplier-detail")
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_DETAIL_VIEW')")
+	@PreAuthorize("hasPermission(#userid, 'View Supplier')")
 	public ResponseEntity<ApiResponse<?>> getSupplierById(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -208,7 +208,7 @@ public class SupplierController {
 	}
 
 	@PostMapping
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_CREATE')")
+	@PreAuthorize("hasPermission(#userid, 'Add Supplier')")
 	public ResponseEntity<ApiResponse<?>> createSupplier(@Valid @RequestBody SupplierDTO supplierDetails,
 			BindingResult errors, @RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -260,7 +260,7 @@ public class SupplierController {
 	}
 
 	@PutMapping
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_UPDATE')")
+	@PreAuthorize("hasPermission(#userid, 'Update Supplier')")
 	public ResponseEntity<ApiResponse<?>> updateSupplier(@RequestParam Integer id,
 			@Valid @RequestBody SupplierDTO supplierDetails, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
@@ -313,7 +313,7 @@ public class SupplierController {
 	}
 
 	@DeleteMapping
-	@PreAuthorize("hasPermission(#userid, 'STAFF_SUPPLIER_REMOVE')")
+	@PreAuthorize("hasPermission(#userid, 'Delete Supplier')")
 	public ResponseEntity<ApiResponse<?>> deleteSupplier(@RequestParam Integer id,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 

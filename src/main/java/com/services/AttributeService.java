@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.entities.Attribute;
 import com.entities.AttributeOption;
 import com.entities.AttributeOptionsVersion;
+import com.models.OptionModel;
 import com.repositories.AttributeJPA;
 import com.repositories.AttributeOptionJPA;
 import com.responsedto.AttributeProductResponse;
@@ -118,5 +119,27 @@ public class AttributeService {
 
 	public Attribute getAttributeById(int id) {
 		return attributeJPA.findById(id).orElse(null);
+	}
+
+	public void createAttriubteOption(Attribute attribute, List<String> options) {
+		for (String op : options) {
+			AttributeOption aop = new AttributeOption();
+
+			aop.setAttribute(attribute);
+			aop.setAttributeValue(op);
+
+			optionJPA.save(aop);
+		}
+	}
+	
+	public void createOption(OptionModel option) {
+		Attribute att = new Attribute();
+		att.setId(option.getAttributeId());
+		AttributeOption optionEntity = new AttributeOption();
+		
+		optionEntity.setAttribute(att);
+		optionEntity.setAttributeValue(option.getOptionName());
+		
+		optionJPA.save(optionEntity);
 	}
 }

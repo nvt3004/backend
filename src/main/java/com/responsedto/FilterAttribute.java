@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FilterAttribute {
-	private List<AttributeOption> color;
-	private List<AttributeOption>  size;
-	private List<Category> category;
+    private Att attribute;
+    private List<Category> categories;
 }
+

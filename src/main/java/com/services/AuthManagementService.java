@@ -1,21 +1,5 @@
 package com.services;
 
-import com.models.AuthDTO;
-import com.models.EmailRequestDTO;
-import com.entities.User;
-import com.entities.Cart;
-import com.entities.Role;
-import com.entities.UserRole;
-import com.errors.ApiResponse;
-import com.repositories.RoleJPA;
-import com.repositories.UsersJPA;
-import com.utils.DateTimeUtil;
-import com.utils.JWTUtils;
-import com.utils.TokenBlacklist;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-import com.repositories.UserRoleJPA;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -26,6 +10,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,11 +24,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import com.entities.Cart;
+import com.entities.Role;
+import com.entities.User;
+import com.entities.UserRole;
+import com.errors.ApiResponse;
+import com.models.AuthDTO;
+import com.models.EmailRequestDTO;
+import com.repositories.RoleJPA;
+import com.repositories.UserRoleJPA;
+import com.repositories.UsersJPA;
+import com.utils.DateTimeUtil;
+import com.utils.JWTUtils;
+import com.utils.TokenBlacklist;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class AuthManagementService {
@@ -180,7 +179,7 @@ public class AuthManagementService {
             }
 
             // Tạo JWT token
-            long expirationTime = (5 * 60) * 60 * 1000;
+            long expirationTime = (5 * 60 * 60) * 60 * 1000; // 24 giờ (86,400,000 ms)
             String jwt = jwtUtils.generateToken(user, "login", expirationTime);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
             String tokenPurpose = jwtUtils.extractPurpose(jwt);
@@ -214,9 +213,10 @@ public class AuthManagementService {
         AuthDTO response = new AuthDTO();
         try {
             String ourEmail = jwtUtils.extractUsername(refreshTokenReqiest.getToken());
+            System.out.println("Token la: "+refreshTokenReqiest.getToken());
             User users = usersRepo.findByEmail(ourEmail).orElseThrow();
             if (jwtUtils.isTokenValid(refreshTokenReqiest.getToken(), users)) {
-                long expirationTime = 7 * 24 * 60 * 60 * 1000;
+                long expirationTime = 600 * 1000;
                 var jwt = jwtUtils.generateToken(users, "login", expirationTime);
                 response.setStatusCode(200);
                 response.setToken(jwt);

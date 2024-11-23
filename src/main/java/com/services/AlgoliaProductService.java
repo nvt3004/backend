@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.algolia.search.DefaultSearchClient;
@@ -41,93 +41,129 @@ public class AlgoliaProductService {
 		this.productIndex = searchClient.initIndex("products", ProductDTO.class);
 	}
 
-	public List<ProductDTO> searchProducts(Integer categoryID, Integer colorID, Integer sizeID, BigDecimal minPrice,
+	public List<ProductDTO> searchProducts(Integer categoryID, List<Integer> attributeId, BigDecimal minPrice,
 			BigDecimal maxPrice, String query, String sortMaxPrice, int page, int pageSize) {
 
+		// Default query if no search query is provided
 		String searchQuery = query != null ? query : "*";
 		Query algoliaQuery = new Query(searchQuery);
 
 		List<String> filters = new ArrayList<>();
 
+		// Add category filter if provided
 		if (categoryID != null && categoryID > 0) {
 			filters.add("categoryID = " + categoryID);
 		}
 
-		if (colorID != null && colorID > 0) {
-			filters.add("colorID = " + colorID);
+		// Add attribute filters if any
+		if (attributeId != null && !attributeId.isEmpty()) {
+			for (Integer att : attributeId) {
+				filters.add("attributeId = " + att);
+			}
 		}
 
-		if (sizeID != null && sizeID > 0) {
-			filters.add("sizeID = " + sizeID);
-		}
-
-		// Kiểm tra minPrice và maxPrice
+		// Add price range filters
 		if (minPrice != null && maxPrice != null) {
-			filters.add("minPrice <= " + maxPrice); // Giá min của sản phẩm phải nhỏ hơn maxPrice yêu cầu
-			filters.add("maxPrice >= " + minPrice); // Giá max của sản phẩm phải lớn hơn minPrice yêu cầu
+			filters.add("minPrice <= " + maxPrice);
+			filters.add("maxPrice >= " + minPrice);
 		} else if (minPrice != null) {
-			filters.add("maxPrice >= " + minPrice); // Chỉ kiểm tra với minPrice
+			filters.add("maxPrice >= " + minPrice);
 		} else if (maxPrice != null) {
-			filters.add("minPrice <= " + maxPrice); // Chỉ kiểm tra với maxPrice
+			filters.add("minPrice <= " + maxPrice);
 		}
 
+		// Set the filters if any exist
 		if (!filters.isEmpty()) {
 			algoliaQuery.setFilters(String.join(" AND ", filters));
 		}
 
-		List<ProductDTO> allProducts;
+		List<ProductDTO> allProducts = new ArrayList<>();
 		try {
-
+			// Perform the Algolia search query
 			SearchResult<ProductDTO> result = productIndex.search(algoliaQuery);
 			allProducts = result.getHits();
 		} catch (Exception e) {
-
+			// Specific error message for Algolia search failure
 			throw new RuntimeException("Error searching products with Algolia: " + e.getMessage(), e);
 		}
 
+		// Sort products by price if sortMaxPrice is provided
 		if ("DESC".equalsIgnoreCase(sortMaxPrice)) {
 			allProducts.sort((p1, p2) -> p2.getMaxPrice().compareTo(p1.getMaxPrice()));
 		} else {
 			allProducts.sort((p1, p2) -> p1.getMaxPrice().compareTo(p2.getMaxPrice()));
 		}
 
-		int startIndex = page * pageSize;
-		int endIndex = Math.min(startIndex + pageSize, allProducts.size());
+		// Handle pagination (ensure valid page and pageSize)
+		int totalProducts = allProducts.size();
+		int startIndex = Math.max(page * pageSize, 0); // Ensure non-negative startIndex
+		int endIndex = Math.min(startIndex + pageSize, totalProducts);
+
+		// Return the paginated list
 		List<ProductDTO> paginatedProducts = allProducts.subList(startIndex, endIndex);
 
 		return paginatedProducts;
 	}
 
 	public List<ProductDTO> getTopProducts() {
-	    List<String> attributesToRetrieve = Arrays.asList("id", "name", "imgName", "rating", "minPrice", "maxPrice", "reviewCount");
-	    
-	    Query query = new Query()
-	        .setQuery("") 
-	        .setAttributesToRetrieve(attributesToRetrieve)
-	        .setHitsPerPage(50); 
+		List<String> attributesToRetrieve = Arrays.asList("id", "name", "imgName", "rating", "minPrice", "maxPrice",
+				"reviewCount");
 
-	    try {
-	
-	        SearchResult<ProductDTO> searchResult = productIndex.search(query);
-	        List<ProductDTO> products = searchResult.getHits();
+		Query query = new Query().setQuery("").setAttributesToRetrieve(attributesToRetrieve).setHitsPerPage(50);
 
-	        products.sort((p1, p2) -> Double.compare(p2.getRating(), p1.getRating()));
+		try {
 
-	        return products.stream().limit(12).collect(Collectors.toList());
-	    } catch (Exception e) {
-	        logger.severe("Lỗi khi lấy sản phẩm từ Algolia: " + e.getMessage());
-	        return List.of();
-	    }
+			SearchResult<ProductDTO> searchResult = productIndex.search(query);
+			List<ProductDTO> products = searchResult.getHits();
+
+			products.sort((p1, p2) -> Double.compare(p2.getRating(), p1.getRating()));
+
+			return products.stream().limit(12).collect(Collectors.toList());
+		} catch (Exception e) {
+			logger.severe("Lỗi khi lấy sản phẩm từ Algolia: " + e.getMessage());
+			return List.of();
+		}
 	}
 
-	// Thêm sản phẩm vào Algolia
-	public void addProduct(ProductDTO product) {
+	public List<ProductDTO> getTop50Products() {
+		List<String> attributesToRetrieve = Arrays.asList("id", "name", "imgName", "rating", "minPrice", "maxPrice",
+				"reviewCount");
+
+		Query query = new Query().setQuery("").setAttributesToRetrieve(attributesToRetrieve).setHitsPerPage(50);
+
 		try {
+
+			SearchResult<ProductDTO> searchResult = productIndex.search(query);
+			List<ProductDTO> products = searchResult.getHits();
+
+			return products;
+		} catch (Exception e) {
+			logger.severe("Lỗi khi lấy sản phẩm từ Algolia: " + e.getMessage());
+			return List.of();
+		}
+	}
+
+	@Async
+	public CompletableFuture<Void> clearAllProductsAsync() {
+		try {
+			productIndex.clearObjects().waitTask(); // Đợi quá trình xóa hoàn thành
+			System.out.println("All products removed from Algolia.");
+		} catch (Exception e) {
+			System.out.println("Error clearing products from Algolia: " + e.getMessage());
+		}
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Async
+	public CompletableFuture<Void> addProductToAlgoliaAsync(ProductDTO product) {
+		try {
+
 			productIndex.saveObject(product).waitTask();
 			logger.info("Thêm sản phẩm thành công: " + product);
 		} catch (Exception e) {
 			logger.severe("Lỗi khi thêm sản phẩm vào Algolia: " + e.getMessage());
 		}
+		return CompletableFuture.completedFuture(null);
 	}
 
 	public List<ProductDTO> searchProducts(Query query) {

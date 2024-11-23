@@ -11,7 +11,6 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.entities.AttributeOption;
 import com.entities.AttributeOptionsVersion;
 import com.entities.Image;
 import com.entities.Order;
@@ -118,7 +117,7 @@ public class OrderDetailService {
 	                item.getProductVersionBean().getProduct().getProductId(), item.getProductVersionBean().getId(),
 	                item.getProductVersionBean().getVersionName(), price, item.getQuantity(),
 	                uploadService.getUrlImage(imageUrl), item.getProductVersionBean().getProduct().getDescription(),
-	                total, item.getOrderDetailId(), attributeProductVersion, attributesProducts));
+	                total, item.getOrderDetailId(), attributeProductVersion, attributesProducts, item.getProductVersionBean().getProduct().getProductName()));
 	    }
 	    return productDetails;
 	}

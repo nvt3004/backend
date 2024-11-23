@@ -18,14 +18,12 @@ public class ProductDTO {
 	private String imgName;
 	private List<String> categories;
 	private List<String> versionName;
-	private List<String> colors;
-	private List<String> sizes;
+	private List<String> attributeName;
 	private List<String> images;
 	private Float discount;
 	private Boolean like;
 	private List<Integer> categoryID;
-	private List<Integer> colorID;
-	private List<Integer> sizeID;
+	private List<Integer> attributeId;
 	private BigDecimal minPrice;
 	private BigDecimal maxPrice;
 	
