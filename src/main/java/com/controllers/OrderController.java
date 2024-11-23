@@ -57,7 +57,6 @@ public class OrderController {
 	@GetMapping("/staff/orders")
 	@PreAuthorize("hasPermission(#userId, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getAllOrders(
-			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,
 			@RequestParam(value = "page", defaultValue = "0") int page,
@@ -106,7 +105,7 @@ public class OrderController {
 		}
 
 		try {
-			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(isAdminOrder, keyword, statusId,
+			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(keyword, statusId,
 					page, size);
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {
@@ -565,13 +564,15 @@ public class OrderController {
 
 			ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
 
-			return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
-					.contentType(MediaType.APPLICATION_OCTET_STREAM).body(file);
-		} catch (Exception e) {
-			apiResponse.setErrorCode(500);
-			apiResponse.setMessage(e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
-		}
-	}
+	    	return ResponseEntity.ok()
+	                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
+	                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+	                .body(file);
+	    } catch (Exception e) {
+	    	 apiResponse.setErrorCode(500);
+	         apiResponse.setMessage(e.getMessage());
+	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
+	    }
+	}	
 
 }

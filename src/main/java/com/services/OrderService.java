@@ -2,6 +2,8 @@ package com.services;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,17 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
@@ -32,9 +23,11 @@ import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
 import com.entities.Coupon;
+import com.entities.Feedback;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
+import com.entities.Product;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.errors.ApiResponse;
@@ -45,9 +38,13 @@ import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
+import com.repositories.ReceiptDetailJPA;
 import com.repositories.UserJPA;
+import com.utils.ExcelUtil;
+import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
-
+import java.text.NumberFormat;
+import java.util.Locale;
 @Service
 public class OrderService {
 	@Autowired
@@ -64,6 +61,9 @@ public class OrderService {
 
 	@Autowired
 	private UserJPA userJpa;
+	
+	@Autowired
+	private ReceiptDetailJPA receiptDetailJpa;
 
 	@Autowired
 	private OrderUtilsService orderUtilsService;
@@ -77,8 +77,7 @@ public class OrderService {
 	@Autowired
 	private UploadService uploadService;
 
-	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(Boolean isAdminOrder, String keyword, Integer statusId,
-			Integer page, Integer size) {
+	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(String keyword, Integer statusId, Integer page, Integer size) {
 
 		if (keyword == null) {
 			keyword = "";
@@ -88,11 +87,11 @@ public class OrderService {
 		Page<Order> ordersPage;
 
 		if (statusId == null) {
-			ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, null, pageable);
+			ordersPage = orderJpa.findOrdersByCriteria(keyword, null, pageable);
 		} else {
 			Optional<OrderStatus> optionalOrderStatus = orderStatusService.getOrderStatusById(statusId);
 			if (optionalOrderStatus.isPresent()) {
-				ordersPage = orderJpa.findOrdersByCriteria(isAdminOrder, keyword, statusId, pageable);
+				ordersPage = orderJpa.findOrdersByCriteria(keyword, statusId, pageable);
 			} else {
 				return new ApiResponse<>(404, "No order status found", null);
 			}
@@ -142,18 +141,35 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
+
 		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
+		Integer orderDetailId = null;
+		Boolean isFeedback = false;
+		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
+		for (OrderDetail orderDetail : order.getOrderDetails()) {
+			orderDetailId = orderDetail.getOrderDetailId();
+			for (Feedback feedback : orderDetail.getFeedbacks()) {
+				if (feedback.getOrderDetail().getOrderDetailId() != null) {
+					isFeedback = true;
+				}
+			}
+			products.add(mapToProductDTO(orderDetail, orderDetailId, isFeedback));
 
-		List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
-			String variant = getVariantFromOrderDetail(orderDetail);
-			return new OrderByUserDTO.ProductDTO(orderDetail.getProductVersionBean().getProduct().getProductName(),
-					uploadService.getUrlImage(orderDetail.getProductVersionBean().getProduct().getProductImg()),
-					variant, orderDetail.getQuantity(), orderDetail.getPrice());
-		}).collect(Collectors.toList());
+		}
 
 		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
 				totalPrice, discountedPrice, products);
+	}
+
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
+			Boolean isFeedback) {
+
+		String variant = getVariantFromOrderDetail(orderDetail);
+		Product product = orderDetail.getProductVersionBean().getProduct();
+		return new OrderByUserDTO.ProductDTO(product.getProductId(), orderDetailId, isFeedback,
+				product.getProductName(), uploadService.getUrlImage(product.getProductImg()), variant,
+				orderDetail.getQuantity(), orderDetail.getPrice());
 	}
 
 	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
@@ -182,17 +198,28 @@ public class OrderService {
 	}
 
 	private OrderDTO createOrderDTO(Order order) {
-		BigDecimal total = orderUtilsService.calculateOrderTotal(order);
+
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
+
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
 		String statusName = order.getOrderStatus().getStatusName();
+
 		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+
+		String disCount = orderUtilsService.getDiscountDescription(order);
 
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId,
-				orderUtilsService.calculateDiscountedPrice(order), order.getShippingFee(), order.getDeliveryDate(),
-				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, total, paymentMethodName);
+		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, disCount, discountValue, subTotal,
+				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
+				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
@@ -271,48 +298,48 @@ public class OrderService {
 	}
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
-		List<String> insufficientStockMessages = new ArrayList<>();
-		for (OrderDetail orderDetail : orderDetailList) {
-			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-				Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
-				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-						.orElse(null);
+	    List<String> insufficientStockMessages = new ArrayList<>();
+	    
+	    for (OrderDetail orderDetail : orderDetailList) {
+	        
+	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+	            
+	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+	                    .orElse(null);
 
-				if (productVersion != null) {
-					Integer productVersionStock = productVersion.getQuantity();
-					Integer processedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-					Integer cancelledOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-					Integer shippedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-					Integer deliveredOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	            if (productVersion != null) {
+	                
+	                Integer productVersionStock = receiptDetailJpa.getTotalQuantityForProductVersion(productVersion.getId());
+	                productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-					processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-					cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-					shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-					deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	                Integer processedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	                Integer cancelledOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	                Integer shippedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	                Integer deliveredOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-					Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
-					Integer totalQuantityReturnedToStock = cancelledOrderQuantity;
+	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-					Integer availableProductVersionStock = productVersionStock + totalQuantityReturnedToStock
-							- totalQuantitySold;
+	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
 
-					if (availableProductVersionStock < orderDetailRequestedQuantity) {
-						insufficientStockMessages.add("Product version ID " + productVersion.getId()
-								+ ": Available stock " + availableProductVersionStock + ", Requested quantity: "
-								+ orderDetailRequestedQuantity);
-					}
-				} else {
-					insufficientStockMessages
-							.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
-				}
-			}
-		}
-		return insufficientStockMessages;
+	                Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
+
+	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
+	                    insufficientStockMessages.add("Product version ID " + productVersion.getId()
+	                            + ": Available stock " + availableProductVersionStock + ", Requested quantity: "
+	                            + orderDetailRequestedQuantity);
+	                }
+	            } else {
+	                insufficientStockMessages.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+	            }
+	        }
+	    }
+	    return insufficientStockMessages;
 	}
+
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {
@@ -441,98 +468,46 @@ public class OrderService {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
 
-	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
-			int size) {
-		try {
-			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(isAdminOrder, keyword, statusId, page,
-					size);
 
-			if (ordersResponse.getErrorCode() != 200) {
-				throw new RuntimeException(ordersResponse.getMessage());
-			}
+	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page, int size) {
+	    try {
+	        ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
 
-			PageImpl<OrderDTO> orders = ordersResponse.getData();
+	        if (ordersResponse.getErrorCode() != 200) {
+	            throw new RuntimeException(ordersResponse.getMessage());
+	        }
 
-			// Tạo file Excel
-			Workbook workbook = new XSSFWorkbook();
-			Sheet sheet = workbook.createSheet("Orders");
+	        PageImpl<OrderDTO> orders = ordersResponse.getData();
 
-			// Tạo các style cho cột header
-			CellStyle headerStyle = workbook.createCellStyle();
-			Font headerFont = workbook.createFont();
-			headerFont.setBold(true);
-			headerFont.setColor(IndexedColors.WHITE.getIndex());
-			headerStyle.setFont(headerFont);
-			headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-			headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			headerStyle.setAlignment(HorizontalAlignment.CENTER);
-			headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+	        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
 
-			// Tạo các style cho dữ liệu
-			CellStyle dataStyle = workbook.createCellStyle();
-			dataStyle.setAlignment(HorizontalAlignment.CENTER); // Căn giữa theo chiều ngang
-			dataStyle.setVerticalAlignment(VerticalAlignment.CENTER); // Căn giữa theo chiều dọc
+	        String[] headers = {"Order ID", "Order Date", "Customer", "Status", "Amount"};
+	        Object[][] data = orders.getContent().stream().map(order -> {
+	            String formattedOrderDate = order.getOrderDate()
+	                    .toInstant()
+	                    .atZone(ZoneId.of("UTC"))
+	                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
-			// Tạo header row
-			Row headerRow = sheet.createRow(0);
-			headerRow.createCell(0).setCellValue("Order ID");
-			headerRow.createCell(1).setCellValue("Order Date");
-			headerRow.createCell(2).setCellValue("Customer");
-			headerRow.createCell(3).setCellValue("Status");
-			headerRow.createCell(4).setCellValue("Amount");
+	            String formattedAmount = currencyFormatter.format(order.getFinalTotal().doubleValue());
+	            formattedAmount = formattedAmount.replace("₫", "VND"); 
+	            return new Object[]{
+	                    order.getOrderId(),
+	                    formattedOrderDate,
+	                    order.getFullname(),
+	                    order.getStatusName(),
+	                    formattedAmount // Số tiền đã được format
+	            };
+	        }).toArray(Object[][]::new);
 
-			for (int i = 0; i < 5; i++) {
-				headerRow.getCell(i).setCellStyle(headerStyle);
-			}
+	        // Tạo file Excel
+	        ByteArrayOutputStream outputStream = ExcelUtil.createExcelFile("Orders", headers, data);
 
-			// Đặt độ rộng cho các cột
-			sheet.setColumnWidth(0, 6000);
-			sheet.setColumnWidth(1, 8000);
-			sheet.setColumnWidth(2, 12000);
-			sheet.setColumnWidth(3, 6000);
-			sheet.setColumnWidth(4, 6000);
-
-			int rowNum = 1;
-			for (OrderDTO order : orders.getContent()) {
-				Optional<Order> orderEntityOpt = orderJpa.findById(order.getOrderId());
-				if (orderEntityOpt.isPresent()) {
-					Order orderEntity = orderEntityOpt.get();
-					Row row = sheet.createRow(rowNum++);
-
-					// Thêm dữ liệu vào các cột và áp dụng style cho dữ liệu
-					Cell cell0 = row.createCell(0);
-					cell0.setCellValue(order.getOrderId());
-					cell0.setCellStyle(dataStyle);
-
-					Cell cell1 = row.createCell(1);
-					cell1.setCellValue(order.getOrderDate().toString());
-					cell1.setCellStyle(dataStyle);
-
-					Cell cell2 = row.createCell(2);
-					cell2.setCellValue(order.getFullname());
-					cell2.setCellStyle(dataStyle);
-
-					Cell cell3 = row.createCell(3);
-					cell3.setCellValue(order.getStatusName());
-					cell3.setCellStyle(dataStyle);
-
-					Cell cell4 = row.createCell(4);
-					cell4.setCellValue(orderUtilsService.calculateOrderTotal(orderEntity).doubleValue());
-					cell4.setCellStyle(dataStyle);
-				}
-			}
-
-			// Tạo file Excel và trả về
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			workbook.write(outputStream);
-			workbook.close();
-
-			// Chuyển đổi output stream thành resource để trả về
-			return new ByteArrayResource(outputStream.toByteArray());
-
-		} catch (Exception e) {
-			throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
-		}
+	        // Trả về resource
+	        return new ByteArrayResource(outputStream.toByteArray());
+	    } catch (Exception e) {
+	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
+	    }
 	}
+
 
 }

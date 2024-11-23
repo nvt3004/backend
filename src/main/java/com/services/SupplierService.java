@@ -1,10 +1,13 @@
 package com.services;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +17,7 @@ import com.models.GetAllSupplierDTO;
 import com.models.SupplierDTO;
 import com.repositories.ReceiptJPA;
 import com.repositories.SupplierJPA;
+import com.utils.ExcelUtil;
 
 @Service
 public class SupplierService {
@@ -24,8 +28,8 @@ public class SupplierService {
 	@Autowired
 	private ReceiptJPA receiptJpa;
 
-	public Page<Supplier> getAllSuppliers(Pageable pageable, Boolean status) {
-		return supplierJpa.findAllByStatus(pageable,status);
+	public Page<Supplier> getAllSuppliers(String keyword, Boolean status,Pageable pageable) {
+		return supplierJpa.findSuppliersByCriteria(keyword,status, pageable);
 	}
 	
 	public List<GetAllSupplierDTO> getAllSuppliersWithoutPagination() {
@@ -92,6 +96,32 @@ public class SupplierService {
 	        }
 	    } else {
 	        return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
+	    }
+	}
+	
+	public ByteArrayResource exportSuppliersToExcel(String keyword, Boolean status, Pageable pageable) {
+	    try {
+
+	        Page<Supplier> suppliersResponse = this.getAllSuppliers(keyword, status, pageable);
+
+	        String[] headers = {"Supplier ID", "Supplier Name", "Contact Name", "Email", "Phone", "Address", "Status"};
+	        Object[][] data = suppliersResponse.getContent().stream().map(supplier -> {
+	            return new Object[]{
+	                    supplier.getSupplierId(),
+	                    supplier.getSupplierName(),
+	                    supplier.getContactName(),
+	                    supplier.getEmail(),
+	                    supplier.getPhone(),
+	                    supplier.getAddress(),
+	                    supplier.getStatus() ? "Active" : "Inactive"
+	            };
+	        }).toArray(Object[][]::new);
+
+	        ByteArrayOutputStream outputStream = ExcelUtil.createExcelFile("Suppliers", headers, data);
+
+	        return new ByteArrayResource(outputStream.toByteArray());
+	    } catch (Exception e) {
+	        throw new RuntimeException("An error occurred while exporting suppliers to Excel: " + e.getMessage(), e);
 	    }
 	}
 
