@@ -15,8 +15,13 @@ public class OrderByUserDTO {
     private Integer orderId;
     private Date orderDate;
     private String statusName;
-    private BigDecimal totalPrice;
-    private BigDecimal discountedPrice;
+    private Integer couponId;
+	private String disCount;
+	private BigDecimal discountValue;
+	private BigDecimal subTotal;
+	private BigDecimal shippingFee;
+	private BigDecimal finalTotal;
+	private String finalTotalInWords;
     private List<ProductDTO> products;
 
     @Data

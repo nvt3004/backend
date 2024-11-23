@@ -411,7 +411,6 @@ public class SupplierController {
 	}
 	
 	@GetMapping("/export")
-//	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<?> exportOrdersToExcel(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestParam(value = "status", required = false) Boolean status,

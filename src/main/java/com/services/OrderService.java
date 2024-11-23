@@ -141,26 +141,41 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
+	    // Tính toán các giá trị cần thiết
+	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+	    finalTotal = finalTotal.max(BigDecimal.ZERO); // Không để tổng tiền âm
+	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
-		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
-		Integer orderDetailId = null;
-		Boolean isFeedback = false;
-		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
-		for (OrderDetail orderDetail : order.getOrderDetails()) {
-			orderDetailId = orderDetail.getOrderDetailId();
-			for (Feedback feedback : orderDetail.getFeedbacks()) {
-				if (feedback.getOrderDetail().getOrderDetailId() != null) {
-					isFeedback = true;
-				}
-			}
-			products.add(mapToProductDTO(orderDetail, orderDetailId, isFeedback));
+	    Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+	    String disCount = orderUtilsService.getDiscountDescription(order);
 
-		}
+	    List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream()
+	        .map(orderDetail -> {
+	            Integer orderDetailId = orderDetail.getOrderDetailId();
+	            boolean isFeedback = orderDetail.getFeedbacks().stream()
+	                .anyMatch(feedback -> feedback.getOrderDetail().getOrderDetailId() != null);
 
-		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
-				totalPrice, discountedPrice, products);
+	            return mapToProductDTO(orderDetail, orderDetailId, isFeedback);
+	        })
+	        .collect(Collectors.toList());
+
+	    return new OrderByUserDTO(
+	        order.getOrderId(),
+	        order.getOrderDate(),
+	        order.getOrderStatus().getStatusName(),
+	        couponId,
+	        disCount,
+	        discountValue,
+	        subTotal,
+	        order.getShippingFee(),
+	        finalTotal,
+	        finalTotalInWords,
+	        products
+	    );
 	}
+
 
 	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
 			Boolean isFeedback) {
@@ -495,7 +510,7 @@ public class OrderService {
 	                    formattedOrderDate,
 	                    order.getFullname(),
 	                    order.getStatusName(),
-	                    formattedAmount // Số tiền đã được format
+	                    formattedAmount 
 	            };
 	        }).toArray(Object[][]::new);
 
