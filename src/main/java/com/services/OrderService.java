@@ -34,6 +34,7 @@ import com.errors.ApiResponse;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
 import com.models.OrderDetailDTO;
+import com.models.OrderQRCodeDTO;
 import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
@@ -232,7 +233,7 @@ public class OrderService {
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, disCount, discountValue, subTotal,
+		return new OrderDTO(order.getOrderId(),order.getUser().getGender(), order.getAddress(), couponId, disCount, discountValue, subTotal,
 				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
 				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
@@ -523,6 +524,22 @@ public class OrderService {
 	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
 	    }
 	}
+	
+	public ApiResponse<Map<String, Object>> getOrder(Integer orderId) {
+		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
+
+		if (orderDetailList == null || orderDetailList.isEmpty()) {
+			return new ApiResponse<>(404, "Order details not found", null);
+		}
+
+		OrderQRCodeDTO orderDetailDTO = orderDetailService.convertToOrderQRCode(orderDetailList);
+
+		Map<String, Object> responseMap = new HashMap<>();
+		responseMap.put("orderDetail", Collections.singletonList(orderDetailDTO));
+
+		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
+	}
+	
 
 
 }

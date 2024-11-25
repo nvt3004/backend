@@ -8,6 +8,7 @@ import lombok.Data;
 @Data
 public class OrderDTO {
 	private int orderId;
+	private Integer gender;
 	private String fullname;
 	private String phone;
 	private String address;
@@ -23,10 +24,12 @@ public class OrderDTO {
 	private String statusName;
 	private String paymentMethod;
 
-	public OrderDTO(int orderId, String address, Integer couponId, String disCount, BigDecimal discountValue,
-			BigDecimal subTotal, BigDecimal shippingFee, BigDecimal finalTotal, String finalTotalInWords,
-			Date deliveryDate, String fullname, Date orderDate, String phone, String statusName, String paymentMethod) {
+	public OrderDTO(int orderId,Integer gender, String address, Integer couponId, String disCount,
+			BigDecimal discountValue, BigDecimal subTotal, BigDecimal shippingFee, BigDecimal finalTotal,
+			String finalTotalInWords, Date deliveryDate, String fullname, Date orderDate, String phone,
+			String statusName, String paymentMethod) {
 		this.orderId = orderId;
+		this.gender = gender;
 		this.address = address;
 		this.couponId = couponId;
 		this.disCount = disCount;
