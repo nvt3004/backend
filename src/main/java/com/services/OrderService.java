@@ -150,11 +150,10 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
-		// Tính toán các giá trị cần thiết
 		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
 		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-		finalTotal = finalTotal.max(BigDecimal.ZERO); // Không để tổng tiền âm
+		finalTotal = finalTotal.max(BigDecimal.ZERO); 
 		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
 		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
@@ -226,8 +225,8 @@ public class OrderService {
 		String statusName = order.getOrderStatus().getStatusName();
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
-
-		return new OrderDTO(order.getOrderId(), order.getUser().getGender(), order.getAddress(), couponId, disCount,
+		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
+		return new OrderDTO(order.getOrderId(),isOpenOrderDetail, order.getUser().getGender(), order.getAddress(), couponId, disCount,
 				discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(),
 				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
@@ -246,7 +245,6 @@ public class OrderService {
 
 		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
 	}
-
 
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
 		if (statusId == null) {
@@ -286,7 +284,7 @@ public class OrderService {
 		return new ApiResponse<>(200, "Order status updated successfully", null);
 	}
 
-	 @Async
+	@Async
 	private void sendOrderStatusUpdateEmail(Order order, String newStatus) {
 		String customerEmail = order.getUser().getEmail();
 		String subject = "Your order #" + order.getOrderId() + " status has been updated";
@@ -302,46 +300,46 @@ public class OrderService {
 		finalTotal = finalTotal.max(BigDecimal.ZERO);
 
 		return """
-								<html>
-								<body style='font-family: Arial, sans-serif;'>
-								    <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
-								        <h2 style='color: #333;'>Dear %s,</h2>
-								        <p>Your order <strong># %d</strong> status has been updated to: <strong style='color: #28a745;'>%s</strong>.</p>
-								        <p>Order details:</p>
-								        <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
-								            <thead>
-								                <tr style='background-color: #f8f9fa; text-align: left;'>
-								                    <th style='padding: 10px; border: 1px solid #ddd;'>Product</th>
-								                    <th style='padding: 10px; border: 1px solid #ddd;'>Quantity</th>
-								                    <th style='padding: 10px; border: 1px solid #ddd;'>Price</th>
-								                </tr>
-								            </thead>
-								            <tbody>
-								                %s
-								                <tr>
-								                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Subtotal:</strong></td>
-								                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
-								                </tr>
-								                <tr>
-								                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Shipping Fee:</strong></td>
-								                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
-								                </tr>
-								                <tr>
-								                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Discount:</strong></td>
-								                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
-								                </tr>
-								                <tr style='background-color: #f8f9fa;'>
-								                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Total:</strong></td>
-								                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745;'><strong>%s</strong></td>
-								                </tr>
-								            </tbody>
-								        </table>
-								        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>support@company.com</a>.</p>
-								        <p>Thank you for shopping with us!</p>
-								    </div>
-								</body>
-								</html>
-								"""
+				<html>
+				<body style='font-family: Arial, sans-serif;'>
+				    <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
+				        <h2 style='color: #333;'>Dear %s,</h2>
+				        <p>Your order <strong># %d</strong> status has been updated to: <strong style='color: #28a745;'>%s</strong>.</p>
+				        <p>Order details:</p>
+				        <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
+				            <thead>
+				                <tr style='background-color: #f8f9fa; text-align: left;'>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Product</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Quantity</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Price</th>
+				                </tr>
+				            </thead>
+				            <tbody>
+				                %s
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Subtotal:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Shipping Fee:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Discount:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr style='background-color: #f8f9fa;'>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Total:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745;'><strong>%s</strong></td>
+				                </tr>
+				            </tbody>
+				        </table>
+				        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>support@company.com</a>.</p>
+				        <p>Thank you for shopping with us!</p>
+				    </div>
+				</body>
+				</html>
+				"""
 				.formatted(order.getFullname(), order.getOrderId(), newStatus, generateOrderItemsHtml(order),
 						formatCurrency(subTotal), formatCurrency(order.getShippingFee()), formatCurrency(discountValue),
 						formatCurrency(finalTotal));
@@ -354,34 +352,33 @@ public class OrderService {
 	}
 
 	private String generateOrderItemsHtml(Order order) {
-	    StringBuilder html = new StringBuilder();
-	    for (OrderDetail detail : order.getOrderDetails()) {
-	        String productName = detail.getProductVersionBean().getVersionName();
-	        int quantity = detail.getQuantity();
-	        String price = formatCurrency(detail.getPrice());
-	        Image image = detail.getProductVersionBean().getImage();
-	        String imageUrl = null;
-	        if(image != null) {
-	        	imageUrl = detail.getProductVersionBean().getImage().getImageUrl();
-	        }else {
-	        	  imageUrl = "https://domain_thuc_te_huhu.com/default-image.jpg";
-	        }
-	        
-	      
-	        System.out.println(imageUrl + " imageUrl");
+		StringBuilder html = new StringBuilder();
+		for (OrderDetail detail : order.getOrderDetails()) {
+			String productName = detail.getProductVersionBean().getVersionName();
+			int quantity = detail.getQuantity();
+			String price = formatCurrency(detail.getPrice());
+			Image image = detail.getProductVersionBean().getImage();
+			String imageUrl = null;
+			if (image != null) {
+				imageUrl = detail.getProductVersionBean().getImage().getImageUrl();
+			} else {
+				imageUrl = "https://domain_thuc_te_huhu.com/default-image.jpg";
+			}
 
-	        html.append("""
-	            <tr>
-	                <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>
-	                    <img src='%s' alt='%s' style='max-width: 100px; max-height: 100px; border-radius: 5px;'><br>
-	                    %s
-	                </td>
-	                <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>%d</td>
-	                <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-	            </tr>
-	            """.formatted(imageUrl, productName, productName, quantity, price));
-	    }
-	    return html.toString();
+			System.out.println(imageUrl + " imageUrl");
+
+			html.append("""
+					<tr>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>
+					        <img src='%s' alt='%s' style='max-width: 100px; max-height: 100px; border-radius: 5px;'><br>
+					        %s
+					    </td>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>%d</td>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+					</tr>
+					""".formatted(imageUrl, productName, productName, quantity, price));
+		}
+		return html.toString();
 	}
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
