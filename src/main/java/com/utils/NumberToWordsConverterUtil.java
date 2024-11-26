@@ -26,7 +26,7 @@ public class NumberToWordsConverterUtil {
 	    return capitalizeFirstLetter(result.trim());
 	}
 
-	// Hàm hỗ trợ để viết hoa chữ cái đầu tiên
+	// Viết hoa chữ cái đầu tiên
 	private static String capitalizeFirstLetter(String input) {
 	    if (input == null || input.isEmpty()) {
 	        return input;

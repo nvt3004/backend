@@ -44,8 +44,6 @@ public class CouponService {
 	public List<FieldErrorDTO> validateCoupon(CouponCreateDTO couponCreateDTO, BindingResult errors) {
 		List<FieldErrorDTO> fieldErrors = new ArrayList<>();
 
-		System.out.println("Đã vào ValidateCoupon");
-		// Kiểm tra lỗi từ BindingResult
 		if (errors.hasErrors()) {
 			for (ObjectError error : errors.getAllErrors()) {
 				String field = ((FieldError) error).getField();

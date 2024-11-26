@@ -573,6 +573,23 @@ public class OrderController {
 	         apiResponse.setMessage(e.getMessage());
 	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
 	    }
-	}	
+	}
+	
+	@GetMapping("/orders/{orderId}")
+	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId) {
+
+		if (orderId == null) {
+			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
+			return ResponseEntity.badRequest().body(response);
+		}
+
+		ApiResponse<Map<String, Object>> response = orderService.getOrder(orderId);
+
+		if (response.getErrorCode() == 200) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
+		}
+	}
 
 }

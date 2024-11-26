@@ -48,7 +48,7 @@ public class SecurityConfig {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
-								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
+								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**", "api/orders/**",
 								"api/getImage/**","/api/home/**","/api/vnp/**", "/images/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**","/api/push/product").hasAnyAuthority("Staff", "Admin")

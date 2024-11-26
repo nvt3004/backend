@@ -2,6 +2,7 @@ package com.services;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -9,8 +10,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +22,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
 import com.entities.Coupon;
-import com.entities.Feedback;
+import com.entities.Image;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.OrderStatus;
@@ -34,6 +39,7 @@ import com.errors.ApiResponse;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
 import com.models.OrderDetailDTO;
+import com.models.OrderQRCodeDTO;
 import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
@@ -43,9 +49,9 @@ import com.repositories.UserJPA;
 import com.utils.ExcelUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
-import java.text.NumberFormat;
-import java.util.Locale;
+
 @Service
+@EnableAsync
 public class OrderService {
 	@Autowired
 	private OrderJPA orderJpa;
@@ -61,7 +67,7 @@ public class OrderService {
 
 	@Autowired
 	private UserJPA userJpa;
-	
+
 	@Autowired
 	private ReceiptDetailJPA receiptDetailJpa;
 
@@ -76,6 +82,9 @@ public class OrderService {
 
 	@Autowired
 	private UploadService uploadService;
+
+	@Autowired
+	private MailService mailService;
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(String keyword, Integer statusId, Integer page, Integer size) {
 
@@ -141,25 +150,26 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO); 
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		BigDecimal totalPrice = orderUtilsService.calculateOrderTotal(order);
-		BigDecimal discountedPrice = orderUtilsService.calculateDiscountedPrice(order);
-		Integer orderDetailId = null;
-		Boolean isFeedback = false;
-		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
-		for (OrderDetail orderDetail : order.getOrderDetails()) {
-			orderDetailId = orderDetail.getOrderDetailId();
-			for (Feedback feedback : orderDetail.getFeedbacks()) {
-				if (feedback.getOrderDetail().getOrderDetailId() != null) {
-					isFeedback = true;
-				}
-			}
-			products.add(mapToProductDTO(orderDetail, orderDetailId, isFeedback));
+		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+		String disCount = orderUtilsService.getDiscountDescription(order);
 
-		}
+		List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
+			Integer orderDetailId = orderDetail.getOrderDetailId();
+			boolean isFeedback = orderDetail.getFeedbacks().stream()
+					.anyMatch(feedback -> feedback.getOrderDetail().getOrderDetailId() != null);
+
+			return mapToProductDTO(orderDetail, orderDetailId, isFeedback);
+		}).collect(Collectors.toList());
 
 		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
-				totalPrice, discountedPrice, products);
+				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
+				products);
 	}
 
 	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
@@ -208,18 +218,17 @@ public class OrderService {
 
 		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		String statusName = order.getOrderStatus().getStatusName();
-
 		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
 
 		String disCount = orderUtilsService.getDiscountDescription(order);
 
+		String statusName = order.getOrderStatus().getStatusName();
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
-
-		return new OrderDTO(order.getOrderId(), order.getAddress(), couponId, disCount, discountValue, subTotal,
-				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
-				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
+		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
+		return new OrderDTO(order.getOrderId(),isOpenOrderDetail, order.getUser().getGender(), order.getAddress(), couponId, disCount,
+				discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(),
+				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
@@ -269,9 +278,107 @@ public class OrderService {
 			}
 			order.setOrderStatus(newOrderStatus.get());
 			orderJpa.save(order);
+			CompletableFuture.runAsync(() -> sendOrderStatusUpdateEmail(order, newStatus));
 		}
 
 		return new ApiResponse<>(200, "Order status updated successfully", null);
+	}
+
+	@Async
+	private void sendOrderStatusUpdateEmail(Order order, String newStatus) {
+		String customerEmail = order.getUser().getEmail();
+		String subject = "Your order #" + order.getOrderId() + " status has been updated";
+		String htmlContent = generateOrderStatusEmailContent(order, newStatus);
+
+		mailService.sendHtmlEmail(customerEmail, subject, htmlContent);
+	}
+
+	private String generateOrderStatusEmailContent(Order order, String newStatus) {
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
+
+		return """
+				<html>
+				<body style='font-family: Arial, sans-serif;'>
+				    <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
+				        <h2 style='color: #333;'>Dear %s,</h2>
+				        <p>Your order <strong># %d</strong> status has been updated to: <strong style='color: #28a745;'>%s</strong>.</p>
+				        <p>Order details:</p>
+				        <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
+				            <thead>
+				                <tr style='background-color: #f8f9fa; text-align: left;'>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Product</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Quantity</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd;'>Price</th>
+				                </tr>
+				            </thead>
+				            <tbody>
+				                %s
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Subtotal:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Shipping Fee:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Discount:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                </tr>
+				                <tr style='background-color: #f8f9fa;'>
+				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Total:</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745;'><strong>%s</strong></td>
+				                </tr>
+				            </tbody>
+				        </table>
+				        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>support@company.com</a>.</p>
+				        <p>Thank you for shopping with us!</p>
+				    </div>
+				</body>
+				</html>
+				"""
+				.formatted(order.getFullname(), order.getOrderId(), newStatus, generateOrderItemsHtml(order),
+						formatCurrency(subTotal), formatCurrency(order.getShippingFee()), formatCurrency(discountValue),
+						formatCurrency(finalTotal));
+	}
+
+	String formatCurrency(BigDecimal amount) {
+		Locale locale = new Locale("vi", "VN");
+		NumberFormat currencyFormatter = NumberFormat.getNumberInstance(locale);
+		return currencyFormatter.format(amount) + " VND";
+	}
+
+	private String generateOrderItemsHtml(Order order) {
+		StringBuilder html = new StringBuilder();
+		for (OrderDetail detail : order.getOrderDetails()) {
+			String productName = detail.getProductVersionBean().getVersionName();
+			int quantity = detail.getQuantity();
+			String price = formatCurrency(detail.getPrice());
+			Image image = detail.getProductVersionBean().getImage();
+			String imageUrl = null;
+			if (image != null) {
+				imageUrl = detail.getProductVersionBean().getImage().getImageUrl();
+			} else {
+				imageUrl = "https://domain_thuc_te_huhu.com/default-image.jpg";
+			}
+
+			System.out.println(imageUrl + " imageUrl");
+
+			html.append("""
+					<tr>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>
+					        <img src='%s' alt='%s' style='max-width: 100px; max-height: 100px; border-radius: 5px;'><br>
+					        %s
+					    </td>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>%d</td>
+					    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+					</tr>
+					""".formatted(imageUrl, productName, productName, quantity, price));
+		}
+		return html.toString();
 	}
 
 	private boolean isOrderStatusChanged(Order order, String statusName) {
@@ -298,48 +405,53 @@ public class OrderService {
 	}
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
-	    List<String> insufficientStockMessages = new ArrayList<>();
-	    
-	    for (OrderDetail orderDetail : orderDetailList) {
-	        
-	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
-	            
-	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
-	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-	                    .orElse(null);
+		List<String> insufficientStockMessages = new ArrayList<>();
 
-	            if (productVersion != null) {
-	                
-	                Integer productVersionStock = productVersion.getQuantity();
-	                productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
+		for (OrderDetail orderDetail : orderDetailList) {
 
-	                Integer processedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-	                Integer cancelledOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-	                Integer shippedOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-	                Integer deliveredOrderQuantity = productVersionJpa.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
 
-	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+				Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+						.orElse(null);
 
-	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+				if (productVersion != null) {
 
-	                Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
+					Integer productVersionStock = receiptDetailJpa
+							.getTotalQuantityForProductVersion(productVersion.getId());
+					productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
-	                    insufficientStockMessages.add("Product version ID " + productVersion.getId()
-	                            + ": Available stock " + availableProductVersionStock + ", Requested quantity: "
-	                            + orderDetailRequestedQuantity);
-	                }
-	            } else {
-	                insufficientStockMessages.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
-	            }
-	        }
-	    }
-	    return insufficientStockMessages;
+					Integer processedOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+					Integer cancelledOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+					Integer shippedOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+					Integer deliveredOrderQuantity = productVersionJpa
+							.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+
+					processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+					cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+					shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+					deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+
+					Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+
+					Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
+
+					if (availableProductVersionStock < orderDetailRequestedQuantity) {
+						insufficientStockMessages.add("Product version ID " + productVersion.getId()
+								+ ": Available stock " + availableProductVersionStock + ", Requested quantity: "
+								+ orderDetailRequestedQuantity);
+					}
+				} else {
+					insufficientStockMessages
+							.add("Product version ID " + orderDetail.getProductVersionBean().getId() + " not found.");
+				}
+			}
+		}
+		return insufficientStockMessages;
 	}
-
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {
@@ -468,46 +580,53 @@ public class OrderService {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
 
+	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
+			int size) {
+		try {
+			ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
 
-	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page, int size) {
-	    try {
-	        ApiResponse<PageImpl<OrderDTO>> ordersResponse = this.getAllOrders(keyword, statusId, page, size);
+			if (ordersResponse.getErrorCode() != 200) {
+				throw new RuntimeException(ordersResponse.getMessage());
+			}
 
-	        if (ordersResponse.getErrorCode() != 200) {
-	            throw new RuntimeException(ordersResponse.getMessage());
-	        }
+			PageImpl<OrderDTO> orders = ordersResponse.getData();
 
-	        PageImpl<OrderDTO> orders = ordersResponse.getData();
+			NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
 
-	        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+			String[] headers = { "Order ID", "Order Date", "Customer", "Status", "Amount" };
+			Object[][] data = orders.getContent().stream().map(order -> {
+				String formattedOrderDate = order.getOrderDate().toInstant().atZone(ZoneId.of("UTC"))
+						.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
-	        String[] headers = {"Order ID", "Order Date", "Customer", "Status", "Amount"};
-	        Object[][] data = orders.getContent().stream().map(order -> {
-	            String formattedOrderDate = order.getOrderDate()
-	                    .toInstant()
-	                    .atZone(ZoneId.of("UTC"))
-	                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+				String formattedAmount = currencyFormatter.format(order.getFinalTotal().doubleValue());
+				formattedAmount = formattedAmount.replace("₫", "VND");
+				return new Object[] { order.getOrderId(), formattedOrderDate, order.getFullname(),
+						order.getStatusName(), formattedAmount };
+			}).toArray(Object[][]::new);
 
-	            String formattedAmount = currencyFormatter.format(order.getFinalTotal().doubleValue());
-	            formattedAmount = formattedAmount.replace("₫", "VND"); 
-	            return new Object[]{
-	                    order.getOrderId(),
-	                    formattedOrderDate,
-	                    order.getFullname(),
-	                    order.getStatusName(),
-	                    formattedAmount // Số tiền đã được format
-	            };
-	        }).toArray(Object[][]::new);
+			// Tạo file Excel
+			ByteArrayOutputStream outputStream = ExcelUtil.createExcelFile("Orders", headers, data);
 
-	        // Tạo file Excel
-	        ByteArrayOutputStream outputStream = ExcelUtil.createExcelFile("Orders", headers, data);
-
-	        // Trả về resource
-	        return new ByteArrayResource(outputStream.toByteArray());
-	    } catch (Exception e) {
-	        throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
-	    }
+			// Trả về resource
+			return new ByteArrayResource(outputStream.toByteArray());
+		} catch (Exception e) {
+			throw new RuntimeException("An error occurred while exporting orders to Excel: " + e.getMessage(), e);
+		}
 	}
 
+	public ApiResponse<Map<String, Object>> getOrder(Integer orderId) {
+		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
+
+		if (orderDetailList == null || orderDetailList.isEmpty()) {
+			return new ApiResponse<>(404, "Order details not found", null);
+		}
+
+		OrderQRCodeDTO orderDetailDTO = orderDetailService.convertToOrderQRCode(orderDetailList);
+
+		Map<String, Object> responseMap = new HashMap<>();
+		responseMap.put("orderDetail", Collections.singletonList(orderDetailDTO));
+
+		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
+	}
 
 }

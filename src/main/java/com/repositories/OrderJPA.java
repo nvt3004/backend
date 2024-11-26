@@ -54,5 +54,14 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("SELECT o FROM Order o WHERE o.orderDate < :createdAt AND o.orderStatus.statusName = :statusName")
 	List<Order> findAllByCreatedAtBeforeAndOrderStatusStatusName(@Param("createdAt") Date createdAt,
 			@Param("statusName") String statusName);
+	
+	@Query("""
+		       SELECT CASE WHEN COUNT(od) > 0 THEN true ELSE false END 
+		       FROM Order o 
+		       LEFT JOIN o.orderDetails od 
+		       WHERE o.orderId = :orderId
+		       """)
+		boolean existsOrderDetailByOrderId(@Param("orderId") Integer orderId);
+
 
 }
