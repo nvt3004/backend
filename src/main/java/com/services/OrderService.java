@@ -150,26 +150,35 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
-		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
-		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
-		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-		finalTotal = finalTotal.max(BigDecimal.ZERO); 
-		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+	    finalTotal = finalTotal.max(BigDecimal.ZERO);
+	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
-		String disCount = orderUtilsService.getDiscountDescription(order);
 
-		List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
-			Integer orderDetailId = orderDetail.getOrderDetailId();
-			boolean isFeedback = orderDetail.getFeedbacks().stream()
-					.anyMatch(feedback -> feedback.getOrderDetail().getOrderDetailId() != null);
+	    Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+	    String disCount = orderUtilsService.getDiscountDescription(order);
 
-			return mapToProductDTO(orderDetail, orderDetailId, isFeedback);
-		}).collect(Collectors.toList());
+	    boolean isDelivered = "Delivered".equalsIgnoreCase(order.getOrderStatus().getStatusName());
+	    List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
+	        Integer orderDetailId = orderDetail.getOrderDetailId();
+	        return mapToProductDTO(orderDetail, orderDetailId, isDelivered);
+	    }).collect(Collectors.toList());
 
-		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
-				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
-				products);
+	    return new OrderByUserDTO(
+	        order.getOrderId(), 
+	        order.getOrderDate(), 
+	        order.getOrderStatus().getStatusName(),
+	        couponId, 
+	        disCount, 
+	        discountValue, 
+	        subTotal, 
+	        order.getShippingFee(), 
+	        finalTotal, 
+	        finalTotalInWords,
+	        products
+	    );
 	}
 
 	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
@@ -226,9 +235,10 @@ public class OrderService {
 		String paymentMethodName = Optional.ofNullable(order.getPayments())
 				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
-		return new OrderDTO(order.getOrderId(),isOpenOrderDetail, order.getUser().getGender(), order.getAddress(), couponId, disCount,
-				discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(),
-				order.getFullname(), order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
+		return new OrderDTO(order.getOrderId(), isOpenOrderDetail, order.getUser().getGender(), order.getAddress(),
+				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
+				order.getDeliveryDate(), order.getFullname(), order.getOrderDate(), order.getPhone(), statusName,
+				paymentMethodName);
 	}
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
@@ -309,32 +319,32 @@ public class OrderService {
 				        <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
 				            <thead>
 				                <tr style='background-color: #f8f9fa; text-align: left;'>
-				                    <th style='padding: 10px; border: 1px solid #ddd;'>Product</th>
-				                    <th style='padding: 10px; border: 1px solid #ddd;'>Quantity</th>
-				                    <th style='padding: 10px; border: 1px solid #ddd;'>Price</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Product</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Quantity</th>
+				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Price</th>
 				                </tr>
 				            </thead>
 				            <tbody>
 				                %s
 				                <tr>
 				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Subtotal:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
 				                </tr>
 				                <tr>
 				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Shipping Fee:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
 				                </tr>
 				                <tr>
 				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Discount:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd;'>%s</td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
 				                </tr>
 				                <tr style='background-color: #f8f9fa;'>
 				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Total:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745;'><strong>%s</strong></td>
+				                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745; text-align: right;'><strong>%s</strong></td>
 				                </tr>
 				            </tbody>
 				        </table>
-				        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>support@company.com</a>.</p>
+				        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a>.</p>
 				        <p>Thank you for shopping with us!</p>
 				    </div>
 				</body>
@@ -347,8 +357,9 @@ public class OrderService {
 
 	String formatCurrency(BigDecimal amount) {
 		Locale locale = new Locale("vi", "VN");
-		NumberFormat currencyFormatter = NumberFormat.getNumberInstance(locale);
-		return currencyFormatter.format(amount) + " VND";
+		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(locale);
+		String formattedAmount = currencyFormatter.format(amount);
+		return formattedAmount.replace("₫", "VND");
 	}
 
 	private String generateOrderItemsHtml(Order order) {
@@ -367,16 +378,18 @@ public class OrderService {
 
 			System.out.println(imageUrl + " imageUrl");
 
-			html.append("""
-					<tr>
-					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>
-					        <img src='%s' alt='%s' style='max-width: 100px; max-height: 100px; border-radius: 5px;'><br>
-					        %s
-					    </td>
-					    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>%d</td>
-					    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-					</tr>
-					""".formatted(imageUrl, productName, productName, quantity, price));
+			html.append(
+					"""
+							<tr>
+							    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>
+							        <img src='%s' alt='%s' style='max-width: 100px; max-height: 100px; border-radius: 5px; width: 'auto'; height: 'auto'; objectFit: 'contain''><br>
+							        %s
+							    </td>
+							    <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>%d</td>
+							    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+							</tr>
+							"""
+							.formatted(imageUrl, productName, productName, quantity, price));
 		}
 		return html.toString();
 	}

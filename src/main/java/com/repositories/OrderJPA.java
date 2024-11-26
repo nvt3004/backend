@@ -17,21 +17,39 @@ import com.entities.Product;
 
 public interface OrderJPA extends JpaRepository<Order, Integer> {
 
-	@Query("SELECT o FROM Order o " + "WHERE "
-			+ "(:keyword IS NULL OR :keyword = '' OR (o.fullname LIKE CONCAT('%', :keyword, '%') "
-			+ "OR o.address LIKE CONCAT('%', :keyword, '%') " + "OR o.phone LIKE CONCAT('%', :keyword, '%'))) AND "
-			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) " + "ORDER BY o.orderStatus.sortOrder ASC")
-	Page<Order> findOrdersByCriteria(@Param("keyword") String keyword, @Param("statusId") Integer statusId,
-			Pageable pageable);
+	@Query("""
+		    SELECT o FROM Order o
+		    WHERE (:keyword IS NULL OR :keyword = '' OR 
+		           (o.fullname LIKE CONCAT('%', :keyword, '%') OR 
+		            o.address LIKE CONCAT('%', :keyword, '%') OR 
+		            o.phone LIKE CONCAT('%', :keyword, '%')))
+		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
+		    ORDER BY o.orderStatus.sortOrder ASC, o.orderDate DESC
+		    """)
+		Page<Order> findOrdersByCriteria(
+		    @Param("keyword") String keyword, 
+		    @Param("statusId") Integer statusId, 
+		    Pageable pageable);
 
-	@Query("SELECT o FROM Order o " + "JOIN o.orderDetails od " + "JOIN od.productVersionBean pv "
-			+ "JOIN pv.product p " + "WHERE (:username IS NULL OR o.user.username = :username) AND "
-			+ "(:keyword IS NULL OR :keyword = '' OR "
-			+ "(CAST(o.orderId AS string) LIKE CONCAT('%', :keyword, '%') OR "
-			+ "p.productName LIKE CONCAT('%', :keyword, '%') OR " + "o.address LIKE CONCAT('%', :keyword, '%'))) AND "
-			+ "(:statusId IS NULL OR o.orderStatus.statusId = :statusId) " + "ORDER BY o.orderDate DESC")
-	Page<Order> findOrdersByUsername(@Param("username") String username, @Param("keyword") String keyword,
-			@Param("statusId") Integer statusId, Pageable pageable);
+
+	@Query("""
+		    SELECT o FROM Order o
+		    JOIN o.orderDetails od
+		    JOIN od.productVersionBean pv
+		    JOIN pv.product p
+		    WHERE (:username IS NULL OR o.user.username = :username)
+		      AND (:keyword IS NULL OR :keyword = '' OR 
+		           (CAST(o.orderId AS string) LIKE CONCAT('%', :keyword, '%') OR 
+		            p.productName LIKE CONCAT('%', :keyword, '%') OR 
+		            o.address LIKE CONCAT('%', :keyword, '%')))
+		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
+		    ORDER BY o.orderDate DESC
+		    """)
+		Page<Order> findOrdersByUsername(
+		    @Param("username") String username, 
+		    @Param("keyword") String keyword,
+		    @Param("statusId") Integer statusId, 
+		    Pageable pageable);
 
 	@Transactional
 	@Modifying
