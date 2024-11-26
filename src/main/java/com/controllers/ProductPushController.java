@@ -29,7 +29,7 @@ public class ProductPushController {
 		ResponseAPI<Object> response = new ResponseAPI<>();
 		try {
 
-			List<ProductDTO> products = inforService.getALLProduct(null);
+		List<ProductDTO> products = inforService.getALLProduct(null);
 
 			if (products.isEmpty()) {
 				response.setCode(204);

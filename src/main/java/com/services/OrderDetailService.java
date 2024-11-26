@@ -238,8 +238,7 @@ public class OrderDetailService {
 	    }
 
 	    ProductVersion productVersion = orderDetail.getProductVersionBean();
-	    Integer productVersionStock = receiptDetailJpa
-	            .getTotalQuantityForProductVersion(productVersion.getId());
+	    Integer productVersionStock = productVersion.getQuantity();
 
 	    Integer processedOrderQuantity = productVersionJpa
 	            .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
