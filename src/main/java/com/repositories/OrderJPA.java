@@ -34,21 +34,23 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 
 	@Query("""
 		    SELECT o FROM Order o
-		    JOIN FETCH o.orderDetails od
-		    JOIN FETCH od.productVersionBean pv
-		    JOIN FETCH pv.product p
+		    LEFT JOIN FETCH o.orderDetails od
+		    LEFT JOIN FETCH od.productVersionBean pv 
+		    LEFT JOIN FETCH pv.product p  
 		    WHERE (:username IS NULL OR o.user.username = :username)
-		      AND (:keyword IS NULL OR :keyword = '' OR 
-		           CAST(o.orderId AS STRING) LIKE %:keyword% OR 
-		           p.productName LIKE %:keyword% OR 
-		           o.address LIKE %:keyword%)
+		      AND (
+		            :keyword IS NULL OR :keyword = '' OR
+		            CAST(o.orderId AS STRING) LIKE %:keyword% OR
+		            p.productName LIKE %:keyword% OR
+		            o.address LIKE %:keyword%
+		          )
 		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
 		    ORDER BY o.orderDate DESC
 		""")
 		Page<Order> findOrdersByUsername(
-		    @Param("username") String username, 
+		    @Param("username") String username,
 		    @Param("keyword") String keyword,
-		    @Param("statusId") Integer statusId, 
+		    @Param("statusId") Integer statusId,
 		    Pageable pageable);
 
 	@Transactional
