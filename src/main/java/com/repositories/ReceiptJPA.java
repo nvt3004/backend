@@ -21,7 +21,15 @@ public interface ReceiptJPA extends JpaRepository<Receipt, Integer> {
 		    ORDER BY r.receiptDate DESC
 		""")
 		Page<Receipt> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+	
+	@Query("""
+		    SELECT CASE 
+		            WHEN COUNT(r) > 0 THEN true 
+		            ELSE false 
+		        END 
+		    FROM Receipt r 
+		    WHERE r.supplier.supplierId = :supplierId
+		""")
+		boolean existsBySupplierSupplierId(@Param("supplierId") Integer supplierId);
 
-	@Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Receipt r WHERE r.supplier.supplierId = :supplierId")
-	boolean existsBySupplierSupplierId(@Param("supplierId") Integer supplierId);
 }

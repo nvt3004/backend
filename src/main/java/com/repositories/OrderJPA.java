@@ -53,26 +53,53 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 
 	@Transactional
 	@Modifying
-	@Query("UPDATE Order o SET o.orderStatus = :newOrderStatus WHERE o.orderId = :orderId")
+	@Query("""
+	    UPDATE Order o 
+	    SET o.orderStatus = :newOrderStatus 
+	    WHERE o.orderId = :orderId
+	""")
 	int updateOrderStatus(@Param("orderId") int orderId, @Param("newOrderStatus") OrderStatus newOrderStatus);
 
-	@Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o WHERE o.coupon.id = :couponId")
+	@Query("""
+	    SELECT CASE 
+	            WHEN COUNT(o) > 0 THEN true 
+	            ELSE false 
+	        END 
+	    FROM Order o 
+	    WHERE o.coupon.id = :couponId
+	""")
 	boolean existsByCouponId(@Param("couponId") Integer couponId);
 
-	@Query("SELECT CASE WHEN COUNT(od) = 0 THEN true ELSE false END FROM OrderDetail od WHERE od.order.orderId = :orderId")
+	@Query("""
+	    SELECT CASE 
+	            WHEN COUNT(od) = 0 THEN true 
+	            ELSE false 
+	        END 
+	    FROM OrderDetail od 
+	    WHERE od.order.orderId = :orderId
+	""")
 	boolean existsByOrderDetail(@Param("orderId") Integer orderId);
 
-	@Query("SELECT p FROM Product p " +
-		       "JOIN ProductVersion pv ON p.productId = pv.product.productId " +
-		       "JOIN OrderDetail od ON pv.id = od.productVersionBean.id " +
-		       "JOIN Order o ON o.orderId = od.order.orderId " +  // Thêm khoảng trống trước WHERE
-		       "WHERE o.user.userId = :userId " +
-		       "GROUP BY p.productId")
-		public List<Product> getProductsByUserId(@Param("userId") int userId);
-	
-	@Query("SELECT o FROM Order o WHERE o.orderDate < :createdAt AND o.orderStatus.statusName = :statusName")
+	@Query("""
+	    SELECT p 
+	    FROM Product p 
+	    JOIN ProductVersion pv ON p.productId = pv.product.productId 
+	    JOIN OrderDetail od ON pv.id = od.productVersionBean.id 
+	    JOIN Order o ON o.orderId = od.order.orderId 
+	    WHERE o.user.userId = :userId 
+	    GROUP BY p.productId
+	""")
+	public List<Product> getProductsByUserId(@Param("userId") int userId);
+
+	@Query("""
+	    SELECT o 
+	    FROM Order o 
+	    WHERE o.orderDate < :createdAt 
+	    AND o.orderStatus.statusName = :statusName
+	""")
 	List<Order> findAllByCreatedAtBeforeAndOrderStatusStatusName(@Param("createdAt") Date createdAt,
-			@Param("statusName") String statusName);
+	        @Param("statusName") String statusName);
+
 	
 	@Query("""
 		       SELECT CASE WHEN COUNT(od) > 0 THEN true ELSE false END 
