@@ -1,5 +1,6 @@
 package com.repositories;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -63,5 +64,8 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 		       """)
 		boolean existsOrderDetailByOrderId(@Param("orderId") Integer orderId);
 
+	
+	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId=4")
+	List<Order> getAllOrderByDate(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
 }
