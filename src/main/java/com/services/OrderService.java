@@ -3,6 +3,7 @@ package com.services;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -151,11 +152,11 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
-	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
-	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
-	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-	    finalTotal = finalTotal.max(BigDecimal.ZERO);
-	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
 
 	    Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
@@ -654,5 +655,7 @@ public class OrderService {
 
 		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
 	}
+
+
 
 }
