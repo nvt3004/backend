@@ -44,7 +44,7 @@ public class ReceiptService {
 
 	@Autowired
 	private SupplierService supplierService;
-	
+
 	@Autowired
 	private UploadService uploadService;
 
@@ -52,9 +52,9 @@ public class ReceiptService {
 		return receiptJpa.findById(id);
 	}
 
-	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size) {
+	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size, String keyword) {
 		Pageable pageable = PageRequest.of(page, size);
-		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
+		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
 
 		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
 

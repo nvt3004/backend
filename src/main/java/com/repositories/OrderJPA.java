@@ -20,12 +20,12 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	@Query("""
 		    SELECT o FROM Order o
 		    WHERE (:keyword IS NULL OR :keyword = '' OR 
-		           (o.fullname LIKE CONCAT('%', :keyword, '%') OR 
-		            o.address LIKE CONCAT('%', :keyword, '%') OR 
-		            o.phone LIKE CONCAT('%', :keyword, '%')))
+		           o.fullname LIKE %:keyword% OR 
+		           o.address LIKE %:keyword% OR 
+		           o.phone LIKE %:keyword%)
 		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
 		    ORDER BY o.orderStatus.sortOrder ASC, o.orderDate DESC
-		    """)
+		""")
 		Page<Order> findOrdersByCriteria(
 		    @Param("keyword") String keyword, 
 		    @Param("statusId") Integer statusId, 
@@ -34,17 +34,17 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 
 	@Query("""
 		    SELECT o FROM Order o
-		    JOIN o.orderDetails od
-		    JOIN od.productVersionBean pv
-		    JOIN pv.product p
+		    JOIN FETCH o.orderDetails od
+		    JOIN FETCH od.productVersionBean pv
+		    JOIN FETCH pv.product p
 		    WHERE (:username IS NULL OR o.user.username = :username)
 		      AND (:keyword IS NULL OR :keyword = '' OR 
-		           (CAST(o.orderId AS string) LIKE CONCAT('%', :keyword, '%') OR 
-		            p.productName LIKE CONCAT('%', :keyword, '%') OR 
-		            o.address LIKE CONCAT('%', :keyword, '%')))
+		           CAST(o.orderId AS STRING) LIKE %:keyword% OR 
+		           p.productName LIKE %:keyword% OR 
+		           o.address LIKE %:keyword%)
 		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
 		    ORDER BY o.orderDate DESC
-		    """)
+		""")
 		Page<Order> findOrdersByUsername(
 		    @Param("username") String username, 
 		    @Param("keyword") String keyword,
@@ -69,6 +69,7 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 		       "WHERE o.user.userId = :userId " +
 		       "GROUP BY p.productId")
 		public List<Product> getProductsByUserId(@Param("userId") int userId);
+	
 	@Query("SELECT o FROM Order o WHERE o.orderDate < :createdAt AND o.orderStatus.statusName = :statusName")
 	List<Order> findAllByCreatedAtBeforeAndOrderStatusStatusName(@Param("createdAt") Date createdAt,
 			@Param("statusName") String statusName);
@@ -80,6 +81,5 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 		       WHERE o.orderId = :orderId
 		       """)
 		boolean existsOrderDetailByOrderId(@Param("orderId") Integer orderId);
-
 
 }
