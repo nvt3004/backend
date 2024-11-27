@@ -68,6 +68,7 @@ public class ReportService {
 
 		for (Order od : orders) {
 			BigDecimal disCount = BigDecimal.ZERO;
+			BigDecimal totalDetail = BigDecimal.ZERO;
 			
 			for (OrderDetail dt : od.getOrderDetails()) {
 				BigDecimal buyPrice = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
@@ -75,11 +76,12 @@ public class ReportService {
 				BigDecimal profit =  buyPrice.subtract(importPrice);
 				
 				total = total.add(profit);
+				totalDetail = totalDetail.add(buyPrice);
 			}
 			
 			if (od.getCoupon() != null) {
 				if (od.getCoupon().getDisPercent() != null) {
-					disCount = total.multiply(od.getCoupon().getDisPercent().divide(new BigDecimal("100")));
+					disCount = totalDetail.multiply(od.getCoupon().getDisPercent().divide(new BigDecimal("100")));
 				} else {
 					disCount = od.getCoupon().getDisPrice();
 				}
