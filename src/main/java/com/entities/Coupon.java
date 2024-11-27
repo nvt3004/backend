@@ -16,6 +16,8 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 
@@ -36,8 +38,10 @@ public class Coupon implements Serializable {
 
 	@Column(name = "coupon_code")
 	private String couponCode;
+	
 	@OneToMany(mappedBy = "coupon", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference("coupon-orders")
+	@JsonIgnore
 	private List<Order> orders;
 
 	@Lob
@@ -61,6 +65,7 @@ public class Coupon implements Serializable {
 	
 	@OneToMany(mappedBy="coupon")
 	@JsonManagedReference("coupon-userCoupons")
+	@JsonIgnore
 	private List<UserCoupon> userCoupons;
 
 	public Coupon() {
