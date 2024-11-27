@@ -1,10 +1,10 @@
 package com.configs;
 
 import com.entities.User;
-import com.errors.ApiResponse;
 import com.repositories.UsersJPA;
 import com.services.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,15 +28,19 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
         int userId = getUserIdFromAuthentication(authentication);
         if (userId == -1) {
-            return false;
+            throw new AccessDeniedException("Authentication failed");
         }
+
         List<String> userPermissions = permissionService.getPermissionsByUserId(userId);
-        return userPermissions.contains(permission.toString());
+        if (!userPermissions.contains(permission.toString())) {
+            throw new AccessDeniedException("Bạn không có quyền thực hiện thao tác này!");
+        }
+
+        return true;
     }
 
     @Override
-    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType,
-            Object permission) {
+    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType, Object permission) {
         return hasPermission(authentication, null, permission);
     }
 
@@ -47,13 +51,10 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
                 UserDetails userDetails = (UserDetails) principal;
                 Optional<User> optionalUser = usersJPA.findByUsername(userDetails.getUsername());
                 if (optionalUser.isPresent()) {
-                    User user = optionalUser.get();
-                    return user.getUserId();
+                    return optionalUser.get().getUserId();
                 } else {
-                    User user = optionalUser.get();
                     throw new UsernameNotFoundException("User not found with username: " + userDetails.getUsername());
                 }
-
             }
         }
         return -1;
