@@ -3,6 +3,7 @@ package com.entities;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -54,7 +55,9 @@ public class Receipt implements Serializable {
 	@JsonManagedReference("receipt-receipt_detail")
 	private List<ReceiptDetail> receiptDetails;
 
+	
 	public Receipt() {
 	}
+	
 
 }
