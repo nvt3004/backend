@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
 import com.entities.Coupon;
+import com.entities.Feedback;
 import com.entities.Image;
 import com.entities.Order;
 import com.entities.OrderDetail;
@@ -161,10 +162,22 @@ public class OrderService {
 	    String disCount = orderUtilsService.getDiscountDescription(order);
 
 	    boolean isDelivered = "Delivered".equalsIgnoreCase(order.getOrderStatus().getStatusName());
-	    List<OrderByUserDTO.ProductDTO> products = order.getOrderDetails().stream().map(orderDetail -> {
-	        Integer orderDetailId = orderDetail.getOrderDetailId();
-	        return mapToProductDTO(orderDetail, orderDetailId, isDelivered);
-	    }).collect(Collectors.toList());
+	    System.out.println(isDelivered + " isDelivered");
+	    List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
+
+	    for (OrderDetail orderDetail : order.getOrderDetails()) {
+	        boolean hasFeedback = false;
+	        for (Feedback feedback : orderDetail.getFeedbacks()) {
+	            if (feedback.getOrderDetail().getOrderDetailId() != null) {
+	                hasFeedback = true; 
+	                break; 
+	            }
+	        }
+
+	        boolean productIsDelivered = isDelivered && !hasFeedback;
+
+	        products.add(mapToProductDTO(orderDetail, productIsDelivered));
+	    }
 
 	    return new OrderByUserDTO(
 	        order.getOrderId(), 
@@ -181,12 +194,12 @@ public class OrderService {
 	    );
 	}
 
-	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Integer orderDetailId,
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail,
 			Boolean isFeedback) {
 
 		String variant = getVariantFromOrderDetail(orderDetail);
 		Product product = orderDetail.getProductVersionBean().getProduct();
-		return new OrderByUserDTO.ProductDTO(product.getProductId(), orderDetailId, isFeedback,
+		return new OrderByUserDTO.ProductDTO(product.getProductId(), orderDetail.getOrderDetailId(), isFeedback,
 				product.getProductName(), uploadService.getUrlImage(product.getProductImg()), variant,
 				orderDetail.getQuantity(), orderDetail.getPrice());
 	}
