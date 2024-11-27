@@ -267,7 +267,6 @@ public class OrderDetailService {
 					null);
 		}
 
-		// Cập nhật số lượng cho OrderDetail
 		orderDetail.setQuantity(quantity);
 		orderDetailJpa.save(orderDetail);
 
