@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.entities.User;
 import com.errors.ResponseAPI;
+import com.responsedto.ReportProductInventoryResponse;
 import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ProductService;
@@ -197,6 +199,55 @@ public class ReportController {
 
 		response.setCode(200);
 		response.setData(profit);
+		response.setMessage("Success");
+
+		return ResponseEntity.ok(response);
+	}
+	
+	@GetMapping("/top-inventory")
+	public ResponseEntity<ResponseAPI<List<ReportProductInventoryResponse>>> getReportProductStock(
+			@RequestHeader("Authorization") Optional<String> authHeader
+			) 
+	{
+		ResponseAPI<List<ReportProductInventoryResponse>> response = new ResponseAPI<>();
+		String token = authService.readTokenFromHeader(authHeader);
+	
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			response.setCode(400);
+			response.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+		}
+
+		if (jwtService.isTokenExpired(token)) {
+			response.setCode(401);
+			response.setMessage("Token expired");
+
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+		}
+
+		String username = jwtService.extractUsername(token);
+		User user = userService.getUserByUsername(username);
+		if (user == null) {
+			response.setCode(404);
+			response.setMessage("Account not found");
+
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		}
+
+		if (user.getStatus() == 0) {
+			response.setCode(403);
+			response.setMessage("Account locked");
+
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+		}
+
+		List<ReportProductInventoryResponse> productStocks = reportService.getTop5Products();
+
+		response.setCode(200);
+		response.setData(productStocks);
 		response.setMessage("Success");
 
 		return ResponseEntity.ok(response);
