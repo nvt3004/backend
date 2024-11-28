@@ -24,7 +24,7 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		               WHEN 'disPrice' THEN c.disPrice IS NOT NULL AND c.disPercent IS NULL 
 		               ELSE TRUE 
 		           END)) 
-		    ORDER BY c.endDate DESC
+		    ORDER BY c.endDate DESC, c.id DESC
 		    """)
 		Page<Coupon> findActiveCoupons(
 		    @Param("startDate") LocalDateTime startDate, 
@@ -32,6 +32,7 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		    @Param("discountType") String discountType, 
 		    Pageable pageable
 		);
+
 
 		@Query("""
 		    SELECT o 
@@ -54,10 +55,7 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		    @Param("dateNow") LocalDateTime dateNow
 		);
 
-
 		@Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Coupon c WHERE c.couponCode = :couponCode")
 		boolean existsByCouponCode(@Param("couponCode") String couponCode);
-
-
 
 }
