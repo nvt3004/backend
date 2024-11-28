@@ -24,7 +24,6 @@ public class Advertisement implements Serializable {
 	@Column(name = "adv_id")
 	private int advId;
 
-	@Lob
 	@Column(name = "adv_description")
 	private String advDescription;
 
@@ -42,7 +41,6 @@ public class Advertisement implements Serializable {
 	@Column(name = "status")
 	private byte status;;
 
-	// bi-directional many-to-one association to Image
 	@OneToMany(mappedBy = "advertisement")
 	@JsonManagedReference("advertisement-images")
 	private List<Image> images;

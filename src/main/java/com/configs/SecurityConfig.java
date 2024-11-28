@@ -1,5 +1,7 @@
 package com.configs;
 
+import com.errors.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.services.AuthDetailsService;
 
 import java.util.Arrays;
@@ -47,14 +49,31 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
-						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
+						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send", "/api/verify-otp",
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**","/api/home/**","/api/vnp/**", "/images/**")
+								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**","/today/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
-						.requestMatchers("/api/staff/**","/api/push/product").hasAnyAuthority("Staff", "Admin")
+						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
-						.requestMatchers("/api/user/**").hasAnyAuthority("User","Admin","Staff")
-.requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest().authenticated())
+						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin", "Staff")
+						.requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest()
+						.authenticated())
+				.exceptionHandling(exception -> exception
+						.accessDeniedHandler((request, response, accessDeniedException) -> {
+							ApiResponse<String> res = new ApiResponse<>();
+							res.setErrorCode(998);
+							res.setMessage(accessDeniedException.getMessage());
+							res.setData(null);
+
+							response.setStatus(998); // Mã lỗi tùy chỉnh
+							response.setContentType("application/json");
+							response.setCharacterEncoding("UTF-8");
+
+							ObjectMapper mapper = new ObjectMapper();
+							String jsonResponse = mapper.writeValueAsString(res);
+							response.getWriter().write(jsonResponse);
+							response.getWriter().flush();
+						}))
 				.sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -90,10 +109,10 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); 
+		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
-		configuration.setAllowCredentials(true); 
+		configuration.setAllowCredentials(true);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

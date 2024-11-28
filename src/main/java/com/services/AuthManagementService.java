@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,13 @@ public class AuthManagementService {
         try {
             String username = registrationRequest.getUsername();
 
+            if (registrationRequest.getFullName() == null || registrationRequest.getFullName().isEmpty()) {
+                throw new IllegalArgumentException("Invalid full name is empty");
+            }
+            if (!registrationRequest.getFullName().matches(nameRegex)) {
+                throw new IllegalArgumentException("Full name cannot contain special characters or numbers");
+            }
+
             if (username == null || username.isEmpty()) {
                 throw new IllegalArgumentException("Username cannot be empty");
             }
@@ -99,13 +107,6 @@ public class AuthManagementService {
                         "Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character");
             }
 
-            if (registrationRequest.getFullName() == null || registrationRequest.getFullName().isEmpty()) {
-                throw new IllegalArgumentException("Invalid full name is empty");
-            }
-            if (!registrationRequest.getFullName().matches(nameRegex)) {
-                throw new IllegalArgumentException("Full name cannot contain special characters or numbers");
-            }
-
             User ourUser = new User();
             ourUser.setEmail(username.matches(emailRegex) ? username : null);
             ourUser.setPhone(username.matches(phoneRegex) ? username : null);
@@ -113,8 +114,15 @@ public class AuthManagementService {
             ourUser.setUsername(username);
             ourUser.setCreateDate(datecurrent);
             ourUser.setProvider("Guest");
-            ourUser.setStatus((byte) 1);
+            ourUser.setStatus((byte) 0);
             ourUser.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
+            String resetCode = generateRandomCode();
+            ourUser.setResetCode(resetCode);
+            ourUser.setResetCodeExpiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000)); // Hết hạn sau 15 phút
+            usersRepo.save(ourUser);
+    
+            // Send reset code email
+            mailService.sendEmail(username, "Reset Code", "Your reset code is: " + resetCode);
             User ourUsersResult = usersRepo.save(ourUser);
 
             List<String> roles = Collections.singletonList("User");
@@ -135,6 +143,7 @@ public class AuthManagementService {
 
             if (ourUsersResult.getUserId() > 0) {
                 resp.setListData(ourUsersResult);
+
                 resp.setMessage("User Saved Successfully");
                 resp.setStatusCode(200);
             }
@@ -160,7 +169,7 @@ public class AuthManagementService {
                 response.setStatusCode(401);
                 response.setError("Login fail: username or password incorrect");
                 System.out.println("User not found: " + loginRequest.getUsername());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                return ResponseEntity.status(200).body(response);
             }
 
             User user = optionalUser.get();
@@ -175,7 +184,7 @@ public class AuthManagementService {
                 response.setStatusCode(401);
                 response.setError("Login fail: Invalid credentials");
                 System.out.println("Authentication failed: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                return ResponseEntity.status(2000).body(response);
             }
 
             // Tạo JWT token
@@ -213,7 +222,7 @@ public class AuthManagementService {
         AuthDTO response = new AuthDTO();
         try {
             String ourEmail = jwtUtils.extractUsername(refreshTokenReqiest.getToken());
-            System.out.println("Token la: "+refreshTokenReqiest.getToken());
+            System.out.println("Token la: " + refreshTokenReqiest.getToken());
             User users = usersRepo.findByEmail(ourEmail).orElseThrow();
             if (jwtUtils.isTokenValid(refreshTokenReqiest.getToken(), users)) {
                 long expirationTime = 600 * 1000;
@@ -629,5 +638,14 @@ public class AuthManagementService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    // Helper method to generate a 6-digit random code
+    private String generateRandomCode() {
+        Random random = new Random();
+        int code = 100000 + random.nextInt(900000); // generates a random 6-digit number
+        return String.valueOf(code);
+    }
+
+
 
 }
