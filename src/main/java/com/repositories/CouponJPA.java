@@ -47,7 +47,7 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		    LEFT JOIN UserCoupon uc 
 		        ON o.couponId = uc.coupon.couponId 
 		       AND uc.user.userId = :userId 
-		    WHERE o.endDate > :dateNow 
+		    WHERE o.startDate<=:dateNow AND o.endDate > :dateNow 
 		      AND uc.coupon.couponId IS NULL
 		    """)
 		List<Coupon> getCouponHomeByUser(
