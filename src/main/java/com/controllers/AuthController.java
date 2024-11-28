@@ -36,7 +36,7 @@ public class AuthController {
     @Autowired
     private UsersJPA usersRepo;
 
-    @GetMapping("/today")
+    @GetMapping("/api/today")
     public ResponseEntity<List<Advertisement>> getAdvertisementsForToday() {
         List<Advertisement> advertisements = advertisementService.getAdvertisementsForToday();
         return ResponseEntity.ok(advertisements);
