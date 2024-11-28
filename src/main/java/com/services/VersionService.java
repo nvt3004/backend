@@ -38,7 +38,7 @@ public class VersionService {
 
 		versionEntity.setVersionName(versionModel.getVersionName());
 		versionEntity.setRetailPrice(versionModel.getRetailPrice());
-		versionEntity.setWholesalePrice(versionModel.getWholesalePrice());
+		versionEntity.setImportPrice(versionModel.getImportPrice());
 		versionEntity.setStatus(true);
 		versionEntity.setProduct(product);
 
@@ -52,7 +52,7 @@ public class VersionService {
 
 		versionEntity.setVersionName(versionModel.getVersionName());
 		versionEntity.setRetailPrice(versionModel.getRetailPrice());
-		versionEntity.setWholesalePrice(versionModel.getWholesalePrice());
+		versionEntity.setImportPrice(versionModel.getImportPrice());
 
 		ProductVersion versionSaved = versionJPA.save(versionEntity);
 

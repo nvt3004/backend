@@ -57,7 +57,6 @@ public class OrderController {
 	@GetMapping("/staff/orders")
 	@PreAuthorize("hasPermission(#userId, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getAllOrders(
-			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
 			@RequestParam(value = "statusId", required = false) Integer statusId,
 			@RequestParam(value = "page", defaultValue = "0") int page,
@@ -106,8 +105,7 @@ public class OrderController {
 		}
 
 		try {
-			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(isAdminOrder, keyword, statusId,
-					page, size);
+			ApiResponse<PageImpl<OrderDTO>> successResponse = orderService.getAllOrders(keyword, statusId, page, size);
 			return ResponseEntity.ok(successResponse);
 		} catch (Exception e) {
 			errorResponse.setErrorCode(500);
@@ -337,9 +335,8 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(validationResponse.getErrorCode()))
 					.body(validationResponse);
 		}
-		
-		return ResponseEntity
-				.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", null));
+
+		return ResponseEntity.ok(new ApiResponse<>(200, "Order detail quantity updated successfully", null));
 	}
 
 	@PutMapping("/staff/orders/update-status")
@@ -552,31 +549,80 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(errorResponse.getErrorCode())).body(errorResponse);
 		}
 	}
-	
+
 	@GetMapping("/staff/orders/export")
 //	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<?> exportOrdersToExcel(
-	        @RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
-	        @RequestParam(value = "keyword", required = false) String keyword,
-	        @RequestParam(value = "statusId", required = false) Integer statusId,
-	        @RequestParam(value = "page", defaultValue = "0") int page,
-	        @RequestParam(value = "size", defaultValue = "5") int size) {
-		 ApiResponse<ByteArrayResource> apiResponse = new ApiResponse<>();
-	    try {
+			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
+			@RequestParam(value = "keyword", required = false) String keyword,
+			@RequestParam(value = "statusId", required = false) Integer statusId,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "5") int size,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
-	    	ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
+		ApiResponse<?> errorResponse = new ApiResponse<>();
 
-	    	return ResponseEntity.ok()
-	                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
-	                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-	                .body(file);
-	    } catch (Exception e) {
-	    	 apiResponse.setErrorCode(500);
-	         apiResponse.setMessage(e.getMessage());
-	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
-	    }
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		ApiResponse<ByteArrayResource> apiResponse = new ApiResponse<>();
+		try {
+
+			ByteArrayResource file = orderService.exportOrdersToExcel(isAdminOrder, keyword, statusId, page, size);
+
+			return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.xlsx")
+					.contentType(MediaType.APPLICATION_OCTET_STREAM).body(file);
+		} catch (Exception e) {
+			apiResponse.setErrorCode(500);
+			apiResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
+		}
 	}
 
-	
+	@GetMapping("/orders/{orderId}")
+	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId) {
+
+		if (orderId == null) {
+			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
+			return ResponseEntity.badRequest().body(response);
+		}
+
+		ApiResponse<Map<String, Object>> response = orderService.getOrder(orderId);
+
+		if (response.getErrorCode() == 200) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
+		}
+	}
 
 }

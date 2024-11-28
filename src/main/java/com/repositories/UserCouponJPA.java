@@ -29,4 +29,7 @@ public interface UserCouponJPA extends JpaRepository<UserCoupon, Integer> {
 			+ "AND CURRENT_TIMESTAMP >= o.startDate " + "AND CURRENT_TIMESTAMP <= o.endDate "
 			+ "AND o.quantity > 0 " + "AND o.status = true")
 	Coupon findCouponByCode(@Param("code") String code);
+	
+	@Query("SELECT COUNT(o) FROM UserCoupon o WHERE o.status = true AND o.coupon.couponId =:couponId")
+	Integer countQuatityCoupon(@Param("couponId") Integer id);
 }

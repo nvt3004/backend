@@ -27,10 +27,12 @@ public class ProductUpdateScheduler {
 	// 23:55
 	public void updateProductsToAlgolia() {
 		try {
-			List<ProductDTO> products = inforService.getALLProduct(null);
-			for (ProductDTO product : products) {
-				algoliaProductService.addProduct(product);
-			}
+		      algoliaProductService.clearAllProductsAsync().join();
+		        
+		        List<ProductDTO> products = inforService.getALLProduct(null);
+		        for (ProductDTO product : products) {
+		            algoliaProductService.addProductToAlgoliaAsync(product).join();
+		        }
 			logger.info("Cập nhật sản phẩm lên Algolia thành công.");
 		} catch (Exception e) {
 			logger.severe("Lỗi khi cập nhật sản phẩm lên Algolia: " + e.getMessage());

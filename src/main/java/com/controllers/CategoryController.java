@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -97,6 +98,7 @@ public class CategoryController {
     }
 
     @PostMapping("/add")
+	@PreAuthorize("hasPermission(#userId, 'Add Category')")
     public ResponseEntity<ResponseAPI<Boolean>> addCategory(@RequestHeader("Authorization") Optional<String> authHeader,
             @RequestBody CategoryDTO catModal) {
         ResponseAPI<Boolean> response = new ResponseAPI<>();
@@ -157,6 +159,7 @@ public class CategoryController {
     }
 
     @PutMapping("/update")
+	@PreAuthorize("hasPermission(#userId, 'Update Category')")
     public ResponseEntity<ResponseAPI<Boolean>> updateCategory(
             @RequestHeader("Authorization") Optional<String> authHeader, @RequestBody CategoryDTO catModal) {
         ResponseAPI<Boolean> response = new ResponseAPI<>();
@@ -226,6 +229,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/remove/{id}")
+	@PreAuthorize("hasPermission(#userId, 'Delete Category')")
     public ResponseEntity<ResponseAPI<Boolean>> updateCategory(
             @RequestHeader("Authorization") Optional<String> authHeader,
             @PathVariable("id") Optional<Integer> id) {

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.entities.Coupon;
 import com.entities.User;
 import com.entities.UserCoupon;
+import com.repositories.CouponJPA;
 import com.repositories.UserCouponJPA;
 import com.repositories.UserJPA;
 import com.responsedto.UserCouponResponse;
@@ -19,6 +20,9 @@ import com.responsedto.UserResponseDTO;
 public class UserCouponService {
 	@Autowired
 	UserCouponJPA userCouponJPA;
+
+	@Autowired
+	CouponJPA couponJPA;
 
 	@Autowired
 	UserJPA userJPA;
@@ -50,10 +54,17 @@ public class UserCouponService {
 		response.setCouponCode(coupon.getCouponCode());
 		response.setPercent(coupon.getDisPercent());
 		response.setPrice(coupon.getDisPrice());
-		response.setStartDate(coupon.getStartDate());
-		response.setEndDate(coupon.getEndDate());
+		response.setStartDate(coupon.getStartDate().minusHours(7));
+		response.setEndDate(coupon.getEndDate().minusHours(7));
 		response.setQuantity(coupon.getQuantity());
 
 		return response;
+	}
+
+	public boolean checkQuantityCoupon(Integer id) {
+		Coupon coupon = couponJPA.findById(id).get();
+		Integer couponUsed = userCouponJPA.countQuatityCoupon(id);
+
+		return coupon.getQuantity() > couponUsed;
 	}
 }

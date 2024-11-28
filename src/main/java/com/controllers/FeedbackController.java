@@ -21,11 +21,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.entities.Feedback;
 import com.entities.Image;
+import com.entities.OrderDetail;
 import com.entities.Product;
 import com.entities.User;
 import com.errors.ResponseAPI;
 import com.repositories.FeedbackJPA;
 import com.repositories.ImageJPA;
+import com.repositories.OrderDetailJPA;
 import com.responsedto.FeedbackResponseDTO;
 import com.responsedto.PageCustom;
 import com.responsedto.UserResponseDTO;
@@ -66,10 +68,14 @@ public class FeedbackController {
 
 	@Autowired
 	FeedbackJPA feedbackJPA;
+	
+	@Autowired
+	OrderDetailJPA orderDetailJPA;
 
 	@PostMapping("api/user/feedback/add")
 	public ResponseEntity<ResponseAPI<FeedbackResponseDTO>> addFeedback(
 			@RequestHeader("Authorization") Optional<String> authHeader, @RequestParam("comment") String comment,
+			@RequestParam("idOrderDetail") Integer idOrderDetail,
 			@RequestPart("photos") Optional<List<MultipartFile>> photos,
 			@RequestParam("productId") Optional<Integer> productId, Optional<Integer> rating) {
 		ResponseAPI<FeedbackResponseDTO> response = new ResponseAPI<>();
@@ -155,13 +161,33 @@ public class FeedbackController {
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
+		
+		if(idOrderDetail == null) {
+			response.setCode(999);
+			response.setMessage(
+					"Id order detail can't is  null");
+
+			return ResponseEntity.status(999).body(response);
+		}
+		
+		OrderDetail detail = orderDetailJPA.findById(idOrderDetail).orElse(null);
+		
+		if(detail == null) {
+			response.setCode(404);
+			response.setMessage(
+					"Id order detail not found");
+
+			return ResponseEntity.status(404).body(response);
+		}
 
 		Feedback feedback = new Feedback();
+		
 		feedback.setUser(user);
 		feedback.setProduct(product);
 		feedback.setRating(rating.orElse(0));
 		feedback.setComment(comment);
 		feedback.setFeedbackDate(new Date());
+		feedback.setOrderDetail(detail);
 
 		Feedback feedbackSaved = feedbackService.createFeedback(feedback);
 		List<Image> images = saveImageFeedback(feedbackSaved, photos.orElse(new ArrayList<MultipartFile>()));

@@ -13,13 +13,19 @@ import com.entities.OrderDetail;
 
 public interface OrderDetailJPA extends JpaRepository<OrderDetail, Integer> {
 
-	@Query("SELECT od FROM OrderDetail od WHERE od.order.orderId = :orderId")
-	List<OrderDetail> findByOrderDetailByOrderId(@Param("orderId") Integer orderId);
+	@Query("""
+		    SELECT od 
+		    FROM OrderDetail od 
+		    WHERE od.order.orderId = :orderId
+		""")
+		List<OrderDetail> findByOrderDetailByOrderId(@Param("orderId") Integer orderId);
 
-	@Modifying
-	@Transactional
-	@Query("DELETE FROM OrderDetail od WHERE od.orderDetailId = :orderDetailId")
-	int deleteOrderDetailsByOrderDetailId(@Param("orderDetailId") int orderDetailId);
-
+		@Modifying
+		@Transactional
+		@Query("""
+		    DELETE FROM OrderDetail od 
+		    WHERE od.orderDetailId = :orderDetailId
+		""")
+		int deleteOrderDetailsByOrderDetailId(@Param("orderDetailId") int orderDetailId);
 
 }

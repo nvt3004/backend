@@ -14,7 +14,7 @@ public class VersionDTO {
 	private Integer id;
 	private String versionName;
 	private BigDecimal retalPrice;
-	private BigDecimal wholesalePrice;
+	private BigDecimal importPrice;
 	private List<OptionDTO> attributes;
 	private List<String> images;
 }
