@@ -441,8 +441,7 @@ public class OrderService {
 
 				if (productVersion != null) {
 
-					Integer productVersionStock = receiptDetailJpa
-							.getTotalQuantityForProductVersion(productVersion.getId());
+					Integer productVersionStock = productVersion.getQuantity();
 					productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
 					Integer processedOrderQuantity = productVersionJpa
