@@ -16,6 +16,7 @@ public class AdvertisementResponse {
 	private String description;
 	private LocalDateTime startDate;
 	private LocalDateTime endDate;
+	private byte status;
 
 	private List<ImageResponse> images;
 }

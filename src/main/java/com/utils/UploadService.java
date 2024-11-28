@@ -99,4 +99,24 @@ public class UploadService {
 		return null;
 	}
 
+	public void delete2(String fileName, String folder) {
+		// Tạo đường dẫn đến thư mục ảnh
+		Path root = Paths.get("static/" + folder);
+		Path filePath = root.resolve(fileName); // Đường dẫn của file cần xóa
+	
+		try {
+			// Kiểm tra nếu tệp tồn tại, thực hiện xóa
+			if (Files.exists(filePath)) {
+				Files.delete(filePath);
+				System.out.println("Đã xóa file: " + fileName);
+			} else {
+				System.out.println("File không tồn tại: " + fileName);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			// Log lỗi nếu có vấn đề trong quá trình xóa
+		}
+	}
+
+
 }

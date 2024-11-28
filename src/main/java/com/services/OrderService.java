@@ -120,13 +120,10 @@ public class OrderService {
 	public ApiResponse<PageImpl<OrderByUserDTO>> getOrdersByUsername(String username, String keyword, Integer statusId,
 			Integer page, Integer size) {
 
-		if (keyword == null) {
-			keyword = "";
-		}
-
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Order> ordersPage;
-
+		
+		System.out.println(username + " usernamene");
 		if (statusId == null) {
 			ordersPage = orderJpa.findOrdersByUsername(username, keyword, null, pageable);
 		} else {
