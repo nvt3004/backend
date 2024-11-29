@@ -62,37 +62,40 @@ public class NumberToWordsConverterUtil {
 		return result.toString().trim();
 	}
 
-	  public static String convertGroupToWords(int num) {
-	        StringBuilder result = new StringBuilder();
+	public static String convertGroupToWords(int num) {
+	    StringBuilder result = new StringBuilder();
 
-	        int h = num / 100;          // Hàng trăm
-	        int t = (num % 100) / 10;   // Hàng chục
-	        int o = num % 10;           // Hàng đơn vị
+	    int h = num / 100;          // Hàng trăm
+	    int t = (num % 100) / 10;   // Hàng chục
+	    int o = num % 10;           // Hàng đơn vị
 
-	        // Hàng trăm
-	        if (h > 0) {
-	            result.append(HUNDREDS[h]).append(" ");
-	        }
-
-	        // Hàng chục
-	        if (t > 1) {
-	            result.append(TENS[t]).append(" ");
-	        } else if (t == 1) {
-	            result.append("mười ");
-	        }
-
-	        // Hàng đơn vị
-	        if (o > 0) {
-	            if (o == 1 && t > 1) {
-	                result.append("mốt");
-	            } else if (o == 5 && t > 0) {
-	                result.append("lăm");
-	            } else {
-	                result.append(ONES[o]);
-	            }
-	        }
-
-	        return result.toString().trim();
+	    // Hàng trăm
+	    if (h > 0) {
+	        result.append(HUNDREDS[h]).append(" ");
 	    }
+
+	    // Hàng chục
+	    if (t > 1) {
+	        result.append(TENS[t]).append(" ");
+	    } else if (t == 1) {
+	        result.append("mười ");
+	    } else if (t == 0 && o > 0) { // Thêm từ "lẻ" khi hàng chục = 0 và hàng đơn vị > 0
+	        result.append("lẻ ");
+	    }
+
+	    // Hàng đơn vị
+	    if (o > 0) {
+	        if (o == 1 && t > 1) {
+	            result.append("mốt");
+	        } else if (o == 5 && t > 0) {
+	            result.append("lăm");
+	        } else {
+	            result.append(ONES[o]);
+	        }
+	    }
+
+	    return result.toString().trim();
+	}
+
 
 }

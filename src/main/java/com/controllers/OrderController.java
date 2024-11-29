@@ -1,9 +1,17 @@
 package com.controllers;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.imageio.ImageIO;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.PageImpl;
@@ -15,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +35,21 @@ import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.InvalidException;
 import com.errors.UserServiceException;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
+import com.models.OrderDetailProductDetailsDTO;
+import com.models.OrderQRCodeDTO;
 import com.models.OrderStatusDTO;
 import com.services.AuthService;
 import com.services.JWTService;
@@ -35,9 +57,11 @@ import com.services.OrderDetailService;
 import com.services.OrderService;
 import com.services.OrderStatusService;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 @RestController
 @RequestMapping("/api")
-public class OrderController {
+public class OrderController<UsbPrinter> {
 
 	@Autowired
 	private OrderService orderService;
@@ -624,5 +648,80 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
 		}
 	}
+
+
+
+
+	  @PostMapping("/staff/orders/export")
+	    public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
+	        try {
+	            ByteArrayOutputStream pdfStream = orderService.generateInvoicePdf(orderId);
+
+	            BufferedImage image = orderService.convertPdfToImage(pdfStream);
+
+	            // Trả ảnh về client
+	            response.setContentType("image/png");
+	            ImageIO.write(image, "png", response.getOutputStream());
+	        } catch (IllegalArgumentException e) {
+	            response.setStatus(400);
+	            try {
+	                response.getWriter().write(e.getMessage());
+	            } catch (IOException ioException) {
+	                ioException.printStackTrace();
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            response.setStatus(500);
+	            try {
+	                response.getWriter().write("Error generating PDF: " + e.getMessage());
+	            } catch (IOException ioException) {
+	                ioException.printStackTrace();
+	            }
+	        }
+	    }
+
+
+	// Helper functions for cleaner code
+	private float addParagraphToDocument(Document document, String text, Font font, int alignment) throws DocumentException {
+	    Paragraph paragraph = new Paragraph(text, font);
+	    paragraph.setAlignment(alignment);
+	    document.add(paragraph);
+	    return paragraph.getTotalLeading(); // Return the height of the paragraph
+	}
+
+	private float addTableToDocument(Document document, List<OrderDetailProductDetailsDTO> products, Font font) throws DocumentException {
+	    PdfPTable table = new PdfPTable(3);
+	    table.setWidthPercentage(100);
+	    table.setWidths(new float[]{4f, 2f, 3f});
+
+	    table.addCell(new PdfPCell(new Phrase("Tên SP & SL", font)));
+	    table.addCell(new PdfPCell(new Phrase("Đơn Giá", font)));
+	    table.addCell(new PdfPCell(new Phrase("Thành Tiền", font)));
+
+	    for (OrderDetailProductDetailsDTO product : products) {
+	        table.addCell(new PdfPCell(new Phrase(product.getProductName() + " x" + product.getQuantity(), font)));
+	        table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getPrice()), font)));
+	        table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getTotal()), font)));
+	    }
+	    document.add(table);
+	    return table.getTotalHeight(); // Return the height of the table
+	}
+	
+//	private Rectangle createPageSize(float height) {
+//	    // Convert width from mm to points (1 mm = 2.83465 points)
+//	    float widthInPoints = 58 * 2.83465f;
+//	    float heightInPoints = height * 2.83465f;
+//	    System.out.println(widthInPoints + " widthInPoints");
+//	    return new Rectangle(widthInPoints, heightInPoints);
+//	}
+
+
+	// Trả PDF về client
+//    response.setContentType("application/pdf");
+//    response.setHeader("Content-Disposition", "attachment; filename=\"hoa_don.pdf\""); // Set filename
+//    response.setContentLength(baos.size());
+//    response.getOutputStream().write(baos.toByteArray());
+	
+	
 
 }

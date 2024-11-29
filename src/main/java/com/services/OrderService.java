@@ -1,6 +1,8 @@
 package com.services;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.ZoneId;
@@ -16,6 +18,11 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import javax.imageio.ImageIO;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
@@ -23,7 +30,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
@@ -37,41 +43,41 @@ import com.entities.Product;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.errors.ApiResponse;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.itextpdf.text.BadElementException;
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.text.pdf.draw.LineSeparator;
+import com.itextpdf.text.pdf.qrcode.EncodeHintType;
+import com.itextpdf.text.pdf.qrcode.ErrorCorrectionLevel;
+import com.itextpdf.text.pdf.qrcode.WriterException;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
 import com.models.OrderDetailDTO;
+import com.models.OrderDetailProductDetailsDTO;
 import com.models.OrderQRCodeDTO;
 import com.repositories.OrderDetailJPA;
 import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
-import com.repositories.ReceiptDetailJPA;
 import com.repositories.UserJPA;
+import com.utils.DateUtils;
 import com.utils.ExcelUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
 @Service
-@EnableAsync
 public class OrderService {
-	@Autowired
-	private OrderJPA orderJpa;
-
-	@Autowired
-	private OrderStatusJPA orderStatusJpa;
-
-	@Autowired
-	private ProductVersionJPA productVersionJpa;
-
-	@Autowired
-	private OrderDetailJPA orderDetailJpa;
-
-	@Autowired
-	private UserJPA userJpa;
-
-	@Autowired
-	private ReceiptDetailJPA receiptDetailJpa;
-
 	@Autowired
 	private OrderUtilsService orderUtilsService;
 
@@ -86,6 +92,17 @@ public class OrderService {
 
 	@Autowired
 	private MailService mailService;
+	@Autowired
+	private OrderJPA orderJpa;
+	@Autowired
+	private OrderDetailJPA orderDetailJpa;
+	@Autowired
+	private OrderStatusJPA orderStatusJpa;
+	@Autowired
+	private ProductVersionJPA productVersionJpa;
+	@Autowired
+	private UserJPA userJpa;
+
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(String keyword, Integer statusId, Integer page, Integer size) {
 
@@ -121,7 +138,7 @@ public class OrderService {
 
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Order> ordersPage;
-		
+
 		System.out.println(username + " usernamene");
 		if (statusId == null) {
 			ordersPage = orderJpa.findOrdersByUsername(username, keyword, null, pageable);
@@ -148,51 +165,39 @@ public class OrderService {
 	}
 
 	private OrderByUserDTO createOrderByUserDTO(Order order) {
-	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
-	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
-	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-	    finalTotal = finalTotal.max(BigDecimal.ZERO);
-	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
+		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+		String disCount = orderUtilsService.getDiscountDescription(order);
 
-	    Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
-	    String disCount = orderUtilsService.getDiscountDescription(order);
+		boolean isDelivered = "Delivered".equalsIgnoreCase(order.getOrderStatus().getStatusName());
+		System.out.println(isDelivered + " isDelivered");
+		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
 
-	    boolean isDelivered = "Delivered".equalsIgnoreCase(order.getOrderStatus().getStatusName());
-	    System.out.println(isDelivered + " isDelivered");
-	    List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
+		for (OrderDetail orderDetail : order.getOrderDetails()) {
+			boolean hasFeedback = false;
+			for (Feedback feedback : orderDetail.getFeedbacks()) {
+				if (feedback.getOrderDetail().getOrderDetailId() != null) {
+					hasFeedback = true;
+					break;
+				}
+			}
 
-	    for (OrderDetail orderDetail : order.getOrderDetails()) {
-	        boolean hasFeedback = false;
-	        for (Feedback feedback : orderDetail.getFeedbacks()) {
-	            if (feedback.getOrderDetail().getOrderDetailId() != null) {
-	                hasFeedback = true; 
-	                break; 
-	            }
-	        }
+			boolean productIsDelivered = isDelivered && !hasFeedback;
 
-	        boolean productIsDelivered = isDelivered && !hasFeedback;
+			products.add(mapToProductDTO(orderDetail, productIsDelivered));
+		}
 
-	        products.add(mapToProductDTO(orderDetail, productIsDelivered));
-	    }
-
-	    return new OrderByUserDTO(
-	        order.getOrderId(), 
-	        order.getOrderDate(), 
-	        order.getOrderStatus().getStatusName(),
-	        couponId, 
-	        disCount, 
-	        discountValue, 
-	        subTotal, 
-	        order.getShippingFee(), 
-	        finalTotal, 
-	        finalTotalInWords,
-	        products
-	    );
+		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
+				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
+				products);
 	}
 
-	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail,
-			Boolean isFeedback) {
+	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Boolean isFeedback) {
 
 		String variant = getVariantFromOrderDetail(orderDetail);
 		Product product = orderDetail.getProductVersionBean().getProduct();
@@ -649,6 +654,235 @@ public class OrderService {
 		responseMap.put("orderDetail", Collections.singletonList(orderDetailDTO));
 
 		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
+	}
+
+	public ByteArrayOutputStream generateInvoicePdf(Integer orderId) throws Exception {
+
+		ApiResponse<Map<String, Object>> apiResponse = getOrder(orderId);
+
+		if (apiResponse.getErrorCode() != 200) {
+			throw new IllegalArgumentException("Error: " + apiResponse.getMessage());
+		}
+
+		Map<String, Object> data = apiResponse.getData();
+		OrderQRCodeDTO orderData = ((List<OrderQRCodeDTO>) data.get("orderDetail")).get(0);
+
+		float height = calculateRequiredHeight(orderData);
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Document document = new Document(createPageSize(height));
+		document.setMargins(35, 35, 10, 0);
+		PdfWriter writer = PdfWriter.getInstance(document, baos);
+		document.open();
+
+		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+		Font font = new Font(bf, 5, Font.NORMAL);
+		String qrCodeData = generateQrCodeData(orderData); 
+		com.itextpdf.text.Image qrCodeImage = generateQrCodeImage(qrCodeData, 50);
+
+		qrCodeImage.setAbsolutePosition(-5, document.getPageSize().getHeight() - 45);
+		document.add(qrCodeImage);
+
+		Paragraph title = new Paragraph("HÓA ĐƠN BÁN HÀNG", font);
+
+		Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
+		title.setFont(titleFont);
+
+		// Set alignment to center
+//		title.setAlignment(Element.ALIGN_CENTER);
+//		title.setSpacingBefore(-20);
+//		title.setSpacingAfter(10);  
+//		LineSeparator line = new LineSeparator();
+//		line.setLineWidth(1f);
+//		line.setLineColor(BaseColor.BLACK);
+
+	
+		document.add(title);
+//		document.add(line);
+
+		document.add(new Paragraph("Mã Hóa Đơn: " + orderData.getOrderId(), font));
+		document.add(new Paragraph("Khách hàng: " + orderData.getFullname(), font));
+		document.add(new Paragraph("Ngày đặt hàng: " + DateUtils.formatDate(orderData.getOrderDate()), font));
+		Paragraph finalTotal = new Paragraph("Tổng tiền: " + formatCurrency(orderData.getFinalTotal()), font);
+		document.add(finalTotal);
+		
+		Paragraph spacer = new Paragraph(" "); 
+		spacer.setSpacingBefore(-10); 
+		document.add(spacer);
+
+
+		PdfPTable table = new PdfPTable(3);
+		table.setWidthPercentage(160);
+		table.setWidths(new float[] { 3f, 3f, 3f });
+
+		PdfPCell headerCell;
+		headerCell = new PdfPCell(new Phrase("Tên SP & SL", font));
+		headerCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+		headerCell.setPadding(5);
+		table.addCell(headerCell);
+
+		headerCell = new PdfPCell(new Phrase("Đơn Giá", font));
+		headerCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		headerCell.setPadding(5);
+		table.addCell(headerCell);
+
+		headerCell = new PdfPCell(new Phrase("Thành Tiền", font));
+		headerCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		headerCell.setPadding(5);
+		table.addCell(headerCell);
+
+		// Customize data cells
+		for (OrderDetailProductDetailsDTO product : orderData.getProductDetails()) {
+			PdfPCell cell = new PdfPCell();
+//			String color = product.getAttributeProductVersion().getColor() != null
+//				    ? product.getAttributeProductVersion().getColor().getColor()
+//				    : "N/A";
+//				String size = product.getAttributeProductVersion().getSize() != null
+//				    ? product.getAttributeProductVersion().getSize().getSize()
+//				    : "N/A";
+
+				Paragraph productNameParagraph = new Paragraph(
+				    product.getProductName() + " ,SL: " + product.getQuantity(),
+				    font
+				);
+
+			productNameParagraph.setLeading(font.getSize() * 1.2f);
+			productNameParagraph.setAlignment(Element.ALIGN_LEFT); 
+			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+			cell.addElement(productNameParagraph);
+			cell.setPadding(5);
+			table.addCell(cell);
+
+			cell = new PdfPCell(new Phrase(formatCurrency(product.getPrice()), font));
+			cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+			cell.setPadding(5);
+			table.addCell(cell);
+
+			cell = new PdfPCell(new Phrase(formatCurrency(product.getTotal()), font));
+			cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+			cell.setPadding(5);
+			table.addCell(cell);
+		}
+		document.add(table);
+		PdfPTable summaryTable = new PdfPTable(2);
+		summaryTable.setWidthPercentage(160);
+		summaryTable.setWidths(new float[] { 6, 3 });
+
+		PdfPCell descriptionCell;
+		PdfPCell valueCell;
+
+		descriptionCell = new PdfPCell(new Phrase("Tổng đơn hàng:", font));
+		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getSubTotal()), font));
+		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		valueCell.setPadding(5);
+		summaryTable.addCell(descriptionCell);
+		summaryTable.addCell(valueCell);
+
+		descriptionCell = new PdfPCell(new Phrase("Phí vận chuyển:", font));
+		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getShippingFee()), font));
+		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		valueCell.setPadding(5);
+		summaryTable.addCell(descriptionCell);
+		summaryTable.addCell(valueCell);
+
+		descriptionCell = new PdfPCell(new Phrase("Giảm giá: (" + orderData.getDisCount() + ")", font));
+		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getDiscountValue()), font));
+		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		valueCell.setPadding(5);
+		summaryTable.addCell(descriptionCell);
+		summaryTable.addCell(valueCell);
+
+		descriptionCell = new PdfPCell(new Phrase("Tổng cộng:", font));
+		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getFinalTotal()), font));
+		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		valueCell.setPadding(5);
+		summaryTable.addCell(descriptionCell);
+		summaryTable.addCell(valueCell);
+		
+		document.add(summaryTable);
+		PdfPTable tableTotalInWord = new PdfPTable(1); 
+		tableTotalInWord.setWidthPercentage(160); 
+
+		PdfPCell cellTotalInWord = new PdfPCell(new Phrase(orderData.getFinalTotalInWords(), font));
+		cellTotalInWord.setHorizontalAlignment(Element.ALIGN_CENTER);
+		cellTotalInWord.setPadding(10);
+		cellTotalInWord.setBorder(PdfPCell.NO_BORDER);
+		tableTotalInWord.addCell(cellTotalInWord);
+
+
+		document.add(tableTotalInWord);
+		document.close();
+
+		return baos;
+	}
+
+	private com.itextpdf.text.Image generateQrCodeImage(String qrCodeData, int size)
+			throws WriterException, IOException, BadElementException, com.google.zxing.WriterException {
+		Map<EncodeHintType, Object> hintMap = new HashMap<>();
+		hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+		hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H); 
+
+		com.google.zxing.common.BitMatrix matrix = new MultiFormatWriter().encode(qrCodeData, BarcodeFormat.QR_CODE,
+				size, size);
+		  Integer dpi = 1200000000;
+		    BufferedImage image = matrixToBufferedImage(matrix, dpi);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write(image, "png", baos); 
+		byte[] imageBytes = baos.toByteArray();
+
+		com.itextpdf.text.Image iTextImage = com.itextpdf.text.Image.getInstance(imageBytes);
+		iTextImage.scaleAbsolute(size, size);
+		return iTextImage;
+	}
+	private BufferedImage matrixToBufferedImage(com.google.zxing.common.BitMatrix matrix, int dpi) {
+	    int width = matrix.getWidth();
+	    int height = matrix.getHeight();
+	    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+	    for (int x = 0; x < width; x++) {
+	        for (int y = 0; y < height; y++) {
+	            image.setRGB(x, y, matrix.get(x, y) ? 0x000000 : 0xFFFFFF); 
+	        }
+	    }
+	    return image;
+	}
+
+	private String generateQrCodeData(OrderQRCodeDTO orderData) {
+		return "http://localhost:3000/orders/" + orderData.getOrderId();
+	}
+
+	public BufferedImage convertPdfToImage(ByteArrayOutputStream pdfStream) throws IOException {
+		byte[] pdfBytes = pdfStream.toByteArray();
+		PDDocument pdfDocument = PDDocument.load(pdfBytes);
+		PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
+		BufferedImage image = pdfRenderer.renderImageWithDPI(0, 300, ImageType.RGB);
+		pdfDocument.close();
+		return image;
+	}
+
+	private float calculateRequiredHeight(OrderQRCodeDTO orderData) {
+		float height = 0;
+		height += 28f * 2;
+
+		int numRows = orderData.getProductDetails().size() + 1;
+		height += 10f * numRows;
+
+		return height;
+	}
+
+	private Rectangle createPageSize(float height) {
+		float widthInPoints = 58 * 2.83465f;
+		float heightInPoints = height * 2.83465f;
+		return new Rectangle(widthInPoints, heightInPoints);
 	}
 
 }
