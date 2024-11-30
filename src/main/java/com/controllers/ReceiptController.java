@@ -26,6 +26,7 @@ import com.errors.UserServiceException;
 import com.models.ReceiptCreateDTO;
 import com.models.ReceiptDTO;
 import com.models.ReceiptInfoDTO;
+import com.responsedto.ReceiptResponse;
 import com.services.AuthService;
 import com.services.JWTService;
 import com.services.ReceiptService;
@@ -89,15 +90,15 @@ public class ReceiptController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		Page<ReceiptInfoDTO> receiptDTOPage = warehouseService.getAllWarehouses(page, size, keyword);
+		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf(page, size);
 
 		if (receiptDTOPage.isEmpty()) {
 			ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "No receipts found", null);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		PageImpl<ReceiptInfoDTO> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(),
-				receiptDTOPage.getPageable(), receiptDTOPage.getTotalElements());
+		PageImpl<ReceiptResponse> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(), receiptDTOPage.getPageable(),
+				receiptDTOPage.getTotalElements());
 
 		ApiResponse<?> response = new ApiResponse<>(200, "Success", receiptDTOList);
 		return ResponseEntity.ok(response);

@@ -71,7 +71,29 @@ public class User implements UserDetails, Serializable {
     private String provider;
     
     @Column(name = "balance", nullable = false)
-    private BigDecimal balance = BigDecimal.ZERO; 
+    private BigDecimal balance = BigDecimal.ZERO;
+
+	@Column(name = "resetCode")
+	private String ResetCode;
+
+	public String getResetCode() {
+		return ResetCode;
+	}
+
+	public void setResetCode(String resetCode) {
+		ResetCode = resetCode;
+	}
+
+	public Date getResetCodeExpiration() {
+		return ResetCodeExpiration;
+	}
+
+	public void setResetCodeExpiration(Date resetCodeExpiration) {
+		ResetCodeExpiration = resetCodeExpiration;
+	}
+
+	@Column(name = "resetcodeexpiration")
+	private Date ResetCodeExpiration;
 
 	// Bi-directional many-to-one association to Address
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

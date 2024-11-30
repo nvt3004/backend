@@ -1,17 +1,24 @@
 package com.controllers;
 
 import com.models.EmailRequestDTO;
+import com.models.OtpRequest;
+import com.repositories.UsersJPA;
 import com.models.AuthDTO;
+import com.entities.Advertisement;
 import com.entities.User;
 import com.errors.ApiResponse;
+import com.services.AdvertisementService;
 import com.services.AuthManagementService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +29,18 @@ public class AuthController {
 
     @Autowired
     private AuthManagementService usersManagementService;
+
+    @Autowired
+    AdvertisementService advertisementService;
+
+    @Autowired
+    private UsersJPA usersRepo;
+
+    @GetMapping("/api/today")
+    public ResponseEntity<List<Advertisement>> getAdvertisementsForToday() {
+        List<Advertisement> advertisements = advertisementService.getAdvertisementsForToday();
+        return ResponseEntity.ok(advertisements);
+    }
 
     @PostMapping("/api/register")
     public ResponseEntity<AuthDTO> regeister(@RequestBody AuthDTO reg) {
@@ -87,6 +106,12 @@ public class AuthController {
         return usersManagementService.sendResetPasswordEmail(emailRequest);
     }
 
+    // @PostMapping("/api/send-reset-code")
+    // public ResponseEntity<ApiResponse<User>> sendCodeEmail(@RequestBody
+    // EmailRequestDTO emailRequest) {
+    // return usersManagementService.sendResetCodeEmail(emailRequest);
+    // }
+
     @PostMapping("/api/reset-password")
     public ResponseEntity<ApiResponse<User>> resetPassword(@RequestBody Map<String, String> payload) {
         return usersManagementService.resetPassword(payload);
@@ -96,4 +121,49 @@ public class AuthController {
     public ResponseEntity<AuthDTO> logout(@RequestHeader("Authorization") String token) {
         return usersManagementService.logout(token);
     }
+
+    @PostMapping("/api/verify-otp")
+    public ResponseEntity<AuthDTO> verifyOtp(@RequestBody OtpRequest otpRequest) {
+        AuthDTO response = new AuthDTO();
+        try {
+            String username = otpRequest.getUsername();
+            String otp = otpRequest.getOtp();
+
+            // Kiểm tra username và OTP
+            User user = usersRepo.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            if (!user.getResetCode().equals(otp)) {
+                throw new IllegalArgumentException("Invalid OTP");
+            }
+
+            // Kiểm tra thời gian hết hạn OTP
+            if (user.getResetCodeExpiration().before(new Date())) {
+                throw new IllegalArgumentException("OTP has expired");
+            }
+
+            // Cập nhật trạng thái người dùng
+            user.setStatus((byte) 1); // Cập nhật status = 1
+            user.setResetCode(null); // Xóa OTP sau khi xác thực thành công
+            user.setResetCodeExpiration(null);
+
+            usersRepo.save(user);
+
+            response.setMessage("OTP verified successfully");
+            response.setStatusCode(200);
+            response.setListData(user);
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            response.setStatusCode(400);
+            response.setError(e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setError("An error occurred: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
 }

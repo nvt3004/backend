@@ -72,18 +72,29 @@ public class CouponService {
 	public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
 		Coupon coupon = new Coupon();
 		String couponCode;
+
+		// Generate a unique coupon code
 		do {
 			couponCode = RandomStringUtils.randomAlphanumeric(10);
 		} while (couponJpa.existsByCouponCode(couponCode));
 		coupon.setCouponCode(couponCode);
 
+		// Set coupon details
 		coupon.setDisPercent(couponCreateDTO.getDisPercent());
 		coupon.setDisPrice(couponCreateDTO.getDisPrice());
 		coupon.setDescription(couponCreateDTO.getDescription());
-		coupon.setStartDate(couponCreateDTO.getStartDate());
-		coupon.setEndDate(couponCreateDTO.getEndDate());
-		coupon.setQuantity(couponCreateDTO.getQuantity());
 
+		// Add 7 hours to start and end dates
+		LocalDateTime startDate = couponCreateDTO.getStartDate().plusHours(7);
+		LocalDateTime endDate = couponCreateDTO.getEndDate().plusHours(7);
+
+		coupon.setStartDate(startDate);
+		coupon.setEndDate(endDate);
+
+		coupon.setQuantity(couponCreateDTO.getQuantity());
+		coupon.setStatus(true);
+
+		// Save the coupon
 		return couponJpa.save(coupon);
 	}
 
@@ -166,23 +177,22 @@ public class CouponService {
 
 		List<CouponDTO> couponDTOs = new ArrayList<>();
 		for (Coupon coupon : couponPage) {
-		    CouponDTO dto = new CouponDTO();
-		    dto.setId(coupon.getCouponId());
-		    dto.setCode(coupon.getCouponCode());
-		    dto.setDescription(coupon.getDescription());
+			CouponDTO dto = new CouponDTO();
+			dto.setId(coupon.getCouponId());
+			dto.setCode(coupon.getCouponCode());
+			dto.setDescription(coupon.getDescription());
 
-		    // Trừ 7 tiếng
-		    dto.setStartDate(coupon.getStartDate().minusHours(7));
-		    dto.setEndDate(coupon.getEndDate().minusHours(7));
+			// Trừ 7 tiếng
+			dto.setStartDate(coupon.getStartDate().minusHours(7));
+			dto.setEndDate(coupon.getEndDate().minusHours(7));
 
-		    dto.setDisPercent(coupon.getDisPercent());
-		    dto.setDisPrice(coupon.getDisPrice());
-		    dto.setQuantity(coupon.getQuantity());
-		    couponDTOs.add(dto);
+			dto.setDisPercent(coupon.getDisPercent());
+			dto.setDisPrice(coupon.getDisPrice());
+			dto.setQuantity(coupon.getQuantity());
+			couponDTOs.add(dto);
 		}
-		
+
 		return couponDTOs;
 	}
-
 
 }
