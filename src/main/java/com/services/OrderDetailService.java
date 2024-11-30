@@ -7,8 +7,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
@@ -28,7 +30,7 @@ import com.models.SizeDTO;
 import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
-import com.repositories.ReceiptDetailJPA;
+import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
@@ -51,10 +53,7 @@ public class OrderDetailService {
 	private UploadService uploadService;
 
 	@Autowired
-	AttributeOptionJPA attributeOptionJpa;
-
-	@Autowired
-	private ReceiptDetailJPA receiptDetailJpa;
+	private MailService mailService;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
 		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
@@ -210,12 +209,33 @@ public class OrderDetailService {
 		}
 
 		orderDetail.setProductVersionBean(newProductVersion.get());
-		orderDetail.setQuantity(1);
+		orderDetail.setQuantity(1); // Set default quantity
 		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
 
+		// Save updated order detail
 		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
 
+		// Send email notification
+		sendOrderDetailUpdateEmail(orderDetail, order.getUser().getEmail(), newProductVersion.get());
+
 		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
+	}
+
+	private void sendOrderDetailUpdateEmail(OrderDetail orderDetail, String userEmail,
+			ProductVersion newProductVersion) {
+		// Construct the email content and send the email asynchronously
+		CompletableFuture.runAsync(() -> {
+			String emailContent = generateOrderDetailUpdateEmailContent(orderDetail, newProductVersion);
+			mailService.sendEmail(userEmail, "Your Order Detail Has Been Updated", emailContent);
+		});
+	}
+
+	private String generateOrderDetailUpdateEmailContent(OrderDetail orderDetail, ProductVersion newProductVersion) {
+		// You can modify this method to generate an HTML email content based on the
+		// updated details
+		return String.format("Your order detail has been updated to product '%s' with price %s.",
+				newProductVersion.getProduct().getProductName(),
+				FormarCurrencyUtil.formatCurrency(newProductVersion.getRetailPrice()));
 	}
 
 	public boolean isValidQuantity(Integer quantity) {
@@ -243,7 +263,7 @@ public class OrderDetailService {
 		ProductVersion productVersion = orderDetail.getProductVersionBean();
 		Integer productVersionStock = productVersion.getQuantity();
 		productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
-		
+
 		Integer processedOrderQuantity = productVersionJpa
 				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
 		Integer cancelledOrderQuantity = productVersionJpa
@@ -270,59 +290,55 @@ public class OrderDetailService {
 
 		orderDetail.setQuantity(quantity);
 		orderDetailJpa.save(orderDetail);
+		System.out.println(orderDetail.getOrder().getUser().getEmail() + "EmailUser");
+
+		sendQuantityUpdateEmail(orderDetail, orderDetail.getOrder().getUser().getEmail());
 
 		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
 	}
 
+	private void sendQuantityUpdateEmail(OrderDetail orderDetail, String userEmail) {
+		CompletableFuture.runAsync(() -> {
+			String emailContent = generateQuantityUpdateEmailContent(orderDetail);
+			mailService.sendEmail(userEmail, "Your Order Quantity Has Been Updated", emailContent);
+		});
+	}
+
+	private String generateQuantityUpdateEmailContent(OrderDetail orderDetail) {
+		return String.format("Your order quantity has been updated to %d for the product '%s'.",
+				orderDetail.getQuantity(), orderDetail.getProductVersionBean().getProduct().getProductName());
+	}
+
 	public OrderQRCodeDTO convertToOrderQRCode(List<OrderDetail> orderDetailList) {
-	    if (orderDetailList == null || orderDetailList.isEmpty()) {
-	        throw new IllegalArgumentException("orderDetailList cannot be null or empty");
-	    }
+		if (orderDetailList == null || orderDetailList.isEmpty()) {
+			throw new IllegalArgumentException("orderDetailList cannot be null or empty");
+		}
 
-	    OrderDetail orderDetail = orderDetailList.get(0);
-	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(orderDetail.getOrder());
-	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(orderDetail.getOrder());
-	    BigDecimal finalTotal = subTotal.add(orderDetail.getOrder().getShippingFee()).subtract(discountValue);
-	    finalTotal = finalTotal.max(BigDecimal.ZERO);
+		OrderDetail orderDetail = orderDetailList.get(0);
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(orderDetail.getOrder());
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(orderDetail.getOrder());
+		BigDecimal finalTotal = subTotal.add(orderDetail.getOrder().getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
 
-	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
-	    String statusName = orderDetail.getOrder().getOrderStatus().getStatusName();
-	    Integer couponId = Optional.ofNullable(orderDetail.getOrder().getCoupon())
-	        .map(Coupon::getCouponId).orElse(null);
-	    String disCount = orderUtilsService.getDiscountDescription(orderDetail.getOrder());
-	    
-	    String paymentMethod = Optional.ofNullable(orderDetail.getOrder().getPayments())
-	            .map(payments -> payments.getPaymentMethod())
-	            .map(paymentMethodObj -> paymentMethodObj.getMethodName())
-	            .orElse(null);
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+		String statusName = orderDetail.getOrder().getOrderStatus().getStatusName();
+		Integer couponId = Optional.ofNullable(orderDetail.getOrder().getCoupon()).map(Coupon::getCouponId)
+				.orElse(null);
+		String disCount = orderUtilsService.getDiscountDescription(orderDetail.getOrder());
 
-	    
-	    String email = Optional.ofNullable(orderDetail.getOrder().getUser())
-	        .map(user -> user.getEmail())
-	        .orElse("N/A");
+		String paymentMethod = Optional.ofNullable(orderDetail.getOrder().getPayments())
+				.map(payments -> payments.getPaymentMethod()).map(paymentMethodObj -> paymentMethodObj.getMethodName())
+				.orElse(null);
 
-	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
-	    return new OrderQRCodeDTO(
-	        orderDetail.getOrder().getOrderId(),
-	        orderDetail.getOrder().getUser().getGender(),
-	        orderDetail.getOrder().getAddress(),
-	        couponId,
-	        disCount,
-	        discountValue,
-	        subTotal,
-	        orderDetail.getOrder().getShippingFee(),
-	        finalTotal,
-	        finalTotalInWords,
-	        orderDetail.getOrder().getDeliveryDate(),
-	        orderDetail.getOrder().getFullname(),
-	        orderDetail.getOrder().getOrderDate(),
-	        orderDetail.getOrder().getPhone(),
-	        statusName,
-	        paymentMethod,
-	        orderDetail.getOrder().getPhone(),
-	        email,
-	        productDetails
-	    );
+		String email = Optional.ofNullable(orderDetail.getOrder().getUser()).map(user -> user.getEmail()).orElse("N/A");
+
+		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
+		return new OrderQRCodeDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getUser().getGender(),
+				orderDetail.getOrder().getAddress(), couponId, disCount, discountValue, subTotal,
+				orderDetail.getOrder().getShippingFee(), finalTotal, finalTotalInWords,
+				orderDetail.getOrder().getDeliveryDate(), orderDetail.getOrder().getFullname(),
+				orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(), statusName, paymentMethod,
+				orderDetail.getOrder().getPhone(), email, productDetails);
 	}
 
 	// ty

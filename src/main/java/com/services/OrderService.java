@@ -75,6 +75,7 @@ import com.repositories.ProductVersionJPA;
 import com.repositories.UserJPA;
 import com.utils.DateUtils;
 import com.utils.ExcelUtil;
+import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
@@ -94,19 +95,19 @@ public class OrderService {
 
 	@Autowired
 	private MailService mailService;
-	
+
 	@Autowired
 	private OrderJPA orderJpa;
-	
+
 	@Autowired
 	private OrderDetailJPA orderDetailJpa;
-	
+
 	@Autowired
 	private OrderStatusJPA orderStatusJpa;
-	
+
 	@Autowired
 	private ProductVersionJPA productVersionJpa;
-	
+
 	@Autowired
 	private UserJPA userJpa;
 
@@ -237,54 +238,30 @@ public class OrderService {
 		return "";
 	}
 
-	private OrderDTO createOrderDTO(Order order) { 
-	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
-	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
-	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-	    finalTotal = finalTotal.max(BigDecimal.ZERO);
+	private OrderDTO createOrderDTO(Order order) {
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
 
-	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-	    Integer couponId = Optional.ofNullable(order.getCoupon())
-	                               .map(Coupon::getCouponId)
-	                               .orElse(null);
+		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
 
-	    String disCount = orderUtilsService.getDiscountDescription(order);
-	    String statusName = order.getOrderStatus().getStatusName();
-	    String paymentMethodName = Optional.ofNullable(order.getPayments())
-	                                       .map(payment -> payment.getPaymentMethod().getMethodName())
-	                                       .orElse(null);
+		String disCount = orderUtilsService.getDiscountDescription(order);
+		String statusName = order.getOrderStatus().getStatusName();
+		String paymentMethodName = Optional.ofNullable(order.getPayments())
+				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-	    Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
-	    String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy())
-	                                       .map(User::getFullName)
-	                                       .orElse(null);
-	    Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate())
-	                                   .orElse(null);
+		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
+		String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getFullName).orElse(null);
+		Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate()).orElse(null);
 
-	    return new OrderDTO(
-	        order.getOrderId(),
-	        lastUpdatedByName,
-	        lastUpdatedDate,
-	        isOpenOrderDetail,
-	        order.getUser().getGender(),
-	        order.getAddress(),
-	        couponId,
-	        disCount,
-	        discountValue,
-	        subTotal,
-	        order.getShippingFee(),
-	        finalTotal,
-	        finalTotalInWords,
-	        order.getDeliveryDate(),
-	        order.getFullname(),
-	        order.getOrderDate(),
-	        order.getPhone(),
-	        statusName,
-	        paymentMethodName
-	    );
+		return new OrderDTO(order.getOrderId(), lastUpdatedByName, lastUpdatedDate, isOpenOrderDetail,
+				order.getUser().getGender(), order.getAddress(), couponId, disCount, discountValue, subTotal,
+				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
+				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
-
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
 		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
@@ -333,22 +310,23 @@ public class OrderService {
 			}
 			order.setOrderStatus(newOrderStatus.get());
 			order.setLastUpdatedBy(currentUser);
-			order.setLastUpdatedDate(new Date());			
+			order.setLastUpdatedDate(new Date());
 			orderJpa.save(order);
-			CompletableFuture.runAsync(() -> sendOrderStatusUpdateEmail(order, newStatus));
+			sendOrderStatusUpdateEmail(order, newStatus);
 		}
 
 		return new ApiResponse<>(200, "Order status updated successfully", null);
 	}
 
-	@Async
 	private void sendOrderStatusUpdateEmail(Order order, String newStatus) {
-		String customerEmail = order.getUser().getEmail();
-		String subject = "Your order #" + order.getOrderId() + " status has been updated";
-		String htmlContent = generateOrderStatusEmailContent(order, newStatus);
-
-		mailService.sendHtmlEmail(customerEmail, subject, htmlContent);
+	    String customerEmail = order.getUser().getEmail();
+	    String subject = "Your order #" + order.getOrderId() + " status has been updated";
+	    String htmlContent = generateOrderStatusEmailContent(order, newStatus);
+	    
+	    // Send email asynchronously using CompletableFuture
+	    CompletableFuture.runAsync(() -> mailService.sendHtmlEmail(customerEmail, subject, htmlContent));
 	}
+
 
 	private String generateOrderStatusEmailContent(Order order, String newStatus) {
 		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
@@ -398,15 +376,8 @@ public class OrderService {
 				</html>
 				"""
 				.formatted(order.getFullname(), order.getOrderId(), newStatus, generateOrderItemsHtml(order),
-						formatCurrency(subTotal), formatCurrency(order.getShippingFee()), formatCurrency(discountValue),
-						formatCurrency(finalTotal));
-	}
-
-	String formatCurrency(BigDecimal amount) {
-		Locale locale = new Locale("vi", "VN");
-		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(locale);
-		String formattedAmount = currencyFormatter.format(amount);
-		return formattedAmount.replace("₫", "VND");
+						FormarCurrencyUtil.formatCurrency(subTotal), FormarCurrencyUtil.formatCurrency(order.getShippingFee()), FormarCurrencyUtil.formatCurrency(discountValue),
+						FormarCurrencyUtil.formatCurrency(finalTotal));
 	}
 
 	private String generateOrderItemsHtml(Order order) {
@@ -414,7 +385,7 @@ public class OrderService {
 		for (OrderDetail detail : order.getOrderDetails()) {
 			String productName = detail.getProductVersionBean().getVersionName();
 			int quantity = detail.getQuantity();
-			String price = formatCurrency(detail.getPrice());
+			String price = FormarCurrencyUtil.formatCurrency(detail.getPrice());
 			Image image = detail.getProductVersionBean().getImage();
 			String imageUrl = null;
 			if (image != null) {
@@ -422,8 +393,6 @@ public class OrderService {
 			} else {
 				imageUrl = "https://domain_thuc_te_huhu.com/default-image.jpg";
 			}
-
-			System.out.println(imageUrl + " imageUrl");
 
 			html.append(
 					"""
@@ -746,7 +715,7 @@ public class OrderService {
 		orderDateParagraph.setAlignment(Element.ALIGN_CENTER);
 		document.add(orderDateParagraph);
 
-		Paragraph finalTotal = new Paragraph("Tổng tiền: " + formatCurrency(orderData.getFinalTotal()), font);
+		Paragraph finalTotal = new Paragraph("Tổng tiền: " + FormarCurrencyUtil.formatCurrency(orderData.getFinalTotal()), font);
 		finalTotal.setAlignment(Element.ALIGN_CENTER);
 		document.add(finalTotal);
 
@@ -797,13 +766,13 @@ public class OrderService {
 			cell.setPadding(5);
 			table.addCell(cell);
 
-			cell = new PdfPCell(new Phrase(formatCurrency(product.getPrice()), font));
+			cell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(product.getPrice()), font));
 			cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 			cell.setPadding(5);
 			table.addCell(cell);
 
-			cell = new PdfPCell(new Phrase(formatCurrency(product.getTotal()), font));
+			cell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(product.getTotal()), font));
 			cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 			cell.setPadding(5);
@@ -820,7 +789,7 @@ public class OrderService {
 		descriptionCell = new PdfPCell(new Phrase("Tổng đơn hàng:", font));
 		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getSubTotal()), font));
+		valueCell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(orderData.getSubTotal()), font));
 		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		valueCell.setPadding(5);
 		summaryTable.addCell(descriptionCell);
@@ -829,16 +798,16 @@ public class OrderService {
 		descriptionCell = new PdfPCell(new Phrase("Phí vận chuyển:", font));
 		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getShippingFee()), font));
+		valueCell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(orderData.getShippingFee()), font));
 		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		valueCell.setPadding(5);
 		summaryTable.addCell(descriptionCell);
 		summaryTable.addCell(valueCell);
 
-		descriptionCell = new PdfPCell(new Phrase("Giảm giá: (" + orderData.getDisCount() + ")", font));
+		descriptionCell = new PdfPCell(new Phrase("Giảm giá: (" + FormarCurrencyUtil.formatDiscount(orderData.getDisCount()) + ")", font));
 		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getDiscountValue()), font));
+		valueCell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(orderData.getDiscountValue()), font));
 		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		valueCell.setPadding(5);
 		summaryTable.addCell(descriptionCell);
@@ -847,7 +816,7 @@ public class OrderService {
 		descriptionCell = new PdfPCell(new Phrase("Tổng cộng:", font));
 		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-		valueCell = new PdfPCell(new Phrase(formatCurrency(orderData.getFinalTotal()), font));
+		valueCell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(orderData.getFinalTotal()), font));
 		valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		valueCell.setPadding(5);
 		summaryTable.addCell(descriptionCell);
@@ -928,6 +897,5 @@ public class OrderService {
 		float heightInPoints = height * 2.83465f;
 		return new Rectangle(widthInPoints, heightInPoints);
 	}
-
 
 }
