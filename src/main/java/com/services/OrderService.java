@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -92,17 +93,21 @@ public class OrderService {
 
 	@Autowired
 	private MailService mailService;
+	
 	@Autowired
 	private OrderJPA orderJpa;
+	
 	@Autowired
 	private OrderDetailJPA orderDetailJpa;
+	
 	@Autowired
 	private OrderStatusJPA orderStatusJpa;
+	
 	@Autowired
 	private ProductVersionJPA productVersionJpa;
+	
 	@Autowired
 	private UserJPA userJpa;
-
 
 	public ApiResponse<PageImpl<OrderDTO>> getAllOrders(String keyword, Integer statusId, Integer page, Integer size) {
 
@@ -231,30 +236,54 @@ public class OrderService {
 		return "";
 	}
 
-	private OrderDTO createOrderDTO(Order order) {
+	private OrderDTO createOrderDTO(Order order) { 
+	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+	    finalTotal = finalTotal.max(BigDecimal.ZERO);
 
-		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+	    Integer couponId = Optional.ofNullable(order.getCoupon())
+	                               .map(Coupon::getCouponId)
+	                               .orElse(null);
 
-		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-		finalTotal = finalTotal.max(BigDecimal.ZERO);
+	    String disCount = orderUtilsService.getDiscountDescription(order);
+	    String statusName = order.getOrderStatus().getStatusName();
+	    String paymentMethodName = Optional.ofNullable(order.getPayments())
+	                                       .map(payment -> payment.getPaymentMethod().getMethodName())
+	                                       .orElse(null);
 
-		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+	    Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
+	    String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy())
+	                                       .map(User::getFullName)
+	                                       .orElse(null);
+	    Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate())
+	                                   .orElse(null);
 
-		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
-
-		String disCount = orderUtilsService.getDiscountDescription(order);
-
-		String statusName = order.getOrderStatus().getStatusName();
-		String paymentMethodName = Optional.ofNullable(order.getPayments())
-				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
-		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
-		return new OrderDTO(order.getOrderId(), isOpenOrderDetail, order.getUser().getGender(), order.getAddress(),
-				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
-				order.getDeliveryDate(), order.getFullname(), order.getOrderDate(), order.getPhone(), statusName,
-				paymentMethodName);
+	    return new OrderDTO(
+	        order.getOrderId(),
+	        lastUpdatedByName,
+	        lastUpdatedDate,
+	        isOpenOrderDetail,
+	        order.getUser().getGender(),
+	        order.getAddress(),
+	        couponId,
+	        disCount,
+	        discountValue,
+	        subTotal,
+	        order.getShippingFee(),
+	        finalTotal,
+	        finalTotalInWords,
+	        order.getDeliveryDate(),
+	        order.getFullname(),
+	        order.getOrderDate(),
+	        order.getPhone(),
+	        statusName,
+	        paymentMethodName
+	    );
 	}
+
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
 		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
@@ -271,7 +300,7 @@ public class OrderService {
 		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
 	}
 
-	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId) {
+	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId, User currentUser) {
 		if (statusId == null) {
 			return new ApiResponse<>(400, "Status is required.", null);
 		}
@@ -302,6 +331,8 @@ public class OrderService {
 				}
 			}
 			order.setOrderStatus(newOrderStatus.get());
+			order.setLastUpdatedBy(currentUser);
+			order.setLastUpdatedDate(new Date());			
 			orderJpa.save(order);
 			CompletableFuture.runAsync(() -> sendOrderStatusUpdateEmail(order, newStatus));
 		}
@@ -667,17 +698,18 @@ public class OrderService {
 		Map<String, Object> data = apiResponse.getData();
 		OrderQRCodeDTO orderData = ((List<OrderQRCodeDTO>) data.get("orderDetail")).get(0);
 
-		float height = calculateRequiredHeight(orderData);
+		Float height = calculateRequiredHeight(orderData);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		Document document = new Document(createPageSize(height));
-		document.setMargins(35, 35, 10, 0);
+		document.setMargins(35, 35, -10, 0);
+
 		PdfWriter writer = PdfWriter.getInstance(document, baos);
 		document.open();
 
 		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
 		Font font = new Font(bf, 5, Font.NORMAL);
-		String qrCodeData = generateQrCodeData(orderData); 
+		String qrCodeData = generateQrCodeData(orderData);
 		com.itextpdf.text.Image qrCodeImage = generateQrCodeImage(qrCodeData, 50);
 
 		qrCodeImage.setAbsolutePosition(-5, document.getPageSize().getHeight() - 45);
@@ -687,29 +719,39 @@ public class OrderService {
 
 		Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
 		title.setFont(titleFont);
+		title.setAlignment(Element.ALIGN_CENTER);
 
-		// Set alignment to center
-//		title.setAlignment(Element.ALIGN_CENTER);
-//		title.setSpacingBefore(-20);
-//		title.setSpacingAfter(10);  
-//		LineSeparator line = new LineSeparator();
-//		line.setLineWidth(1f);
-//		line.setLineColor(BaseColor.BLACK);
+		title.setSpacingBefore(5);
+		title.setSpacingAfter(10);
+		LineSeparator line = new LineSeparator();
+		line.setLineWidth(1f);
+		line.setLineColor(BaseColor.BLACK);
 
-	
 		document.add(title);
-//		document.add(line);
+		document.add(line);
 
-		document.add(new Paragraph("Mã Hóa Đơn: " + orderData.getOrderId(), font));
-		document.add(new Paragraph("Khách hàng: " + orderData.getFullname(), font));
-		document.add(new Paragraph("Ngày đặt hàng: " + DateUtils.formatDate(orderData.getOrderDate()), font));
+		Paragraph orderIdParagraph = new Paragraph("Mã Hóa Đơn: " + orderData.getOrderId(), font);
+		orderIdParagraph.setAlignment(Element.ALIGN_CENTER);
+		document.add(orderIdParagraph);
+
+		Paragraph customerParagraph = new Paragraph("Khách hàng: " + orderData.getFullname(), font);
+		customerParagraph.setAlignment(Element.ALIGN_CENTER);
+		document.add(customerParagraph);
+
+		String formattedOrderDate = orderData.getOrderDate().toInstant().atZone(ZoneId.of("UTC"))
+				.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+
+		Paragraph orderDateParagraph = new Paragraph("Ngày đặt hàng: " + formattedOrderDate, font);
+		orderDateParagraph.setAlignment(Element.ALIGN_CENTER);
+		document.add(orderDateParagraph);
+
 		Paragraph finalTotal = new Paragraph("Tổng tiền: " + formatCurrency(orderData.getFinalTotal()), font);
+		finalTotal.setAlignment(Element.ALIGN_CENTER);
 		document.add(finalTotal);
-		
-		Paragraph spacer = new Paragraph(" "); 
-		spacer.setSpacingBefore(-10); 
-		document.add(spacer);
 
+		Paragraph spacer = new Paragraph(" ");
+		spacer.setSpacingBefore(-10);
+		document.add(spacer);
 
 		PdfPTable table = new PdfPTable(3);
 		table.setWidthPercentage(160);
@@ -717,17 +759,20 @@ public class OrderService {
 
 		PdfPCell headerCell;
 		headerCell = new PdfPCell(new Phrase("Tên SP & SL", font));
-		headerCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+		headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+		headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		headerCell.setPadding(5);
 		table.addCell(headerCell);
 
 		headerCell = new PdfPCell(new Phrase("Đơn Giá", font));
-		headerCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+		headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		headerCell.setPadding(5);
 		table.addCell(headerCell);
 
 		headerCell = new PdfPCell(new Phrase("Thành Tiền", font));
-		headerCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+		headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+		headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		headerCell.setPadding(5);
 		table.addCell(headerCell);
 
@@ -741,13 +786,11 @@ public class OrderService {
 //				    ? product.getAttributeProductVersion().getSize().getSize()
 //				    : "N/A";
 
-				Paragraph productNameParagraph = new Paragraph(
-				    product.getProductName() + " ,SL: " + product.getQuantity(),
-				    font
-				);
+			Paragraph productNameParagraph = new Paragraph(product.getProductName() + " ,SL: " + product.getQuantity(),
+					font);
 
 			productNameParagraph.setLeading(font.getSize() * 1.2f);
-			productNameParagraph.setAlignment(Element.ALIGN_LEFT); 
+			productNameParagraph.setAlignment(Element.ALIGN_LEFT);
 			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 			cell.addElement(productNameParagraph);
 			cell.setPadding(5);
@@ -808,17 +851,16 @@ public class OrderService {
 		valueCell.setPadding(5);
 		summaryTable.addCell(descriptionCell);
 		summaryTable.addCell(valueCell);
-		
+
 		document.add(summaryTable);
-		PdfPTable tableTotalInWord = new PdfPTable(1); 
-		tableTotalInWord.setWidthPercentage(160); 
+		PdfPTable tableTotalInWord = new PdfPTable(1);
+		tableTotalInWord.setWidthPercentage(160);
 
 		PdfPCell cellTotalInWord = new PdfPCell(new Phrase(orderData.getFinalTotalInWords(), font));
 		cellTotalInWord.setHorizontalAlignment(Element.ALIGN_CENTER);
 		cellTotalInWord.setPadding(10);
 		cellTotalInWord.setBorder(PdfPCell.NO_BORDER);
 		tableTotalInWord.addCell(cellTotalInWord);
-
 
 		document.add(tableTotalInWord);
 		document.close();
@@ -830,30 +872,31 @@ public class OrderService {
 			throws WriterException, IOException, BadElementException, com.google.zxing.WriterException {
 		Map<EncodeHintType, Object> hintMap = new HashMap<>();
 		hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
-		hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H); 
+		hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
 
 		com.google.zxing.common.BitMatrix matrix = new MultiFormatWriter().encode(qrCodeData, BarcodeFormat.QR_CODE,
 				size, size);
-		  Integer dpi = 1200000000;
-		    BufferedImage image = matrixToBufferedImage(matrix, dpi);
+		Integer dpi = 1200000000;
+		BufferedImage image = matrixToBufferedImage(matrix, dpi);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageIO.write(image, "png", baos); 
+		ImageIO.write(image, "png", baos);
 		byte[] imageBytes = baos.toByteArray();
 
 		com.itextpdf.text.Image iTextImage = com.itextpdf.text.Image.getInstance(imageBytes);
 		iTextImage.scaleAbsolute(size, size);
 		return iTextImage;
 	}
+
 	private BufferedImage matrixToBufferedImage(com.google.zxing.common.BitMatrix matrix, int dpi) {
-	    int width = matrix.getWidth();
-	    int height = matrix.getHeight();
-	    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-	    for (int x = 0; x < width; x++) {
-	        for (int y = 0; y < height; y++) {
-	            image.setRGB(x, y, matrix.get(x, y) ? 0x000000 : 0xFFFFFF); 
-	        }
-	    }
-	    return image;
+		int width = matrix.getWidth();
+		int height = matrix.getHeight();
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				image.setRGB(x, y, matrix.get(x, y) ? 0x000000 : 0xFFFFFF);
+			}
+		}
+		return image;
 	}
 
 	private String generateQrCodeData(OrderQRCodeDTO orderData) {

@@ -102,6 +102,10 @@ public class User implements UserDetails, Serializable {
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference("user-orders")
 	private List<Order> orders;
+	
+	@OneToMany(mappedBy = "lastUpdatedBy")
+	@JsonManagedReference("user-orders-update")
+	private List<Order> orderUpdate;
 
 	// Bi-directional many-to-one association to Reply
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -408,7 +408,7 @@ public class OrderController<UsbPrinter> {
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
 
-		errorResponse = orderService.updateOrderStatus(orderId, statusId);
+		errorResponse = orderService.updateOrderStatus(orderId, statusId, user);
 
 		if (errorResponse.getErrorCode() == 200) {
 			return ResponseEntity.ok(errorResponse);
@@ -649,64 +649,62 @@ public class OrderController<UsbPrinter> {
 		}
 	}
 
+	@PostMapping("/staff/orders/export")
+	public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
+		try {
+			ByteArrayOutputStream pdfStream = orderService.generateInvoicePdf(orderId);
 
+			BufferedImage image = orderService.convertPdfToImage(pdfStream);
 
-
-	  @PostMapping("/staff/orders/export")
-	    public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
-	        try {
-	            ByteArrayOutputStream pdfStream = orderService.generateInvoicePdf(orderId);
-
-	            BufferedImage image = orderService.convertPdfToImage(pdfStream);
-
-	            // Trả ảnh về client
-	            response.setContentType("image/png");
-	            ImageIO.write(image, "png", response.getOutputStream());
-	        } catch (IllegalArgumentException e) {
-	            response.setStatus(400);
-	            try {
-	                response.getWriter().write(e.getMessage());
-	            } catch (IOException ioException) {
-	                ioException.printStackTrace();
-	            }
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	            response.setStatus(500);
-	            try {
-	                response.getWriter().write("Error generating PDF: " + e.getMessage());
-	            } catch (IOException ioException) {
-	                ioException.printStackTrace();
-	            }
-	        }
-	    }
-
+			// Trả ảnh về client
+			response.setContentType("image/png");
+			ImageIO.write(image, "png", response.getOutputStream());
+		} catch (IllegalArgumentException e) {
+			response.setStatus(400);
+			try {
+				response.getWriter().write(e.getMessage());
+			} catch (IOException ioException) {
+				ioException.printStackTrace();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(500);
+			try {
+				response.getWriter().write("Error generating PDF: " + e.getMessage());
+			} catch (IOException ioException) {
+				ioException.printStackTrace();
+			}
+		}
+	}
 
 	// Helper functions for cleaner code
-	private float addParagraphToDocument(Document document, String text, Font font, int alignment) throws DocumentException {
-	    Paragraph paragraph = new Paragraph(text, font);
-	    paragraph.setAlignment(alignment);
-	    document.add(paragraph);
-	    return paragraph.getTotalLeading(); // Return the height of the paragraph
+	private float addParagraphToDocument(Document document, String text, Font font, int alignment)
+			throws DocumentException {
+		Paragraph paragraph = new Paragraph(text, font);
+		paragraph.setAlignment(alignment);
+		document.add(paragraph);
+		return paragraph.getTotalLeading(); // Return the height of the paragraph
 	}
 
-	private float addTableToDocument(Document document, List<OrderDetailProductDetailsDTO> products, Font font) throws DocumentException {
-	    PdfPTable table = new PdfPTable(3);
-	    table.setWidthPercentage(100);
-	    table.setWidths(new float[]{4f, 2f, 3f});
+	private float addTableToDocument(Document document, List<OrderDetailProductDetailsDTO> products, Font font)
+			throws DocumentException {
+		PdfPTable table = new PdfPTable(3);
+		table.setWidthPercentage(100);
+		table.setWidths(new float[] { 4f, 2f, 3f });
 
-	    table.addCell(new PdfPCell(new Phrase("Tên SP & SL", font)));
-	    table.addCell(new PdfPCell(new Phrase("Đơn Giá", font)));
-	    table.addCell(new PdfPCell(new Phrase("Thành Tiền", font)));
+		table.addCell(new PdfPCell(new Phrase("Tên SP & SL", font)));
+		table.addCell(new PdfPCell(new Phrase("Đơn Giá", font)));
+		table.addCell(new PdfPCell(new Phrase("Thành Tiền", font)));
 
-	    for (OrderDetailProductDetailsDTO product : products) {
-	        table.addCell(new PdfPCell(new Phrase(product.getProductName() + " x" + product.getQuantity(), font)));
-	        table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getPrice()), font)));
-	        table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getTotal()), font)));
-	    }
-	    document.add(table);
-	    return table.getTotalHeight(); // Return the height of the table
+		for (OrderDetailProductDetailsDTO product : products) {
+			table.addCell(new PdfPCell(new Phrase(product.getProductName() + " x" + product.getQuantity(), font)));
+			table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getPrice()), font)));
+			table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getTotal()), font)));
+		}
+		document.add(table);
+		return table.getTotalHeight(); // Return the height of the table
 	}
-	
+
 //	private Rectangle createPageSize(float height) {
 //	    // Convert width from mm to points (1 mm = 2.83465 points)
 //	    float widthInPoints = 58 * 2.83465f;
@@ -715,13 +713,10 @@ public class OrderController<UsbPrinter> {
 //	    return new Rectangle(widthInPoints, heightInPoints);
 //	}
 
-
 	// Trả PDF về client
 //    response.setContentType("application/pdf");
 //    response.setHeader("Content-Disposition", "attachment; filename=\"hoa_don.pdf\""); // Set filename
 //    response.setContentLength(baos.size());
 //    response.getOutputStream().write(baos.toByteArray());
-	
-	
 
 }
