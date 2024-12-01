@@ -61,7 +61,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api")
-public class OrderController<UsbPrinter> {
+public class OrderController {
 
 	@Autowired
 	private OrderService orderService;
@@ -632,9 +632,8 @@ public class OrderController<UsbPrinter> {
 		}
 	}
 
-	@GetMapping("/orders/{orderId}")
-	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId) {
-
+	@GetMapping("/orders/")
+	public ResponseEntity<ApiResponse<?>> getOrderDetail(@RequestParam Integer orderId) {
 		if (orderId == null) {
 			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
 			return ResponseEntity.badRequest().body(response);
@@ -656,7 +655,6 @@ public class OrderController<UsbPrinter> {
 
 			BufferedImage image = orderService.convertPdfToImage(pdfStream);
 
-			// Trả ảnh về client
 			response.setContentType("image/png");
 			ImageIO.write(image, "png", response.getOutputStream());
 		} catch (IllegalArgumentException e) {
@@ -677,46 +675,5 @@ public class OrderController<UsbPrinter> {
 		}
 	}
 
-	// Helper functions for cleaner code
-	private float addParagraphToDocument(Document document, String text, Font font, int alignment)
-			throws DocumentException {
-		Paragraph paragraph = new Paragraph(text, font);
-		paragraph.setAlignment(alignment);
-		document.add(paragraph);
-		return paragraph.getTotalLeading(); // Return the height of the paragraph
-	}
-
-	private float addTableToDocument(Document document, List<OrderDetailProductDetailsDTO> products, Font font)
-			throws DocumentException {
-		PdfPTable table = new PdfPTable(3);
-		table.setWidthPercentage(100);
-		table.setWidths(new float[] { 4f, 2f, 3f });
-
-		table.addCell(new PdfPCell(new Phrase("Tên SP & SL", font)));
-		table.addCell(new PdfPCell(new Phrase("Đơn Giá", font)));
-		table.addCell(new PdfPCell(new Phrase("Thành Tiền", font)));
-
-		for (OrderDetailProductDetailsDTO product : products) {
-			table.addCell(new PdfPCell(new Phrase(product.getProductName() + " x" + product.getQuantity(), font)));
-			table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getPrice()), font)));
-			table.addCell(new PdfPCell(new Phrase(String.valueOf(product.getTotal()), font)));
-		}
-		document.add(table);
-		return table.getTotalHeight(); // Return the height of the table
-	}
-
-//	private Rectangle createPageSize(float height) {
-//	    // Convert width from mm to points (1 mm = 2.83465 points)
-//	    float widthInPoints = 58 * 2.83465f;
-//	    float heightInPoints = height * 2.83465f;
-//	    System.out.println(widthInPoints + " widthInPoints");
-//	    return new Rectangle(widthInPoints, heightInPoints);
-//	}
-
-	// Trả PDF về client
-//    response.setContentType("application/pdf");
-//    response.setHeader("Content-Disposition", "attachment; filename=\"hoa_don.pdf\""); // Set filename
-//    response.setContentLength(baos.size());
-//    response.getOutputStream().write(baos.toByteArray());
 
 }

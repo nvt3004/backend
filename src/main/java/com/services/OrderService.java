@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -31,7 +30,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
@@ -73,7 +71,6 @@ import com.repositories.OrderJPA;
 import com.repositories.OrderStatusJPA;
 import com.repositories.ProductVersionJPA;
 import com.repositories.UserJPA;
-import com.utils.DateUtils;
 import com.utils.ExcelUtil;
 import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
@@ -668,7 +665,12 @@ public class OrderService {
 		Map<String, Object> data = apiResponse.getData();
 		OrderQRCodeDTO orderData = ((List<OrderQRCodeDTO>) data.get("orderDetail")).get(0);
 
-		Float height = calculateRequiredHeight(orderData);
+		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+		Font font = new Font(bf, 5, Font.NORMAL);
+		Font fontBold = new Font(bf, 6, Font.NORMAL);
+		Font infoFont = new Font(Font.FontFamily.HELVETICA, 4, Font.BOLD);
+		
+		Float height = calculateRequiredHeight(orderData,font);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		Document document = new Document(createPageSize(height));
@@ -677,8 +679,6 @@ public class OrderService {
 		PdfWriter writer = PdfWriter.getInstance(document, baos);
 		document.open();
 
-		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-		Font font = new Font(bf, 5, Font.NORMAL);
 		String qrCodeData = generateQrCodeData(orderData);
 		com.itextpdf.text.Image qrCodeImage = generateQrCodeImage(qrCodeData, 50);
 
@@ -687,11 +687,9 @@ public class OrderService {
 
 		Paragraph title = new Paragraph("HÓA ĐƠN BÁN HÀNG", font);
 
-		Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
-		title.setFont(titleFont);
 		title.setAlignment(Element.ALIGN_CENTER);
 
-		title.setSpacingBefore(5);
+		title.setSpacingBefore(24);
 		title.setSpacingAfter(10);
 		LineSeparator line = new LineSeparator();
 		line.setLineWidth(1f);
@@ -699,14 +697,14 @@ public class OrderService {
 
 		document.add(title);
 		document.add(line);
-
+		
+		Paragraph orderInfoTitle = new Paragraph("Thông tin đơn hàng", fontBold);
+		orderInfoTitle.setAlignment(Element.ALIGN_CENTER);
+		document.add(orderInfoTitle);
+		
 		Paragraph orderIdParagraph = new Paragraph("Mã Hóa Đơn: " + orderData.getOrderId(), font);
 		orderIdParagraph.setAlignment(Element.ALIGN_CENTER);
 		document.add(orderIdParagraph);
-
-		Paragraph customerParagraph = new Paragraph("Khách hàng: " + orderData.getFullname(), font);
-		customerParagraph.setAlignment(Element.ALIGN_CENTER);
-		document.add(customerParagraph);
 
 		String formattedOrderDate = orderData.getOrderDate().toInstant().atZone(ZoneId.of("UTC"))
 				.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
@@ -719,10 +717,64 @@ public class OrderService {
 		finalTotal.setAlignment(Element.ALIGN_CENTER);
 		document.add(finalTotal);
 
-		Paragraph spacer = new Paragraph(" ");
-		spacer.setSpacingBefore(-10);
-		document.add(spacer);
+		PdfPTable billToTable = new PdfPTable(2);
+		billToTable.setWidthPercentage(160); 
+		billToTable.setSpacingBefore(0);
 
+		//Thông tin của công ty
+		PdfPCell billFromCell = new PdfPCell();
+		billFromCell.setBorder(Rectangle.NO_BORDER); 
+
+		Paragraph companyInfoTitle = new Paragraph("Công ty bán hàng:", fontBold);
+		companyInfoTitle.setAlignment(Element.ALIGN_LEFT);
+		billFromCell.addElement(companyInfoTitle);
+
+		Paragraph companyName = new Paragraph("Công ty TNHH Step To The Future", font);
+		companyName.setAlignment(Element.ALIGN_LEFT);
+		billFromCell.addElement(companyName);
+
+		Paragraph companyAddress = new Paragraph("Địa chỉ: Đ. Số 22, Thường Thạnh, Cái Răng, Cần Thơ, Việt Nam", font);
+		companyAddress.setAlignment(Element.ALIGN_LEFT);
+		billFromCell.addElement(companyAddress);
+		
+		Paragraph companyPhone = new Paragraph("Điện thoại: 098 388 11 00", font);
+		companyPhone.setAlignment(Element.ALIGN_LEFT);
+		billFromCell.addElement(companyPhone);
+
+		Paragraph companyEmail = new Paragraph("Email: ngothai3004@gmail.com", font);
+		companyEmail.setAlignment(Element.ALIGN_LEFT);
+		billFromCell.addElement(companyEmail);
+		
+		// Thông tin của khách hàng
+		PdfPCell billToCell = new PdfPCell();
+		billToCell.setBorder(Rectangle.NO_BORDER);
+
+		Paragraph customerInfoTitle = new Paragraph("Khách hàng:", fontBold);
+		customerInfoTitle.setAlignment(Element.ALIGN_LEFT);
+		billToCell.addElement(customerInfoTitle);
+
+		Paragraph customerName = new Paragraph("Tên khách hàng: " + orderData.getFullname(), font);
+		customerName.setAlignment(Element.ALIGN_LEFT);
+		billToCell.addElement(customerName);
+
+		Paragraph customerAddress = new Paragraph("Địa chỉ: " + orderData.getAddress(), font);
+		customerAddress.setAlignment(Element.ALIGN_LEFT);
+		billToCell.addElement(customerAddress);
+
+		Paragraph customerPhone = new Paragraph("Điện thoại: " + orderData.getPhone(), font);
+		customerPhone.setAlignment(Element.ALIGN_LEFT);
+		billToCell.addElement(customerPhone);
+
+		Paragraph customerEmail = new Paragraph("Email: " + orderData.getEmail(), font);
+		customerEmail.setAlignment(Element.ALIGN_LEFT);
+		billToCell.addElement(customerEmail);
+
+		billToTable.setSpacingAfter(10);
+		
+		billToTable.addCell(billFromCell);
+		billToTable.addCell(billToCell);
+
+		document.add(billToTable);
 		PdfPTable table = new PdfPTable(3);
 		table.setWidthPercentage(160);
 		table.setWidths(new float[] { 3f, 3f, 3f });
@@ -882,19 +934,49 @@ public class OrderService {
 		return image;
 	}
 
-	private float calculateRequiredHeight(OrderQRCodeDTO orderData) {
-		float height = 0;
-		height += 28f * 2;
+	private float calculateRequiredHeight(OrderQRCodeDTO orderData, Font font) {
+	    float height = 0;
+	    height += 2f * 2;
 
-		int numRows = orderData.getProductDetails().size() + 1;
-		height += 10f * numRows;
+	    int numRows = orderData.getProductDetails().size() + 1; 
+	    height += 10f * numRows;
 
-		return height;
+	    for (OrderDetailProductDetailsDTO productDetail : orderData.getProductDetails()) {
+	        String productName = productDetail.getProductName();
+	        float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 17); 
+	        height += productNameHeight;
+	    }
+
+	    float customerInfoHeight = 0;
+
+	    String customerName = orderData.getFullname();
+	    if (customerName != null) {
+	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerName.length() / 25);
+	    }
+
+	    String customerAddress = orderData.getAddress();
+	    if (customerAddress != null) {
+	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 25);
+	    }
+
+	    String customerPhone = orderData.getPhone();
+	    if (customerPhone != null) {
+	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerPhone.length() / 25);
+	    }
+
+	    String customerEmail = orderData.getEmail();
+	    if (customerEmail != null) {
+	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerEmail.length() / 25);
+	    }
+
+	    height += customerInfoHeight;
+
+	    return height;
 	}
-
 	private Rectangle createPageSize(float height) {
 		float widthInPoints = 58 * 2.83465f;
 		float heightInPoints = height * 2.83465f;
+		System.out.println(widthInPoints + " widthInPoints");
 		return new Rectangle(widthInPoints, heightInPoints);
 	}
 
