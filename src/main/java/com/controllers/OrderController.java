@@ -56,6 +56,7 @@ import com.services.JWTService;
 import com.services.OrderDetailService;
 import com.services.OrderService;
 import com.services.OrderStatusService;
+import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -77,6 +78,9 @@ public class OrderController {
 
 	@Autowired
 	private JWTService jwtService;
+	
+	@Autowired
+	private UploadService uploadService;
 
 	@GetMapping("/staff/orders")
 	@PreAuthorize("hasPermission(#userId, 'View Order')")
@@ -296,8 +300,8 @@ public class OrderController {
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
 
-		ApiResponse<OrderDetail> response = orderDetailService.updateOrderDetail(orderDetailId, productId, colorId,
-				sizeId);
+		ApiResponse<OrderDetail> response = orderDetailService.updateOrderDetail(orderDetailId, user, productId,
+				colorId, sizeId);
 
 		if (response.getErrorCode() == 200) {
 			return ResponseEntity.ok(response);
@@ -353,7 +357,7 @@ public class OrderController {
 		}
 
 		ApiResponse<OrderDetail> validationResponse = orderDetailService
-				.validateAndUpdateOrderDetailQuantity(orderDetailId, quantity);
+				.validateAndUpdateOrderDetailQuantity(orderDetailId, user, quantity);
 
 		if (validationResponse.getErrorCode() != 200) {
 			return ResponseEntity.status(HttpStatus.valueOf(validationResponse.getErrorCode()))
@@ -632,8 +636,9 @@ public class OrderController {
 		}
 	}
 
-	@GetMapping("/orders/")
-	public ResponseEntity<ApiResponse<?>> getOrderDetail(@RequestParam Integer orderId) {
+	@GetMapping("/orders/{orderId}")
+	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeaders) {
 		if (orderId == null) {
 			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
 			return ResponseEntity.badRequest().body(response);
@@ -648,32 +653,57 @@ public class OrderController {
 		}
 	}
 
+//	@PostMapping("/staff/orders/export")
+//	public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
+//		try {
+//			ApiResponse<ByteArrayOutputStream> pdfStream = orderService.generateInvoicePdf(orderId);
+//
+//			ApiResponse<BufferedImage> image = orderService.convertPdfToImage(pdfStream.getData());
+//
+//			response.setContentType("image/png");
+//			ImageIO.write(image.getData(), "png", response.getOutputStream());
+//		} catch (IllegalArgumentException e) {
+//			response.setStatus(400);
+//			try {
+//				response.getWriter().write(e.getMessage());
+//			} catch (IOException ioException) {
+//				ioException.printStackTrace();
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			response.setStatus(500);
+//			try {
+//				response.getWriter().write("Error generating PDF: " + e.getMessage());
+//			} catch (IOException ioException) {
+//				ioException.printStackTrace();
+//			}
+//		}
+//	}
 	@PostMapping("/staff/orders/export")
-	public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
-		try {
-			ByteArrayOutputStream pdfStream = orderService.generateInvoicePdf(orderId);
+	public ResponseEntity<ApiResponse<String>> exportInvoiceAsImage(@RequestParam("orderId") Integer orderId) {
+	    try {
+	        // 1. Tạo PDF từ Order ID
+	        ApiResponse<ByteArrayOutputStream> pdfStream = orderService.generateInvoicePdf(orderId);
 
-			BufferedImage image = orderService.convertPdfToImage(pdfStream);
+	        // 2. Chuyển đổi PDF thành hình ảnh
+	        ApiResponse<BufferedImage> imageResponse = orderService.convertPdfToImage(pdfStream.getData());
+	        BufferedImage image = imageResponse.getData();
 
-			response.setContentType("image/png");
-			ImageIO.write(image, "png", response.getOutputStream());
-		} catch (IllegalArgumentException e) {
-			response.setStatus(400);
-			try {
-				response.getWriter().write(e.getMessage());
-			} catch (IOException ioException) {
-				ioException.printStackTrace();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			response.setStatus(500);
-			try {
-				response.getWriter().write("Error generating PDF: " + e.getMessage());
-			} catch (IOException ioException) {
-				ioException.printStackTrace();
-			}
-		}
+	        // 3. Lưu hình ảnh bằng UploadService
+	        String folder = "invoices"; // Thư mục lưu trữ
+	        String fileName = uploadService.saveBufferedImage(image, folder);
+
+	        // 4. Trả về URL của hình ảnh
+	        String imageUrl = uploadService.getUrlImage(fileName);
+	        return ResponseEntity.ok(new ApiResponse<>(200, "Image generated and saved successfully.", imageUrl));
+
+	    } catch (IllegalArgumentException e) {
+	        return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body(new ApiResponse<>(500, "Error generating image: " + e.getMessage(), null));
+	    }
 	}
-
 
 }

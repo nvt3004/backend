@@ -53,7 +53,7 @@ public class CouponController {
 
 	@Autowired
 	private JWTService jwtService;
-	
+
 	@PostMapping
 	@PreAuthorize("hasPermission(#userId, 'Add Coupon')")
 	public ResponseEntity<ApiResponse<?>> createCoupon(@Valid @RequestBody CouponCreateDTO couponCreateDTO,
@@ -101,14 +101,14 @@ public class CouponController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
 		}
 
-		System.out.println(validationErrors.size() + " SizeError");
 		try {
 			Coupon savedCoupon = couponService.saveCoupon(couponCreateDTO);
-			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", savedCoupon);
+			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Tạo mã giảm giá thành công.",
+					savedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			errorResponse = new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-					"An error occurred while creating the coupon", e.getMessage());
+					"Đã xảy ra lỗi khi tạo mã giảm giá", e.getMessage());
 			return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -163,10 +163,11 @@ public class CouponController {
 
 		try {
 			Coupon updatedCoupon = couponService.updateCoupon(id, couponCreateDTO);
-			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Success", updatedCoupon);
+			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Cập nhật mã giảm giá thành công.",
+					updatedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (InvalidException e) {
-			errorResponse = new ApiResponse<>(HttpStatus.NOT_FOUND.value(), "Coupon not found", e.getMessage());
+			errorResponse = new ApiResponse<>(HttpStatus.NOT_FOUND.value(), e.getMessage(), null);
 			return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
 		} catch (Exception e) {
 			errorResponse = new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -217,15 +218,15 @@ public class CouponController {
 
 		try {
 			couponService.deleteCoupon(id);
-			ApiResponse<String> response = new ApiResponse<>(HttpStatus.OK.value(), "Coupon deleted successfully",
-					null);
+			ApiResponse<String> response = new ApiResponse<>(HttpStatus.OK.value(),
+					"Mã phiếu giảm giá đã xóa thành công.", null);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (InvalidException e) {
-			errorResponse = new ApiResponse<>(HttpStatus.CONFLICT.value(), "Unable to delete coupon", e.getMessage());
+			errorResponse = new ApiResponse<>(HttpStatus.CONFLICT.value(), e.getMessage(), null);
 			return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
 		} catch (Exception e) {
 			errorResponse = new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-					"An error occurred while deleting the coupon", e.getMessage());
+					"An error occurred while deleting the coupon " + e.getMessage(), null);
 			return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}

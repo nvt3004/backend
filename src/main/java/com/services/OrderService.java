@@ -76,6 +76,8 @@ import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
+import jakarta.mail.MessagingException;
+
 @Service
 public class OrderService {
 	@Autowired
@@ -316,64 +318,99 @@ public class OrderService {
 	}
 
 	private void sendOrderStatusUpdateEmail(Order order, String newStatus) {
-	    String customerEmail = order.getUser().getEmail();
-	    String subject = "Your order #" + order.getOrderId() + " status has been updated";
-	    String htmlContent = generateOrderStatusEmailContent(order, newStatus);
-	    
-	    // Send email asynchronously using CompletableFuture
-	    CompletableFuture.runAsync(() -> mailService.sendHtmlEmail(customerEmail, subject, htmlContent));
+		String customerEmail = order.getUser().getEmail();
+		String subject = "Đơn hàng #" + order.getOrderId() + " " + getStatusMessage(newStatus);
+		String htmlContent = generateOrderStatusEmailContent(order, newStatus);
+
+		CompletableFuture.runAsync(() -> mailService.sendHtmlEmail(customerEmail, subject, htmlContent));
 	}
 
+	private String getStatusMessage(String status) {
+		switch (status.toLowerCase()) {
+		case "pending":
+			return "đang chờ xác nhận.";
+		case "processed":
+			return "đã xác nhận.";
+		case "shipped":
+			return "đã vận chuyển.";
+		case "delivered":
+			return "đã giao thành công.";
+		case "cancelled":
+			return "đã bị hủy.";
+		default:
+			return "đã cập nhật.";
+		}
+	}
 
 	private String generateOrderStatusEmailContent(Order order, String newStatus) {
 		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
 		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
 		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
 		finalTotal = finalTotal.max(BigDecimal.ZERO);
-
+		String statusMessage = getStatusMessage(newStatus);
 		return """
-				<html>
-				<body style='font-family: Arial, sans-serif;'>
-				    <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
-				        <h2 style='color: #333;'>Dear %s,</h2>
-				        <p>Your order <strong># %d</strong> status has been updated to: <strong style='color: #28a745;'>%s</strong>.</p>
-				        <p>Order details:</p>
-				        <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
-				            <thead>
-				                <tr style='background-color: #f8f9fa; text-align: left;'>
-				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Product</th>
-				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Quantity</th>
-				                    <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Price</th>
-				                </tr>
-				            </thead>
-				            <tbody>
-				                %s
-				                <tr>
-				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Subtotal:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                </tr>
-				                <tr>
-				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Shipping Fee:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                </tr>
-				                <tr>
-				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Discount:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                </tr>
-				                <tr style='background-color: #f8f9fa;'>
-				                    <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Total:</strong></td>
-				                    <td style='padding: 10px; border: 1px solid #ddd; color: #28a745; text-align: right;'><strong>%s</strong></td>
-				                </tr>
-				            </tbody>
-				        </table>
-				        <p style='margin-top: 20px;'>If you have any questions, please contact us at <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a>.</p>
-				        <p>Thank you for shopping with us!</p>
-				    </div>
-				</body>
-				</html>
-				"""
-				.formatted(order.getFullname(), order.getOrderId(), newStatus, generateOrderItemsHtml(order),
-						FormarCurrencyUtil.formatCurrency(subTotal), FormarCurrencyUtil.formatCurrency(order.getShippingFee()), FormarCurrencyUtil.formatCurrency(discountValue),
+				  <html>
+				  <body style='font-family: Arial, sans-serif;'>
+				  <style>
+				     body { font-family: Arial, sans-serif; line-height: 1.6; }
+				     .highlight { color: #007bff; font-weight: bold;}
+				     .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				     .content { margin: 10px 0; }
+				 </style>
+				      <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
+				          <h2 style='color: #333;'>Kính chào %s,</h2>
+				       <p>Đơn hàng <strong># %d</strong> của bạn %s</p>
+				          <p>Thông tin chi tiết đơn hàng:</p>
+				          <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
+				              <thead>
+				                  <tr style='background-color: #f8f9fa; text-align: left;'>
+				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Sản phẩm</th>
+				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Số lượng</th>
+				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Giá</th>
+				                  </tr>
+				              </thead>
+				              <tbody>
+				                  %s
+				                  <tr>
+				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng phụ:</strong></td>
+				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                  </tr>
+				                  <tr>
+				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Phí vận chuyển:</strong></td>
+				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                  </tr>
+				                  <tr>
+				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Giảm giá:</strong></td>
+				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                  </tr>
+				                  <tr style='background-color: #f8f9fa;'>
+				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng cộng:</strong></td>
+				                      <td style='padding: 10px; border: 1px solid #ddd; color: #28a745; text-align: right;'><strong>%s</strong></td>
+				                  </tr>
+				              </tbody>
+				          </table>
+				                <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+				<p>
+				     Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+				 </p>
+				 <p class="content">
+				     - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				     - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				 </p>
+				 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				 <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				 <p class="footer">
+				     Đây là email tự động. Vui lòng không trả lời email này.
+				 </p>
+
+				      </div>
+				  </body>
+				  </html>
+				  """
+				.formatted(order.getFullname(), order.getOrderId(), statusMessage, generateOrderItemsHtml(order),
+						FormarCurrencyUtil.formatCurrency(subTotal),
+						FormarCurrencyUtil.formatCurrency(order.getShippingFee()),
+						FormarCurrencyUtil.formatCurrency(discountValue),
 						FormarCurrencyUtil.formatCurrency(finalTotal));
 	}
 
@@ -513,7 +550,8 @@ public class OrderService {
 						return new ApiResponse<>(500, "Failed to find 'Cancelled' status: " + e.getMessage(), null);
 					}
 				}
-
+				Optional<OrderDetail> orderDetail = orderDetailJpa.findById(orderDetailId);
+				sendEmailNotification(order, orderDetail.get());
 				return new ApiResponse<>(200, "Product deleted successfully.", null);
 			} else {
 				return new ApiResponse<>(404, "OrderDetail with ID " + orderDetailId + " not found.", null);
@@ -523,6 +561,49 @@ public class OrderService {
 			e.printStackTrace();
 			return new ApiResponse<>(500, "An error occurred while deleting the OrderDetail. Please try again.", null);
 		}
+	}
+
+	private void sendEmailNotification(Order order, OrderDetail orderDetail) throws Exception {
+		String userEmail = order.getUser().getEmail();
+
+		CompletableFuture.runAsync(() -> {
+			String subject = "Thông báo xóa sản phẩm khỏi đơn hàng #" + order.getOrderId();
+
+			String message = """
+					  <!DOCTYPE html>
+					  <html>
+					      <head>
+					          <style>
+					     body { font-family: Arial, sans-serif; line-height: 1.6; }
+					     .highlight { color: #007bff; font-weight: bold;}
+					     .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+					     .content { margin: 10px 0; }
+					 </style>
+					      </head>
+					      <body>
+					          <p>Kính chào <strong>%s</strong>,</p>
+					          <p>Sản phẩm <span class="highlight">"%s"</span> với số lượng <span class="highlight">%d</span> trong đơn hàng <span class="highlight">#%d</span> đã được xóa thành công.</p>
+					             <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+					<p>
+					     Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+					 </p>
+					 <p class="content">
+					     - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+					     - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+					 </p>
+					  <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+					 <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+					 <p class="footer">
+					     Đây là email tự động. Vui lòng không trả lời email này.
+					 </p>
+					      </body>
+					  </html>
+					  """
+					.formatted(order.getFullname(), orderDetail.getProductVersionBean().getProduct().getProductName(),
+							orderDetail.getQuantity(), order.getOrderId());
+
+			mailService.sendHtmlEmail(userEmail, subject, message);
+		});
 	}
 
 	public Order createOrderCart(Order order) {
@@ -654,23 +735,28 @@ public class OrderService {
 		return new ApiResponse<>(200, "Order details fetched successfully", responseMap);
 	}
 
-	public ByteArrayOutputStream generateInvoicePdf(Integer orderId) throws Exception {
+	public ApiResponse<ByteArrayOutputStream> generateInvoicePdf(Integer orderId) throws Exception {
 
 		ApiResponse<Map<String, Object>> apiResponse = getOrder(orderId);
 
 		if (apiResponse.getErrorCode() != 200) {
-			throw new IllegalArgumentException("Error: " + apiResponse.getMessage());
+			return new ApiResponse<>(apiResponse.getErrorCode(), apiResponse.getMessage(), null); // Return ApiResponse
+																									// with error
 		}
 
 		Map<String, Object> data = apiResponse.getData();
 		OrderQRCodeDTO orderData = ((List<OrderQRCodeDTO>) data.get("orderDetail")).get(0);
 
+		if (!"Processed".equalsIgnoreCase(orderData.getStatusName())) {
+			return new ApiResponse<>(400, "Chỉ được phép tạo hóa đơn cho các đơn hàng 'Đã xử lý (Processed)'.", null);
+		}
+
 		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
 		Font font = new Font(bf, 5, Font.NORMAL);
 		Font fontBold = new Font(bf, 6, Font.NORMAL);
 		Font infoFont = new Font(Font.FontFamily.HELVETICA, 4, Font.BOLD);
-		
-		Float height = calculateRequiredHeight(orderData,font);
+
+		Float height = calculateRequiredHeight(orderData, font);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		Document document = new Document(createPageSize(height));
@@ -697,11 +783,11 @@ public class OrderService {
 
 		document.add(title);
 		document.add(line);
-		
+
 		Paragraph orderInfoTitle = new Paragraph("Thông tin đơn hàng", fontBold);
 		orderInfoTitle.setAlignment(Element.ALIGN_CENTER);
 		document.add(orderInfoTitle);
-		
+
 		Paragraph orderIdParagraph = new Paragraph("Mã Hóa Đơn: " + orderData.getOrderId(), font);
 		orderIdParagraph.setAlignment(Element.ALIGN_CENTER);
 		document.add(orderIdParagraph);
@@ -713,17 +799,18 @@ public class OrderService {
 		orderDateParagraph.setAlignment(Element.ALIGN_CENTER);
 		document.add(orderDateParagraph);
 
-		Paragraph finalTotal = new Paragraph("Tổng tiền: " + FormarCurrencyUtil.formatCurrency(orderData.getFinalTotal()), font);
+		Paragraph finalTotal = new Paragraph(
+				"Tổng tiền: " + FormarCurrencyUtil.formatCurrency(orderData.getFinalTotal()), font);
 		finalTotal.setAlignment(Element.ALIGN_CENTER);
 		document.add(finalTotal);
 
 		PdfPTable billToTable = new PdfPTable(2);
-		billToTable.setWidthPercentage(160); 
+		billToTable.setWidthPercentage(160);
 		billToTable.setSpacingBefore(0);
 
-		//Thông tin của công ty
+		// Thông tin của công ty
 		PdfPCell billFromCell = new PdfPCell();
-		billFromCell.setBorder(Rectangle.NO_BORDER); 
+		billFromCell.setBorder(Rectangle.NO_BORDER);
 
 		Paragraph companyInfoTitle = new Paragraph("Công ty bán hàng:", fontBold);
 		companyInfoTitle.setAlignment(Element.ALIGN_LEFT);
@@ -736,7 +823,7 @@ public class OrderService {
 		Paragraph companyAddress = new Paragraph("Địa chỉ: Đ. Số 22, Thường Thạnh, Cái Răng, Cần Thơ, Việt Nam", font);
 		companyAddress.setAlignment(Element.ALIGN_LEFT);
 		billFromCell.addElement(companyAddress);
-		
+
 		Paragraph companyPhone = new Paragraph("Điện thoại: 098 388 11 00", font);
 		companyPhone.setAlignment(Element.ALIGN_LEFT);
 		billFromCell.addElement(companyPhone);
@@ -744,7 +831,7 @@ public class OrderService {
 		Paragraph companyEmail = new Paragraph("Email: ngothai3004@gmail.com", font);
 		companyEmail.setAlignment(Element.ALIGN_LEFT);
 		billFromCell.addElement(companyEmail);
-		
+
 		// Thông tin của khách hàng
 		PdfPCell billToCell = new PdfPCell();
 		billToCell.setBorder(Rectangle.NO_BORDER);
@@ -770,7 +857,7 @@ public class OrderService {
 		billToCell.addElement(customerEmail);
 
 		billToTable.setSpacingAfter(10);
-		
+
 		billToTable.addCell(billFromCell);
 		billToTable.addCell(billToCell);
 
@@ -829,6 +916,8 @@ public class OrderService {
 			cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 			cell.setPadding(5);
 			table.addCell(cell);
+			System.out.println(orderData.getProductDetails().get(0).getProductName() + " Có null không");
+			System.out.println("Vô tới đây luôn");
 		}
 		document.add(table);
 		PdfPTable summaryTable = new PdfPTable(2);
@@ -856,7 +945,8 @@ public class OrderService {
 		summaryTable.addCell(descriptionCell);
 		summaryTable.addCell(valueCell);
 
-		descriptionCell = new PdfPCell(new Phrase("Giảm giá: (" + FormarCurrencyUtil.formatDiscount(orderData.getDisCount()) + ")", font));
+		descriptionCell = new PdfPCell(
+				new Phrase("Giảm giá: (" + FormarCurrencyUtil.formatDiscount(orderData.getDisCount()) + ")", font));
 		descriptionCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 		descriptionCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		valueCell = new PdfPCell(new Phrase(FormarCurrencyUtil.formatCurrency(orderData.getDiscountValue()), font));
@@ -886,9 +976,30 @@ public class OrderService {
 
 		document.add(tableTotalInWord);
 		document.close();
-
-		return baos;
+		sentEmail(orderData, baos);
+		return new ApiResponse<>(200, "Tạo hóa đơn thành công.", baos);
 	}
+	
+	private ApiResponse<?> sentEmail(OrderQRCodeDTO orderData, ByteArrayOutputStream baos) {
+	    String toEmail = orderData.getEmail();
+	    String subject = "Hóa đơn mua hàng";
+	    String body = "Cảm ơn bạn đã mua hàng. Vui lòng xem hóa đơn đính kèm.";
+
+	    try {
+	        CompletableFuture.runAsync(() -> {
+	            try {
+	                mailService.sendInvoiceEmail(toEmail, subject, body, baos);
+	            } catch (MessagingException e) {
+	                System.err.println("Lỗi khi gửi email: " + e.getMessage());
+	            }
+	        });
+	    } catch (Exception e) {
+	        return new ApiResponse<>(500, "Lỗi khi gửi email: " + e.getMessage(), null);
+	    }
+
+	    return new ApiResponse<>(200, "Email đang được gửi.", null);
+	}
+
 
 	private com.itextpdf.text.Image generateQrCodeImage(String qrCodeData, int size)
 			throws WriterException, IOException, BadElementException, com.google.zxing.WriterException {
@@ -925,54 +1036,61 @@ public class OrderService {
 		return "http://localhost:3000/orders/" + orderData.getOrderId();
 	}
 
-	public BufferedImage convertPdfToImage(ByteArrayOutputStream pdfStream) throws IOException {
-		byte[] pdfBytes = pdfStream.toByteArray();
-		PDDocument pdfDocument = PDDocument.load(pdfBytes);
-		PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
-		BufferedImage image = pdfRenderer.renderImageWithDPI(0, 300, ImageType.RGB);
-		pdfDocument.close();
-		return image;
+	public ApiResponse<BufferedImage> convertPdfToImage(ByteArrayOutputStream pdfStream) {
+		try {
+			byte[] pdfBytes = pdfStream.toByteArray();
+			try (PDDocument pdfDocument = PDDocument.load(pdfBytes)) {
+				PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
+				BufferedImage image = pdfRenderer.renderImageWithDPI(0, 300, ImageType.RGB);
+				return new ApiResponse<>(200, "Success", image);
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			return new ApiResponse<>(500, "Error converting PDF to image: " + e.getMessage(), null);
+		}
 	}
 
 	private float calculateRequiredHeight(OrderQRCodeDTO orderData, Font font) {
-	    float height = 0;
-	    height += 2f * 2;
+		float height = 0;
+		height += 30f * 2;
 
-	    int numRows = orderData.getProductDetails().size() + 1; 
-	    height += 10f * numRows;
+		int numRows = orderData.getProductDetails().size() + 1;
+		height += 10f * numRows;
 
-	    for (OrderDetailProductDetailsDTO productDetail : orderData.getProductDetails()) {
-	        String productName = productDetail.getProductName();
-	        float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 17); 
-	        height += productNameHeight;
-	    }
+		for (OrderDetailProductDetailsDTO productDetail : orderData.getProductDetails()) {
+			String productName = productDetail.getProductName();
+			float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 17);
+			height += productNameHeight;
+		}
 
-	    float customerInfoHeight = 0;
+		float customerInfoHeight = 0;
 
-	    String customerName = orderData.getFullname();
-	    if (customerName != null) {
-	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerName.length() / 25);
-	    }
+		String customerName = orderData.getFullname();
+		if (customerName != null) {
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerName.length() / 25);
+		}
 
-	    String customerAddress = orderData.getAddress();
-	    if (customerAddress != null) {
-	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 25);
-	    }
+		String customerAddress = orderData.getAddress();
+		if (customerAddress != null) {
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 25);
+		}
 
-	    String customerPhone = orderData.getPhone();
-	    if (customerPhone != null) {
-	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerPhone.length() / 25);
-	    }
+		String customerPhone = orderData.getPhone();
+		if (customerPhone != null) {
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerPhone.length() / 25);
+		}
 
-	    String customerEmail = orderData.getEmail();
-	    if (customerEmail != null) {
-	        customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerEmail.length() / 25);
-	    }
+		String customerEmail = orderData.getEmail();
+		if (customerEmail != null) {
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerEmail.length() / 25);
+		}
 
-	    height += customerInfoHeight;
+		height += customerInfoHeight;
 
-	    return height;
+		return height;
 	}
+
 	private Rectangle createPageSize(float height) {
 		float widthInPoints = 58 * 2.83465f;
 		float heightInPoints = height * 2.83465f;

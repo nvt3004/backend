@@ -3,6 +3,7 @@ package com.services;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +11,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
@@ -19,6 +19,7 @@ import com.entities.Image;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.ProductVersion;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.models.AttributeDTO;
 import com.models.AttributeProductVersionDTO;
@@ -27,7 +28,6 @@ import com.models.OrderDetailDTO;
 import com.models.OrderDetailProductDetailsDTO;
 import com.models.OrderQRCodeDTO;
 import com.models.SizeDTO;
-import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
 import com.utils.FormarCurrencyUtil;
@@ -172,8 +172,8 @@ public class OrderDetailService {
 		return productVersionService.getProductVersionByAttributes(productId, colorId, sizeId);
 	}
 
-	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, Integer productId, Integer colorId,
-			Integer sizeId) {
+	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, User currentUser, Integer productId,
+			Integer colorId, Integer sizeId) {
 
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
@@ -209,40 +209,94 @@ public class OrderDetailService {
 		}
 
 		orderDetail.setProductVersionBean(newProductVersion.get());
-		orderDetail.setQuantity(1); // Set default quantity
+		orderDetail.setQuantity(1);
 		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
-
-		// Save updated order detail
+		orderDetail.getOrder().setLastUpdatedBy(currentUser);
+		orderDetail.getOrder().setLastUpdatedDate(new Date());
 		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
-
-		// Send email notification
-		sendOrderDetailUpdateEmail(orderDetail, order.getUser().getEmail(), newProductVersion.get());
+		sendOrderDetailUpdateEmail(orderDetail, currentProductVersion, order.getUser().getEmail(),
+				newProductVersion.get());
 
 		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
 	}
 
-	private void sendOrderDetailUpdateEmail(OrderDetail orderDetail, String userEmail,
+	private void sendOrderDetailUpdateEmail(OrderDetail orderDetail, ProductVersion productVersion, String userEmail,
 			ProductVersion newProductVersion) {
-		// Construct the email content and send the email asynchronously
 		CompletableFuture.runAsync(() -> {
-			String emailContent = generateOrderDetailUpdateEmailContent(orderDetail, newProductVersion);
-			mailService.sendEmail(userEmail, "Your Order Detail Has Been Updated", emailContent);
+			String emailContent = generateHtmlEmailContent(orderDetail, productVersion, newProductVersion);
+			mailService.sendHtmlEmail(userEmail, "Thông báo cập nhật chi tiết đơn hàng", emailContent);
 		});
 	}
 
-	private String generateOrderDetailUpdateEmailContent(OrderDetail orderDetail, ProductVersion newProductVersion) {
-		// You can modify this method to generate an HTML email content based on the
-		// updated details
-		return String.format("Your order detail has been updated to product '%s' with price %s.",
-				newProductVersion.getProduct().getProductName(),
-				FormarCurrencyUtil.formatCurrency(newProductVersion.getRetailPrice()));
+	private String getAttributeValue(List<AttributeOptionsVersion> attributeOptionsVersions, String attributeName) {
+		for (AttributeOptionsVersion version : attributeOptionsVersions) {
+			String attribute = version.getAttributeOption().getAttribute().getAttributeName();
+			if (attribute.equals(attributeName)) {
+				return version.getAttributeOption().getAttributeValue();
+			}
+		}
+		return "";
+	}
+
+	private String generateHtmlEmailContent(OrderDetail orderDetail, ProductVersion productVersion,
+			ProductVersion newProductVersion) {
+
+		String oldColor = getAttributeValue(productVersion.getAttributeOptionsVersions(), "Color");
+		String oldSize = getAttributeValue(productVersion.getAttributeOptionsVersions(), "Size");
+
+		String newColor = getAttributeValue(newProductVersion.getAttributeOptionsVersions(), "Color");
+		String newSize = getAttributeValue(newProductVersion.getAttributeOptionsVersions(), "Size");
+
+		String colorChange = !oldColor.equals(newColor) ? String.format(
+				"Màu sắc đã thay đổi từ <span class='highlight'>%s</span> thành <span class='highlight'>%s</span>.",
+				oldColor, newColor) : "";
+
+		String sizeChange = !oldSize.equals(newSize) ? String.format(
+				"Kích cỡ đã thay đổi từ <span class='highlight'>%s</span> thành <span class='highlight'>%s</span>.",
+				oldSize, newSize) : "";
+
+		return """
+				    <!DOCTYPE html>
+				    <html>
+				    <head>
+				        <style>
+				            body { font-family: Arial, sans-serif; line-height: 1.6; }
+				            .highlight { color: #007bff; font-weight: bold;}
+				            .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				            .content { margin: 10px 0; }
+				        </style>
+				    </head>
+				    <body>
+				        <p>Kính chào <strong>%s</strong>,</p>
+				        <p>Chi tiết đơn hàng của bạn đã được cập nhật với sản phẩm <span class='highlight'>%s</span> có giá <span class='highlight'>%s</span>.</p>
+				        <p>%s</p>
+				        <p>%s</p>
+				        <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+				       <p>
+				            Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+				        </p>
+				        <p class="content">
+				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				        </p>
+				        <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				        <p class="footer">
+				            Đây là email tự động. Vui lòng không trả lời email này.
+				        </p>
+				    </body>
+				    </html>
+				"""
+				.formatted(orderDetail.getOrder().getFullname(), newProductVersion.getProduct().getProductName(),
+						FormarCurrencyUtil.formatCurrency(newProductVersion.getRetailPrice()), colorChange, sizeChange);
 	}
 
 	public boolean isValidQuantity(Integer quantity) {
 		return quantity != null && quantity > 0;
 	}
 
-	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, Integer quantity) {
+	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, User currentUser,
+			Integer quantity) {
 
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
@@ -288,9 +342,10 @@ public class OrderDetailService {
 					null);
 		}
 
+		orderDetail.getOrder().setLastUpdatedBy(currentUser);
+		orderDetail.getOrder().setLastUpdatedDate(new Date());
 		orderDetail.setQuantity(quantity);
 		orderDetailJpa.save(orderDetail);
-		System.out.println(orderDetail.getOrder().getUser().getEmail() + "EmailUser");
 
 		sendQuantityUpdateEmail(orderDetail, orderDetail.getOrder().getUser().getEmail());
 
@@ -300,13 +355,49 @@ public class OrderDetailService {
 	private void sendQuantityUpdateEmail(OrderDetail orderDetail, String userEmail) {
 		CompletableFuture.runAsync(() -> {
 			String emailContent = generateQuantityUpdateEmailContent(orderDetail);
-			mailService.sendEmail(userEmail, "Your Order Quantity Has Been Updated", emailContent);
+			mailService.sendHtmlEmail(userEmail, "Cập nhật số lượng sản phẩm trong đơn hàng", emailContent);
 		});
 	}
 
 	private String generateQuantityUpdateEmailContent(OrderDetail orderDetail) {
-		return String.format("Your order quantity has been updated to %d for the product '%s'.",
-				orderDetail.getQuantity(), orderDetail.getProductVersionBean().getProduct().getProductName());
+		return """
+				    <!DOCTYPE html>
+				    <html>
+				    <head>
+				        <style>
+				            body { font-family: Arial, sans-serif; line-height: 1.6; }
+				            .highlight { color: #007bff; font-weight: bold; }
+				            .content { margin: 10px 0; }
+				            .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				        </style>
+				    </head>
+				    <body>
+				        <p>Xin chào <strong>%s</strong>,</p>
+				        <p class="content">
+				            Số lượng sản phẩm trong đơn hàng của bạn đã được cập nhật:
+				        </p>
+				        <p class="content">
+				            Sản phẩm: <span class="highlight">%s</span><br>
+				            Số lượng mới: <span class="highlight">%d</span>
+				        </p>
+				         <p class="content">Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+				        <p>
+				            Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+				        </p>
+				        <p class="content">
+				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				        </p>
+				         <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				        <p class="footer">
+				            Đây là email tự động. Vui lòng không trả lời email này.
+				        </p>
+				    </body>
+				    </html>
+				"""
+				.formatted(orderDetail.getOrder().getFullname(),
+						orderDetail.getProductVersionBean().getProduct().getProductName(), orderDetail.getQuantity());
 	}
 
 	public OrderQRCodeDTO convertToOrderQRCode(List<OrderDetail> orderDetailList) {
