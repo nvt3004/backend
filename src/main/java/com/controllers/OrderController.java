@@ -1,17 +1,10 @@
 package com.controllers;
 
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.imageio.ImageIO;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
-import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.PageImpl;
@@ -35,21 +28,8 @@ import com.entities.User;
 import com.errors.ApiResponse;
 import com.errors.InvalidException;
 import com.errors.UserServiceException;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.pdf.BaseFont;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import com.itextpdf.text.pdf.PdfWriter;
 import com.models.OrderByUserDTO;
 import com.models.OrderDTO;
-import com.models.OrderDetailProductDetailsDTO;
-import com.models.OrderQRCodeDTO;
 import com.models.OrderStatusDTO;
 import com.services.AuthService;
 import com.services.JWTService;
@@ -57,8 +37,6 @@ import com.services.OrderDetailService;
 import com.services.OrderService;
 import com.services.OrderStatusService;
 import com.utils.UploadService;
-
-import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -90,7 +68,7 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-
+System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -425,7 +403,7 @@ public class OrderController {
 	@PreAuthorize("hasPermission(#userid, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-
+System.out.println("Chạy Vô OrderDetails");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -679,31 +657,32 @@ public class OrderController {
 //			}
 //		}
 //	}
+	
 	@PostMapping("/staff/orders/export")
-	public ResponseEntity<ApiResponse<String>> exportInvoiceAsImage(@RequestParam("orderId") Integer orderId) {
+	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId) {
 	    try {
 	        // 1. Tạo PDF từ Order ID
-	        ApiResponse<ByteArrayOutputStream> pdfStream = orderService.generateInvoicePdf(orderId);
+	        ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
+	        ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
+	        byte[] pdfBytes = pdfStream.toByteArray();
 
-	        // 2. Chuyển đổi PDF thành hình ảnh
-	        ApiResponse<BufferedImage> imageResponse = orderService.convertPdfToImage(pdfStream.getData());
-	        BufferedImage image = imageResponse.getData();
+	        // 2. Trả về PDF dưới dạng file
+	        HttpHeaders headers = new HttpHeaders();
+	        headers.setContentType(MediaType.APPLICATION_PDF);
+	        headers.setContentDispositionFormData("attachment", "invoice.pdf");
+	        headers.setContentLength(pdfBytes.length);
 
-	        // 3. Lưu hình ảnh bằng UploadService
-	        String folder = "invoices"; // Thư mục lưu trữ
-	        String fileName = uploadService.saveBufferedImage(image, folder);
-
-	        // 4. Trả về URL của hình ảnh
-	        String imageUrl = uploadService.getUrlImage(fileName);
-	        return ResponseEntity.ok(new ApiResponse<>(200, "Image generated and saved successfully.", imageUrl));
+	        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 
 	    } catch (IllegalArgumentException e) {
-	        return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
+	        ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
+	        return ResponseEntity.badRequest().body(response);
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                .body(new ApiResponse<>(500, "Error generating image: " + e.getMessage(), null));
+	        ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 	    }
 	}
+
 
 }

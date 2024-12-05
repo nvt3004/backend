@@ -272,9 +272,10 @@ public class OrderDetailService {
 				        <p>%s</p>
 				        <p>%s</p>
 				        <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
-				       <p>
-				            Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
-				        </p>
+				      <p>
+						    Nếu bạn không yêu cầu thay đổi này hoặc có bất kỳ câu hỏi hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+						</p>
+
 				        <p class="content">
 				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
 				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
@@ -381,9 +382,9 @@ public class OrderDetailService {
 				            Số lượng mới: <span class="highlight">%d</span>
 				        </p>
 				         <p class="content">Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
-				        <p>
-				            Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
-				        </p>
+				         <p>
+						    Nếu bạn không yêu cầu thay đổi này hoặc có bất kỳ câu hỏi hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+						</p>
 				        <p class="content">
 				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
 				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>

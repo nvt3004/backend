@@ -30,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import com.entities.AttributeOptionsVersion;
@@ -77,6 +78,7 @@ import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
 import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class OrderService {
@@ -349,64 +351,65 @@ public class OrderService {
 		finalTotal = finalTotal.max(BigDecimal.ZERO);
 		String statusMessage = getStatusMessage(newStatus);
 		return """
-				  <html>
-				  <body style='font-family: Arial, sans-serif;'>
-				  <style>
-				     body { font-family: Arial, sans-serif; line-height: 1.6; }
-				     .highlight { color: #007bff; font-weight: bold;}
-				     .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
-				     .content { margin: 10px 0; }
-				 </style>
-				      <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
-				          <h2 style='color: #333;'>Kính chào %s,</h2>
-				       <p>Đơn hàng <strong># %d</strong> của bạn %s</p>
-				          <p>Thông tin chi tiết đơn hàng:</p>
-				          <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
-				              <thead>
-				                  <tr style='background-color: #f8f9fa; text-align: left;'>
-				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Sản phẩm</th>
-				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Số lượng</th>
-				                      <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Giá</th>
-				                  </tr>
-				              </thead>
-				              <tbody>
-				                  %s
-				                  <tr>
-				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng phụ:</strong></td>
-				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                  </tr>
-				                  <tr>
-				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Phí vận chuyển:</strong></td>
-				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                  </tr>
-				                  <tr>
-				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Giảm giá:</strong></td>
-				                      <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
-				                  </tr>
-				                  <tr style='background-color: #f8f9fa;'>
-				                      <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng cộng:</strong></td>
-				                      <td style='padding: 10px; border: 1px solid #ddd; color: #28a745; text-align: right;'><strong>%s</strong></td>
-				                  </tr>
-				              </tbody>
-				          </table>
-				                <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
-				<p>
-				     Nếu bạn không yêu cầu thay đổi này hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
-				 </p>
-				 <p class="content">
-				     - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
-				     - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
-				 </p>
-				 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
-				 <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
-				 <p class="footer">
-				     Đây là email tự động. Vui lòng không trả lời email này.
-				 </p>
+				 <html>
+				 <body style='font-family: Arial, sans-serif;'>
+				 <style>
+				    body { font-family: Arial, sans-serif; line-height: 1.6; }
+				    .highlight { color: #007bff; font-weight: bold;}
+				    .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				    .content { margin: 10px 0; }
+				</style>
+				     <div style='max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px; padding: 20px;'>
+				         <h2 style='color: #333;'>Kính chào %s,</h2>
+				      <p>Đơn hàng <strong># %d</strong> của bạn %s</p>
+				         <p>Thông tin chi tiết đơn hàng:</p>
+				         <table style='width: 100%%; border-collapse: collapse; margin-bottom: 20px;'>
+				             <thead>
+				                 <tr style='background-color: #f8f9fa; text-align: left;'>
+				                     <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Sản phẩm</th>
+				                     <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Số lượng</th>
+				                     <th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Giá</th>
+				                 </tr>
+				             </thead>
+				             <tbody>
+				                 %s
+				                 <tr>
+				                     <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng phụ:</strong></td>
+				                     <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                 </tr>
+				                 <tr>
+				                     <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Phí vận chuyển:</strong></td>
+				                     <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                 </tr>
+				                 <tr>
+				                     <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Giảm giá:</strong></td>
+				                     <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>%s</td>
+				                 </tr>
+				                 <tr style='background-color: #f8f9fa;'>
+				                     <td colspan='2' style='padding: 10px; border: 1px solid #ddd; text-align: right;'><strong>Tổng cộng:</strong></td>
+				                     <td style='padding: 10px; border: 1px solid #ddd; color: #28a745; text-align: right;'><strong>%s</strong></td>
+				                 </tr>
+				             </tbody>
+				         </table>
+				               <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+							<p>
+				    Nếu bạn có bất kỳ câu hỏi nào hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+				</p>
 
-				      </div>
-				  </body>
-				  </html>
-				  """
+				<p class="content">
+				    - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				    - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				</p>
+				<p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				<p class="footer">
+				    Đây là email tự động. Vui lòng không trả lời email này.
+				</p>
+
+				     </div>
+				 </body>
+				 </html>
+				 """
 				.formatted(order.getFullname(), order.getOrderId(), statusMessage, generateOrderItemsHtml(order),
 						FormarCurrencyUtil.formatCurrency(subTotal),
 						FormarCurrencyUtil.formatCurrency(order.getShippingFee()),
@@ -570,35 +573,36 @@ public class OrderService {
 			String subject = "Thông báo xóa sản phẩm khỏi đơn hàng #" + order.getOrderId();
 
 			String message = """
-					  <!DOCTYPE html>
-					  <html>
-					      <head>
-					          <style>
-					     body { font-family: Arial, sans-serif; line-height: 1.6; }
-					     .highlight { color: #007bff; font-weight: bold;}
-					     .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
-					     .content { margin: 10px 0; }
-					 </style>
-					      </head>
-					      <body>
-					          <p>Kính chào <strong>%s</strong>,</p>
-					          <p>Sản phẩm <span class="highlight">"%s"</span> với số lượng <span class="highlight">%d</span> trong đơn hàng <span class="highlight">#%d</span> đã được xóa thành công.</p>
-					             <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
-					<p>
-					     Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
-					 </p>
-					 <p class="content">
-					     - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
-					     - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
-					 </p>
-					  <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
-					 <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
-					 <p class="footer">
-					     Đây là email tự động. Vui lòng không trả lời email này.
-					 </p>
-					      </body>
-					  </html>
-					  """
+					 <!DOCTYPE html>
+					 <html>
+					     <head>
+					         <style>
+					    body { font-family: Arial, sans-serif; line-height: 1.6; }
+					    .highlight { color: #007bff; font-weight: bold;}
+					    .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+					    .content { margin: 10px 0; }
+					</style>
+					     </head>
+					     <body>
+					         <p>Kính chào <strong>%s</strong>,</p>
+					         <p>Sản phẩm <span class="highlight">"%s"</span> với số lượng <span class="highlight">%d</span> trong đơn hàng <span class="highlight">#%d</span> đã được xóa thành công.</p>
+					            <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+							<p>
+							    Nếu bạn không yêu cầu thay đổi này hoặc có bất kỳ câu hỏi hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+							</p>
+
+					<p class="content">
+					    - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+					    - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+					</p>
+					 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+					<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+					<p class="footer">
+					    Đây là email tự động. Vui lòng không trả lời email này.
+					</p>
+					     </body>
+					 </html>
+					 """
 					.formatted(order.getFullname(), orderDetail.getProductVersionBean().getProduct().getProductName(),
 							orderDetail.getQuantity(), order.getOrderId());
 
@@ -975,31 +979,66 @@ public class OrderService {
 		tableTotalInWord.addCell(cellTotalInWord);
 
 		document.add(tableTotalInWord);
+
 		document.close();
 		sentEmail(orderData, baos);
 		return new ApiResponse<>(200, "Tạo hóa đơn thành công.", baos);
 	}
-	
+
 	private ApiResponse<?> sentEmail(OrderQRCodeDTO orderData, ByteArrayOutputStream baos) {
-	    String toEmail = orderData.getEmail();
-	    String subject = "Hóa đơn mua hàng";
-	    String body = "Cảm ơn bạn đã mua hàng. Vui lòng xem hóa đơn đính kèm.";
+		String toEmail = orderData.getEmail();
+		String subject = "Hóa đơn mua hàng";
+		String body = generateEmailContent(orderData);
 
-	    try {
-	        CompletableFuture.runAsync(() -> {
-	            try {
-	                mailService.sendInvoiceEmail(toEmail, subject, body, baos);
-	            } catch (MessagingException e) {
-	                System.err.println("Lỗi khi gửi email: " + e.getMessage());
-	            }
-	        });
-	    } catch (Exception e) {
-	        return new ApiResponse<>(500, "Lỗi khi gửi email: " + e.getMessage(), null);
-	    }
+		try {
+			CompletableFuture.runAsync(() -> {
+				try {
+					mailService.sendInvoiceEmail(toEmail, subject, body, baos);
+				} catch (MessagingException e) {
+					System.err.println("Lỗi khi gửi email: " + e.getMessage());
+				}
+			});
+		} catch (Exception e) {
+			return new ApiResponse<>(500, "Lỗi khi gửi email: " + e.getMessage(), null);
+		}
 
-	    return new ApiResponse<>(200, "Email đang được gửi.", null);
+		return new ApiResponse<>(200, "Email đang được gửi.", null);
 	}
 
+	private String generateEmailContent(OrderQRCodeDTO orderData) {
+		return """
+				  <!DOCTYPE html>
+				  <html>
+				  <head>
+				      <style>
+				          body { font-family: Arial, sans-serif; line-height: 1.6; }
+				          .highlight { color: #007bff; font-weight: bold; }
+				          .content { margin: 10px 0; }
+				          .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				      </style>
+				  </head>
+				  <body>
+				      <h2>Cảm ơn bạn đã mua hàng</h2>
+				      <p class="content">Vui lòng xem hóa đơn đính kèm.</p>
+				          <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+							<p>
+				    Nếu bạn có bất kỳ câu hỏi nào hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+				</p>
+
+				<p class="content">
+				    - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				    - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				</p>
+				 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				<p class="footer">
+				    Đây là email tự động. Vui lòng không trả lời email này.
+				</p>
+				  </body>
+				  </html>
+				  """
+				.formatted(orderData.getFullname());
+	}
 
 	private com.itextpdf.text.Image generateQrCodeImage(String qrCodeData, int size)
 			throws WriterException, IOException, BadElementException, com.google.zxing.WriterException {
@@ -1009,7 +1048,7 @@ public class OrderService {
 
 		com.google.zxing.common.BitMatrix matrix = new MultiFormatWriter().encode(qrCodeData, BarcodeFormat.QR_CODE,
 				size, size);
-		Integer dpi = 1200000000;
+		Integer dpi = 200;
 		BufferedImage image = matrixToBufferedImage(matrix, dpi);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ImageIO.write(image, "png", baos);

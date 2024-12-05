@@ -42,14 +42,14 @@ public class MailService {
         }
     }
     
-    public void sendInvoiceEmail(String toEmail, String subject, String body, ByteArrayOutputStream pdfStream) throws MessagingException {
+    public void sendInvoiceEmail(String toEmail, String subject, String htmlContent, ByteArrayOutputStream pdfStream) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
         helper.setFrom("ngothai3004@gmail.com");
         helper.setTo(toEmail);
         helper.setSubject(subject);
-        helper.setText(body);
+        helper.setText(htmlContent, true); 
 
         ByteArrayDataSource dataSource = new ByteArrayDataSource(pdfStream.toByteArray(), "application/pdf");
         helper.addAttachment("Invoice.pdf", dataSource);
