@@ -78,13 +78,13 @@ public class ProductController {
             jwtService.extractUsername(token);
         } catch (Exception e) {
             response.setCode(400);
-            response.setMessage("Invalid token format");
+            response.setMessage("Định dạng mã token không hợp lệ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         if (jwtService.isTokenExpired(token)) {
             response.setCode(401);
-            response.setMessage("Token expired");
+            response.setMessage("Phiên đăng nhập đã hết hạn");
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
@@ -92,7 +92,7 @@ public class ProductController {
         String username = jwtService.extractUsername(token);
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            response.setCode(404);
+            response.setCode(403);
             response.setMessage("Account not found");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -133,13 +133,13 @@ public class ProductController {
             jwtService.extractUsername(token);
         } catch (Exception e) {
             response.setCode(400);
-            response.setMessage("Invalid token format");
+            response.setMessage("Định dạng mã token không hợp lệ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         if (jwtService.isTokenExpired(token)) {
             response.setCode(401);
-            response.setMessage("Token expired");
+            response.setMessage("Phiên đăng nhập đã hết hạn");
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
@@ -147,7 +147,7 @@ public class ProductController {
         String username = jwtService.extractUsername(token);
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            response.setCode(404);
+            response.setCode(403);
             response.setMessage("Account not found");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -164,7 +164,7 @@ public class ProductController {
 
         if (temp == null) {
             response.setCode(404);
-            response.setMessage("Product not found");
+            response.setMessage("Sản phẩm không tồn tại");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
@@ -194,13 +194,13 @@ public class ProductController {
             jwtService.extractUsername(token);
         } catch (Exception e) {
             response.setCode(400);
-            response.setMessage("Invalid token format");
+            response.setMessage("Định dạng mã token không hợp lệ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         if (jwtService.isTokenExpired(token)) {
             response.setCode(401);
-            response.setMessage("Token expired");
+            response.setMessage("Phiên đăng nhập đã hết hạn");
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
@@ -208,7 +208,7 @@ public class ProductController {
         String username = jwtService.extractUsername(token);
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            response.setCode(404);
+            response.setCode(403);
             response.setMessage("Account not found");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -249,13 +249,13 @@ public class ProductController {
             jwtService.extractUsername(token);
         } catch (Exception e) {
             response.setCode(400);
-            response.setMessage("Invalid token format");
+            response.setMessage("Định dạng mã token không hợp lệ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         if (jwtService.isTokenExpired(token)) {
             response.setCode(401);
-            response.setMessage("Token expired");
+            response.setMessage("Phiên đăng nhập đã hết hạn");
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
@@ -263,7 +263,7 @@ public class ProductController {
         String username = jwtService.extractUsername(token);
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            response.setCode(404);
+            response.setCode(403);
             response.setMessage("Account not found");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -278,7 +278,7 @@ public class ProductController {
 
         if (productService.getProductById(idProduct) == null) {
             response.setCode(404);
-            response.setMessage(String.format("Product id %d not found", idProduct));
+            response.setMessage("Không tìm thấy sản phẩm");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
@@ -300,35 +300,35 @@ public class ProductController {
 
         if (product.getName() == null || product.getName().isBlank() || product.getName().isEmpty()) {
             response.setCode(422);
-            response.setMessage("Invalid format product name");
+            response.setMessage("Tên sản phẩm không được để trống");
 
             return response;
         }
 
         if (product.getPrice().compareTo(oneThousand) < 0) {
             response.setCode(422);
-            response.setMessage("Product price must be 1000 or more");
+            response.setMessage("Giá sản phẩm phải từ 1000 trở lên");
 
             return response;
         }
 
         if (product.getImage() == null || product.getImage().isBlank() || product.getImage().isEmpty()) {
             response.setCode(422);
-            response.setMessage("Invalid format product image");
+            response.setMessage("Vui lòng tải lên ảnh");
 
             return response;
         }
 
         if (product.getCategories() == null) {
             response.setCode(400);
-            response.setMessage("Error because category is null");
+            response.setMessage("Vui lòng chọn loại sản phẩm");
 
             return response;
         }
 
         if (product.getCategories().isEmpty()) {
             response.setCode(400);
-            response.setMessage("Error because category is empty");
+            response.setMessage("Vui lòng chọn loại sản phẩm");
 
             return response;
         }
@@ -338,7 +338,7 @@ public class ProductController {
 
             if (category == null) {
                 response.setCode(404);
-                response.setMessage(String.format("Category with id %d not found", cat.getId()));
+                response.setMessage(String.format("Không tìm thấy loại sản phẩm có id là %d", cat.getId()));
 
                 return response;
             }
@@ -348,35 +348,29 @@ public class ProductController {
 
             if (vs.getVersionName() == null || vs.getVersionName().isBlank() || vs.getVersionName().isEmpty()) {
                 response.setCode(422);
-                response.setMessage("Invalid format version name");
+                response.setMessage("Không được để trống tên phiên bản");
 
                 return response;
             }
 
             if (vs.getImportPrice().compareTo(fiveHundred) < 0) {
                 response.setCode(422);
-                response.setMessage("Version import price must be 500 or more");
+                response.setMessage("Giá nhập phiên bản phải từ 500 trở lên");
 
                 return response;
             }
 
-            if (vs.getRetalPrice().compareTo(fiveHundred) < 0) {
-                response.setCode(422);
-                response.setMessage("Version retal price must be 500 or more");
-
-                return response;
-            }
 
             if (vs.getAttributes() == null) {
                 response.setCode(400);
-                response.setMessage("Error because version is null");
+                response.setMessage("Vui lòng chọn thuộc tính sản phẩm");
 
                 return response;
             }
 
             if (vs.getAttributes().isEmpty()) {
                 response.setCode(400);
-                response.setMessage("Error because version is empty");
+                response.setMessage("Vui lòng chọn thuộc tính sản phẩm");
 
                 return response;
             }
@@ -384,7 +378,7 @@ public class ProductController {
             int idAttributeError = validAttribute(vs.getAttributes());
             if (idAttributeError != -1) {
                 response.setCode(404);
-                response.setMessage(String.format("Attribute id %d not found", idAttributeError));
+                response.setMessage(String.format("Không tìm thấy thuộc tính có id là %d", idAttributeError));
 
                 return response;
             }
@@ -421,20 +415,21 @@ public class ProductController {
             jwtService.extractUsername(token);
         } catch (Exception e) {
             response.setCode(400);
-            response.setMessage("Invalid token format");
+            response.setMessage("Định dạng mã token không hợp lệ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         if (jwtService.isTokenExpired(token)) {
             response.setCode(401);
-            response.setMessage("Token expired");
+            response.setMessage("Phiên đăng nhập đã hết hạn");
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
         String username = jwtService.extractUsername(token);
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            response.setCode(404);
+            response.setCode(403);
             response.setMessage("Account not found");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
@@ -448,7 +443,7 @@ public class ProductController {
         ProductResponse data = productService.refreshSelectedProduct(idProduct);
         if (data == null) {
             response.setCode(404);
-            response.setMessage("Product not found");
+            response.setMessage("Không tìm thấy sản phẩm");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
