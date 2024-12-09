@@ -26,7 +26,6 @@ import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.models.ReceiptCreateDTO;
 import com.models.ReceiptDTO;
-import com.models.ReceiptInfoDTO;
 import com.repositories.ReceiptDetailJPA;
 import com.repositories.ReceiptJPA;
 import com.responsedto.ReceiptDetailResponse;
@@ -55,28 +54,29 @@ public class ReceiptService {
 		return receiptJpa.findById(id);
 	}
 
-	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size, String keyword) {
-		Pageable pageable = PageRequest.of(page, size);
-		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
+//	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size, String keyword) {
+//		
+//		Pageable pageable = PageRequest.of(page, size);
+//		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
+//
+//		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
+//
+//		for (Receipt receipt : receiptPage.getContent()) {
+//			ReceiptInfoDTO receiptDTO = convertReceipt(receipt);
+//			receiptDTOList.add(receiptDTO);
+//		}
+//
+//		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
+//	}
 
-		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
-
-		for (Receipt receipt : receiptPage.getContent()) {
-			ReceiptInfoDTO receiptDTO = convertReceipt(receipt);
-			receiptDTOList.add(receiptDTO);
-		}
-
-		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
-	}
-
-	private ReceiptInfoDTO convertReceipt(Receipt receipt) {
-		ReceiptInfoDTO receiptInfoDTO = new ReceiptInfoDTO();
-		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
-		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
-		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
-		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
-		return receiptInfoDTO;
-	}
+//	private ReceiptInfoDTO convertReceipt(Receipt receipt) {
+//		ReceiptInfoDTO receiptInfoDTO = new ReceiptInfoDTO();
+//		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
+//		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
+//		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+//		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
+//		return receiptInfoDTO;
+//	}
 
 	public ReceiptDTO getWarehouseById(Integer id) {
 		Receipt receipt = receiptJpa.findById(id).orElse(null);
@@ -182,13 +182,14 @@ public class ReceiptService {
 		return response;
 	}
 
-	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size) {
+	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size, String keyword) {
 		Pageable pageable = PageRequest.of(page, size);
-		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
+		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
 
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
 
 		for (Receipt receipt : receiptPage.getContent()) {
+			System.out.println(receipt.getReceiptId() + " ReceiptIdEEE");
 			ReceiptResponse receiptDTO = convertReceiptStf(receipt);
 			receiptDTOList.add(receiptDTO);
 		}
