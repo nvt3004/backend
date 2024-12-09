@@ -240,29 +240,31 @@ public class OrderService {
 	}
 
 	private OrderDTO createOrderDTO(Order order) {
-		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
-		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
-		BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
-		finalTotal = finalTotal.max(BigDecimal.ZERO);
+	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
+	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(order);
+	    BigDecimal finalTotal = subTotal.add(order.getShippingFee()).subtract(discountValue);
+	    finalTotal = finalTotal.max(BigDecimal.ZERO);
 
-		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
 
-		Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
+	    Integer couponId = Optional.ofNullable(order.getCoupon()).map(Coupon::getCouponId).orElse(null);
 
-		String disCount = orderUtilsService.getDiscountDescription(order);
-		String statusName = order.getOrderStatus().getStatusName();
-		String paymentMethodName = Optional.ofNullable(order.getPayments())
-				.map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
+	    String disCount = orderUtilsService.getDiscountDescription(order);
+	    String statusName = order.getOrderStatus().getStatusName();
+	    String paymentMethodName = Optional.ofNullable(order.getPayments())
+	            .map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
-		Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
-		String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getFullName).orElse(null);
-		Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate()).orElse(null);
+	    Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
+	    Integer lastUpdatedById = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getUserId).orElse(null); // Lấy ID người cập nhật
+	    String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getFullName).orElse(null); // Lấy fullname
+	    Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate()).orElse(null);
 
-		return new OrderDTO(order.getOrderId(), lastUpdatedByName, lastUpdatedDate, isOpenOrderDetail,
-				order.getUser().getGender(), order.getAddress(), couponId, disCount, discountValue, subTotal,
-				order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
-				order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
+	    return new OrderDTO(order.getOrderId(), lastUpdatedById, lastUpdatedByName, lastUpdatedDate, isOpenOrderDetail,
+	            order.getUser().getGender(), order.getAddress(), couponId, disCount, discountValue, subTotal,
+	            order.getShippingFee(), finalTotal, finalTotalInWords, order.getDeliveryDate(), order.getFullname(),
+	            order.getOrderDate(), order.getPhone(), statusName, paymentMethodName);
 	}
+
 
 	public ApiResponse<Map<String, Object>> getOrderDetails(Integer orderId) {
 		List<OrderDetail> orderDetailList = orderDetailJpa.findByOrderDetailByOrderId(orderId);
