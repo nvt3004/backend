@@ -215,13 +215,13 @@ public class ReceiptService {
 
 		for (ReceiptDetail dt : receipt.getReceiptDetails()) {
 			ReceiptDetailResponse detail = new ReceiptDetailResponse();
-			BigDecimal total = dt.getProductVersion().getImportPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
+			BigDecimal total = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
 
 			if(dt.getProductVersion().getImage() != null) {
 				detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
 			}
 			
-			detail.setImportPrice(dt.getProductVersion().getImportPrice());
+			detail.setImportPrice(dt.getPrice());
 			detail.setName(dt.getProductVersion().getVersionName());
 			detail.setQuantity(dt.getQuantity());
 			detail.setTotal(total);
