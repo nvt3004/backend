@@ -255,8 +255,8 @@ public class OrderService {
 	            .map(payment -> payment.getPaymentMethod().getMethodName()).orElse(null);
 
 	    Boolean isOpenOrderDetail = orderJpa.existsOrderDetailByOrderId(order.getOrderId());
-	    Integer lastUpdatedById = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getUserId).orElse(null); // Lấy ID người cập nhật
-	    String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getFullName).orElse(null); // Lấy fullname
+	    Integer lastUpdatedById = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getUserId).orElse(null);
+	    String lastUpdatedByName = Optional.ofNullable(order.getLastUpdatedBy()).map(User::getFullName).orElse(null);
 	    Date lastUpdatedDate = Optional.ofNullable(order.getLastUpdatedDate()).orElse(null);
 
 	    return new OrderDTO(order.getOrderId(), lastUpdatedById, lastUpdatedByName, lastUpdatedDate, isOpenOrderDetail,
