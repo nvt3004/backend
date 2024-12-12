@@ -18,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class UploadService {
 
-	private final String URL_DOMAIN = "http://localhost:8080";
+	private final String URL_DOMAIN = "https://api.stepstothefuture.store";
 
 	public String getUrlImage(String fileName) {
 		if(fileName == null) {
