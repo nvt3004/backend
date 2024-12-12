@@ -16,6 +16,9 @@ public interface ProductJPA extends JpaRepository<Product, Integer> {
 	public Page<Product> getAllProductByKeyword(@Param("status") boolean status, @Param("keyword") String keyword,
 			Pageable pageable);
 
+	@Query("SELECT o " + "FROM Product o " + "WHERE o.status=:status " + "AND o.productName LIKE:keyword "+"ORDER BY o.productId DESC")
+	public List<Product> getAllProductByKeyword(@Param("status") boolean status, @Param("keyword") String keyword);
+
 	@Query("SELECT DISTINCT o " + "FROM Product o " + "JOIN o.productCategories pc " + "JOIN pc.category c "
 			+ "WHERE o.status = :status " + "AND o.productName LIKE %:keyword% " + "AND c.categoryId = :idCat")
 	public Page<Product> getAllProductByKeywordAndCategory(@Param("status") boolean status,

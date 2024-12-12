@@ -237,6 +237,56 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasPermission(#userId, 'View Product')")
+    public ResponseEntity<ResponseAPI<List<ProductResponse>>> getAllProductNotPage(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam(value = "keyword", defaultValue = "") String keywword) {
+        boolean statusProduct = true;
+        ResponseAPI<List<ProductResponse>> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
+
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Định dạng mã token không hợp lệ");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Phiên đăng nhập đã hết hạn");
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(403);
+            response.setMessage("Account not found");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        keywword = "%"+keywword+"%";
+        List<ProductResponse>  data = productService.getAllProductsByKeyword(2,3,true,keywword);
+
+        response.setCode(200);
+        response.setMessage("Success");
+        response.setData(data);
+
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/remove/{id}")
     @PreAuthorize("hasPermission(#userId, 'Delete Product')")
     public ResponseEntity<ResponseAPI<Boolean>> removeProduct(
