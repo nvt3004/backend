@@ -53,7 +53,7 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
+		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.authorizeHttpRequests(request -> request
 				.requestMatchers(SWAGGER_ENDPOINTS).permitAll()
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
