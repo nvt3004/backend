@@ -262,9 +262,9 @@
 						</goals>
 					</execution>
 				</executions>
-				<configuration>
+				<!-- <configuration>
 					<mainClass>com.example.DATN_STF_BE.Application</mainClass>
-				</configuration>
+				</configuration> -->
 			</plugin>
 <plugin>
 				<groupId>org.springframework.boot</groupId>
