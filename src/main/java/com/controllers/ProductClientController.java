@@ -1,5 +1,6 @@
 package com.controllers;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,10 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.entities.Category;
 import com.entities.User;
@@ -25,8 +30,11 @@ import com.responsedto.FilterAttribute;
 import com.responsedto.ProductDTO;
 import com.services.AlgoliaProductService;
 import com.services.AuthService;
+import com.services.GetProductService;
 import com.services.JWTService;
 import com.services.ProductClientService;
+import com.services.ProductSearchImageService;
+import com.services.TranscriptService;
 import com.services.UserService;
 import com.utils.UploadService;
 
@@ -52,8 +60,90 @@ public class ProductClientController {
 	AlgoliaProductService algoliaProductService;
 
 	@Autowired
+	GetProductService getProductService;
+
+	@Autowired
 	public ProductClientController(AlgoliaProductService algoliaProductService) {
 		this.algoliaProductService = algoliaProductService;
+	}
+
+	@Autowired
+	private ProductSearchImageService productSearchImageService;
+
+//	@Autowired
+//	private TranscriptService transcriptService;
+//
+//    @PostMapping("/transcription")
+//    public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
+//
+//        if (file.isEmpty()) {
+//            ResponseAPI<String> response = new ResponseAPI<>();
+//            response.setCode(400);
+//            response.setMessage("No file provided.");
+//            response.setData(null);
+//            return ResponseEntity.status(400).body(response);
+//        }
+//
+//        String transcriptText = transcriptService.transcribe(file);
+//      
+//        ResponseAPI<String> response = new ResponseAPI<>();
+//
+//        if (transcriptText != null) {
+//            response.setCode(200);
+//            response.setMessage("Success");
+//            response.setData(transcriptText); 
+//            return ResponseEntity.ok(response);
+//        } else {
+//            response.setCode(500);
+//            response.setMessage("An error occurred during transcription.");
+//            response.setData(null);
+//            return ResponseEntity.status(500).body(response);
+//        }
+//    }
+
+	@PostMapping("/searchByImage")
+	public ResponseAPI<List<ProductDTO>> searchProductByImage(@RequestPart("image") Optional<MultipartFile> image,
+			@RequestHeader("Authorization") Optional<String> authHeader) throws Exception {
+		// Tạo đối tượng ResponseAPI để chứa kết quả trả về
+		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
+
+		// Kiểm tra xem có hình ảnh trong request không
+		if (image.isPresent()) {
+			// Chuyển MultipartFile thành InputStream
+			InputStream imageStream = image.get().getInputStream();
+
+			User user = null;
+
+			if (authHeader.isPresent() && !authHeader.get().isEmpty()) {
+				String token = authService.readTokenFromHeader(authHeader);
+
+				if (token != null && !token.isEmpty() && !jwtService.isTokenExpired(token)) {
+					String username = jwtService.extractUsername(token);
+					user = userService.getUserByUsername(username);
+				}
+			}
+
+			// Gọi service để tìm kiếm sản phẩm từ hình ảnh
+			String items = productSearchImageService.searchProductByImage(imageStream);
+			List<ProductDTO> productDTOs = getProductService.getDetailProductFormListVector(user, items);
+			for (ProductDTO productDTO : productDTOs) {
+				String img = productDTO.getImgName();
+				if (img != null && !img.isEmpty()) {
+					productDTO.setImgName(uploadService.getUrlImage(img));
+				}
+			}
+			// Thiết lập dữ liệu vào response
+			response.setCode(200);
+			response.setMessage("Success");
+			response.setData(productDTOs);
+		} else {
+			// Trả về lỗi nếu không có ảnh trong request
+			response.setCode(400);
+			response.setMessage("No image provided");
+			response.setData(null);
+		}
+
+		return response;
 	}
 
 	@GetMapping("/getRecommendedProducts")

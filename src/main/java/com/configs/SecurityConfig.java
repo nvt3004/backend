@@ -53,6 +53,7 @@ public class SecurityConfig {
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
 								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**","/api/today/**,/api/orders/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
+						.requestMatchers("/api/analytics/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
 						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin", "Staff")
