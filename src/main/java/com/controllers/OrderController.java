@@ -56,7 +56,7 @@ public class OrderController {
 
 	@Autowired
 	private JWTService jwtService;
-	
+
 	@Autowired
 	private UploadService uploadService;
 
@@ -68,7 +68,7 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-System.out.println("Dị là dô đây");
+		System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -403,7 +403,7 @@ System.out.println("Dị là dô đây");
 	@PreAuthorize("hasPermission(#userid, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-System.out.println("Chạy Vô OrderDetails");
+		System.out.println("Chạy Vô OrderDetails");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -657,9 +657,10 @@ System.out.println("Chạy Vô OrderDetails");
 //			}
 //		}
 //	}
-	
+
 	@PostMapping("/staff/orders/export")
-	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId,@RequestHeader("Authorization") Optional<String> authHeader) {
+	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
@@ -695,29 +696,28 @@ System.out.println("Chạy Vô OrderDetails");
 			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
-	    try {
-	        // 1. Tạo PDF từ Order ID
-	        ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
-	        ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
-	        byte[] pdfBytes = pdfStream.toByteArray();
+		try {
+			// 1. Tạo PDF từ Order ID
+			ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
+			ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
+			byte[] pdfBytes = pdfStream.toByteArray();
 
-	        // 2. Trả về PDF dưới dạng file
-	        HttpHeaders headers = new HttpHeaders();
-	        headers.setContentType(MediaType.APPLICATION_PDF);
-	        headers.setContentDispositionFormData("attachment", "invoice.pdf");
-	        headers.setContentLength(pdfBytes.length);
+			// 2. Trả về PDF dưới dạng file
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_PDF);
+			headers.setContentDispositionFormData("attachment", "invoice.pdf");
+			headers.setContentLength(pdfBytes.length);
 
-	        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+			return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 
-	    } catch (IllegalArgumentException e) {
-	        ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
-	        return ResponseEntity.badRequest().body(response);
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-	    }
+		} catch (IllegalArgumentException e) {
+			ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
+			return ResponseEntity.badRequest().body(response);
+		} catch (Exception e) {
+			e.printStackTrace();
+			ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+		}
 	}
-
 
 }

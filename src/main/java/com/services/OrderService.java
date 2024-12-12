@@ -315,7 +315,9 @@ public class OrderService {
 			order.setLastUpdatedBy(currentUser);
 			order.setLastUpdatedDate(new Date());
 			orderJpa.save(order);
-			sendOrderStatusUpdateEmail(order, newStatus);
+			if(!newStatus.equalsIgnoreCase("Shipped")) {
+				sendOrderStatusUpdateEmail(order, newStatus);
+			}
 		}
 
 		return new ApiResponse<>(200, "Order status updated successfully", null);
