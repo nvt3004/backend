@@ -176,10 +176,11 @@
 			<artifactId>json</artifactId>
 			<version>20240303</version>
 		</dependency>
+
 		<dependency>
 			<groupId>com.assemblyai</groupId>
 			<artifactId>assemblyai-java</artifactId>
-			<version>1.0.0</version>
+			<version>2.1.0</version>
 		</dependency>
 
 		<dependency>

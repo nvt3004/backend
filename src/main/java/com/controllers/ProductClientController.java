@@ -34,6 +34,7 @@ import com.services.GetProductService;
 import com.services.JWTService;
 import com.services.ProductClientService;
 import com.services.ProductSearchImageService;
+import com.services.TranscriptService;
 import com.services.UserService;
 import com.utils.UploadService;
 
@@ -69,38 +70,36 @@ public class ProductClientController {
 	@Autowired
 	private ProductSearchImageService productSearchImageService;
 
-//	@Autowired
-//	private TranscriptionService transcriptionService;
-//
-//	@PostMapping("/transcription")
-//	public ResponseEntity<?> transcribe(@RequestBody TranscriptionRequest request) {
-//		ResponseAPI<String> response = new ResponseAPI<>();
-//		try {
-//			if (request.getFileUrl() != null) {
-//				String transcript = transcriptionService.transcribeFromUrl(request.getFileUrl());
-//				response.setCode(200);
-//				response.setMessage("Success");
-//				response.setData(transcript);
-//				return ResponseEntity.ok(response);
-//			} else if (request.getFilePath() != null) {
-//				String transcript = transcriptionService.transcribeFromFile(request.getFilePath());
-//				response.setCode(200);
-//				response.setMessage("Success");
-//				response.setData(transcript);
-//				return ResponseEntity.ok(response);
-//			} else {
-//				response.setCode(400);
-//				response.setMessage("Either 'fileUrl' or 'filePath' must be provided.");
-//				response.setData(null);
-//				return ResponseEntity.badRequest().body(response);
-//			}
-//		} catch (Exception e) {
-//			response.setCode(500);
-//			response.setMessage("Internal Server Error: " + e.getMessage());
-//			response.setData(null);
-//			return ResponseEntity.status(500).body(response);
-//		}
-//	}
+	@Autowired
+	private TranscriptService transcriptService;
+
+    @PostMapping("/transcription")
+    public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
+
+        if (file.isEmpty()) {
+            ResponseAPI<String> response = new ResponseAPI<>();
+            response.setCode(400);
+            response.setMessage("No file provided.");
+            response.setData(null);
+            return ResponseEntity.status(400).body(response);
+        }
+
+        String transcriptText = transcriptService.transcribe(file);
+      
+        ResponseAPI<String> response = new ResponseAPI<>();
+
+        if (transcriptText != null) {
+            response.setCode(200);
+            response.setMessage("Success");
+            response.setData(transcriptText); 
+            return ResponseEntity.ok(response);
+        } else {
+            response.setCode(500);
+            response.setMessage("An error occurred during transcription.");
+            response.setData(null);
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 
 	@PostMapping("/searchByImage")
 	public ResponseAPI<List<ProductDTO>> searchProductByImage(@RequestPart("image") Optional<MultipartFile> image,
