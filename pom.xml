@@ -12,7 +12,7 @@
 	<groupId>com</groupId>
 	<artifactId>DATN_STF_BE</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<name>DATN_STF_BE</name>
 	<description>Demo project for Spring Boot</description>
 	<url />
