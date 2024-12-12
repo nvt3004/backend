@@ -8,5 +8,5 @@ RUN mvn clean package -DskipTests
 # Package stage
 FROM eclipse-temurin:17-jre
 COPY --from=build /app/target/DATN_STF_BE-0.0.1-SNAPSHOT.jar /usr/local/lib/app.jar
-EXPOSE 8003
+EXPOSE 8000
 ENTRYPOINT ["java", "--enable-preview", "-jar", "/usr/local/lib/app.jar"]
