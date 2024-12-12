@@ -70,36 +70,36 @@ public class ProductClientController {
 	@Autowired
 	private ProductSearchImageService productSearchImageService;
 
-	@Autowired
-	private TranscriptService transcriptService;
-
-    @PostMapping("/transcription")
-    public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
-
-        if (file.isEmpty()) {
-            ResponseAPI<String> response = new ResponseAPI<>();
-            response.setCode(400);
-            response.setMessage("No file provided.");
-            response.setData(null);
-            return ResponseEntity.status(400).body(response);
-        }
-
-        String transcriptText = transcriptService.transcribe(file);
-      
-        ResponseAPI<String> response = new ResponseAPI<>();
-
-        if (transcriptText != null) {
-            response.setCode(200);
-            response.setMessage("Success");
-            response.setData(transcriptText); 
-            return ResponseEntity.ok(response);
-        } else {
-            response.setCode(500);
-            response.setMessage("An error occurred during transcription.");
-            response.setData(null);
-            return ResponseEntity.status(500).body(response);
-        }
-    }
+//	@Autowired
+//	private TranscriptService transcriptService;
+//
+//    @PostMapping("/transcription")
+//    public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
+//
+//        if (file.isEmpty()) {
+//            ResponseAPI<String> response = new ResponseAPI<>();
+//            response.setCode(400);
+//            response.setMessage("No file provided.");
+//            response.setData(null);
+//            return ResponseEntity.status(400).body(response);
+//        }
+//
+//        String transcriptText = transcriptService.transcribe(file);
+//      
+//        ResponseAPI<String> response = new ResponseAPI<>();
+//
+//        if (transcriptText != null) {
+//            response.setCode(200);
+//            response.setMessage("Success");
+//            response.setData(transcriptText); 
+//            return ResponseEntity.ok(response);
+//        } else {
+//            response.setCode(500);
+//            response.setMessage("An error occurred during transcription.");
+//            response.setData(null);
+//            return ResponseEntity.status(500).body(response);
+//        }
+//    }
 
 	@PostMapping("/searchByImage")
 	public ResponseAPI<List<ProductDTO>> searchProductByImage(@RequestPart("image") Optional<MultipartFile> image,
