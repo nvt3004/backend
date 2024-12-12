@@ -45,13 +45,21 @@ public class SecurityConfig {
 	@Lazy
 	private CustomPermissionEvaluator customPermissionEvaluator;
 
+	private static final String[] SWAGGER_ENDPOINTS = {
+			"/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
+			"/configuration/ui", "/configuration/security", "/webjars/**",
+			"/swagger-ui.html"
+	};
+
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
-						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send", "/api/verify-otp",
+				.requestMatchers(SWAGGER_ENDPOINTS).permitAll()
+						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
+								"/api/verify-otp",
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**","/api/today/**")
+								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**", "/api/today/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
