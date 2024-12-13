@@ -153,10 +153,10 @@ public class AdvertisementController {
     private void saveImageAdvertisement(Advertisement advertisement, List<MultipartFile> images) {
         for (MultipartFile image : images) {
             try {
-                // Save the image file
-                String fileName = uploadService.save(image, "images"); // Save method adapted to handle MultipartFile
+                // Save the image to Cloudinary and get the URL
+                String fileUrl = uploadService.save(image, "advertisements");
                 Image imageEntity = new Image();
-                imageEntity.setImageUrl(fileName);
+                imageEntity.setImageUrl(fileUrl);
                 imageEntity.setAdvertisement(advertisement);
                 imageJPA.save(imageEntity);
             } catch (Exception e) {
@@ -164,6 +164,7 @@ public class AdvertisementController {
             }
         }
     }
+
 
     private List<String> updateImages(Advertisement advertisement, List<MultipartFile> images,
             List<String> imagesToDelete) {
