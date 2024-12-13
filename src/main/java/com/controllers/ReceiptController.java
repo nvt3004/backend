@@ -90,7 +90,7 @@ public class ReceiptController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf(page, size);
+		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf( page, size,keyword);
 
 		if (receiptDTOPage.isEmpty()) {
 			ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "No receipts found", null);
