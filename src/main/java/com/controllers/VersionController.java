@@ -126,12 +126,7 @@ public class VersionController {
 			response.setMessage("Retail price invalid!");
 			return ResponseEntity.status(999).body(response);
 		}
-
-		if (wholesalePrice == null || wholesalePrice.compareTo(BigDecimal.ZERO) <= 0) {
-			response.setCode(999);
-			response.setMessage("Wholesale price invalid!");
-			return ResponseEntity.status(999).body(response);
-		}
+		
 
 		versionService.updateVersion(versionModal);
 		response.setCode(200);

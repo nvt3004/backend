@@ -3,10 +3,12 @@ package com.services;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import com.entities.Image;
 import com.entities.Order;
 import com.entities.OrderDetail;
 import com.entities.ProductVersion;
+import com.entities.User;
 import com.errors.ApiResponse;
 import com.models.AttributeDTO;
 import com.models.AttributeProductVersionDTO;
@@ -25,10 +28,9 @@ import com.models.OrderDetailDTO;
 import com.models.OrderDetailProductDetailsDTO;
 import com.models.OrderQRCodeDTO;
 import com.models.SizeDTO;
-import com.repositories.AttributeOptionJPA;
 import com.repositories.OrderDetailJPA;
 import com.repositories.ProductVersionJPA;
-import com.repositories.ReceiptDetailJPA;
+import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
 import com.utils.UploadService;
 
@@ -51,10 +53,7 @@ public class OrderDetailService {
 	private UploadService uploadService;
 
 	@Autowired
-	AttributeOptionJPA attributeOptionJpa;
-
-	@Autowired
-	private ReceiptDetailJPA receiptDetailJpa;
+	private MailService mailService;
 
 	public OrderDetailDTO convertToOrderDetailDTO(List<OrderDetail> orderDetailList) {
 		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
@@ -173,8 +172,8 @@ public class OrderDetailService {
 		return productVersionService.getProductVersionByAttributes(productId, colorId, sizeId);
 	}
 
-	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, Integer productId, Integer colorId,
-			Integer sizeId) {
+	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, User currentUser, Integer productId,
+			Integer colorId, Integer sizeId) {
 
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
@@ -212,17 +211,93 @@ public class OrderDetailService {
 		orderDetail.setProductVersionBean(newProductVersion.get());
 		orderDetail.setQuantity(1);
 		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
-
+		orderDetail.getOrder().setLastUpdatedBy(currentUser);
+		orderDetail.getOrder().setLastUpdatedDate(new Date());
 		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
+		sendOrderDetailUpdateEmail(orderDetail, currentProductVersion, order.getUser().getEmail(),
+				newProductVersion.get());
 
 		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
+	}
+
+	private void sendOrderDetailUpdateEmail(OrderDetail orderDetail, ProductVersion productVersion, String userEmail,
+			ProductVersion newProductVersion) {
+		CompletableFuture.runAsync(() -> {
+			String emailContent = generateHtmlEmailContent(orderDetail, productVersion, newProductVersion);
+			mailService.sendHtmlEmail(userEmail, "Thông báo cập nhật chi tiết đơn hàng", emailContent);
+		});
+	}
+
+	private String getAttributeValue(List<AttributeOptionsVersion> attributeOptionsVersions, String attributeName) {
+		for (AttributeOptionsVersion version : attributeOptionsVersions) {
+			String attribute = version.getAttributeOption().getAttribute().getAttributeName();
+			if (attribute.equals(attributeName)) {
+				return version.getAttributeOption().getAttributeValue();
+			}
+		}
+		return "";
+	}
+
+	private String generateHtmlEmailContent(OrderDetail orderDetail, ProductVersion productVersion,
+			ProductVersion newProductVersion) {
+
+		String oldColor = getAttributeValue(productVersion.getAttributeOptionsVersions(), "Color");
+		String oldSize = getAttributeValue(productVersion.getAttributeOptionsVersions(), "Size");
+
+		String newColor = getAttributeValue(newProductVersion.getAttributeOptionsVersions(), "Color");
+		String newSize = getAttributeValue(newProductVersion.getAttributeOptionsVersions(), "Size");
+
+		String colorChange = !oldColor.equals(newColor) ? String.format(
+				"Màu sắc đã thay đổi từ <span class='highlight'>%s</span> thành <span class='highlight'>%s</span>.",
+				oldColor, newColor) : "";
+
+		String sizeChange = !oldSize.equals(newSize) ? String.format(
+				"Kích cỡ đã thay đổi từ <span class='highlight'>%s</span> thành <span class='highlight'>%s</span>.",
+				oldSize, newSize) : "";
+
+		return """
+				    <!DOCTYPE html>
+				    <html>
+				    <head>
+				        <style>
+				            body { font-family: Arial, sans-serif; line-height: 1.6; }
+				            .highlight { color: #007bff; font-weight: bold;}
+				            .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				            .content { margin: 10px 0; }
+				        </style>
+				    </head>
+				    <body>
+				        <p>Kính chào <strong>%s</strong>,</p>
+				        <p>Chi tiết đơn hàng của bạn đã được cập nhật với sản phẩm <span class='highlight'>%s</span> có giá <span class='highlight'>%s</span>.</p>
+				        <p>%s</p>
+				        <p>%s</p>
+				        <p>Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+				      <p>
+						    Nếu bạn không yêu cầu thay đổi này hoặc có bất kỳ câu hỏi hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+						</p>
+
+				        <p class="content">
+				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				        </p>
+				        <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				        <p class="footer">
+				            Đây là email tự động. Vui lòng không trả lời email này.
+				        </p>
+				    </body>
+				    </html>
+				"""
+				.formatted(orderDetail.getOrder().getFullname(), newProductVersion.getProduct().getProductName(),
+						FormarCurrencyUtil.formatCurrency(newProductVersion.getRetailPrice()), colorChange, sizeChange);
 	}
 
 	public boolean isValidQuantity(Integer quantity) {
 		return quantity != null && quantity > 0;
 	}
 
-	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, Integer quantity) {
+	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, User currentUser,
+			Integer quantity) {
 
 		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
 		if (!existingOrderDetail.isPresent()) {
@@ -243,7 +318,7 @@ public class OrderDetailService {
 		ProductVersion productVersion = orderDetail.getProductVersionBean();
 		Integer productVersionStock = productVersion.getQuantity();
 		productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
-		
+
 		Integer processedOrderQuantity = productVersionJpa
 				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
 		Integer cancelledOrderQuantity = productVersionJpa
@@ -268,61 +343,94 @@ public class OrderDetailService {
 					null);
 		}
 
+		orderDetail.getOrder().setLastUpdatedBy(currentUser);
+		orderDetail.getOrder().setLastUpdatedDate(new Date());
 		orderDetail.setQuantity(quantity);
 		orderDetailJpa.save(orderDetail);
+
+		sendQuantityUpdateEmail(orderDetail, orderDetail.getOrder().getUser().getEmail());
 
 		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
 	}
 
+	private void sendQuantityUpdateEmail(OrderDetail orderDetail, String userEmail) {
+		CompletableFuture.runAsync(() -> {
+			String emailContent = generateQuantityUpdateEmailContent(orderDetail);
+			mailService.sendHtmlEmail(userEmail, "Cập nhật số lượng sản phẩm trong đơn hàng", emailContent);
+		});
+	}
+
+	private String generateQuantityUpdateEmailContent(OrderDetail orderDetail) {
+		return """
+				    <!DOCTYPE html>
+				    <html>
+				    <head>
+				        <style>
+				            body { font-family: Arial, sans-serif; line-height: 1.6; }
+				            .highlight { color: #007bff; font-weight: bold; }
+				            .content { margin: 10px 0; }
+				            .footer { margin-top: 20px; font-size: 0.9em; color: #555; }
+				        </style>
+				    </head>
+				    <body>
+				        <p>Xin chào <strong>%s</strong>,</p>
+				        <p class="content">
+				            Số lượng sản phẩm trong đơn hàng của bạn đã được cập nhật:
+				        </p>
+				        <p class="content">
+				            Sản phẩm: <span class="highlight">%s</span><br>
+				            Số lượng mới: <span class="highlight">%d</span>
+				        </p>
+				         <p class="content">Vui lòng kiểm tra lại thông tin đơn hàng của bạn.</p>
+				         <p>
+						    Nếu bạn không yêu cầu thay đổi này hoặc có bất kỳ câu hỏi hay cần sự hỗ trợ thêm, xin vui lòng liên hệ với chúng tôi qua thông tin dưới đây:
+						</p>
+				        <p class="content">
+				            - Email: <a href='mailto:ngothai3004@gmail.com' style='color: #007bff;'>ngothai3004@gmail.com</a><br>
+				            - Điện thoại: <span class="highlight">(+84) 939 658 044</span>
+				        </p>
+				         <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
+				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
+				        <p class="footer">
+				            Đây là email tự động. Vui lòng không trả lời email này.
+				        </p>
+				    </body>
+				    </html>
+				"""
+				.formatted(orderDetail.getOrder().getFullname(),
+						orderDetail.getProductVersionBean().getProduct().getProductName(), orderDetail.getQuantity());
+	}
+
 	public OrderQRCodeDTO convertToOrderQRCode(List<OrderDetail> orderDetailList) {
-	    if (orderDetailList == null || orderDetailList.isEmpty()) {
-	        throw new IllegalArgumentException("orderDetailList cannot be null or empty");
-	    }
+		if (orderDetailList == null || orderDetailList.isEmpty()) {
+			throw new IllegalArgumentException("orderDetailList cannot be null or empty");
+		}
 
-	    OrderDetail orderDetail = orderDetailList.get(0);
-	    BigDecimal subTotal = orderUtilsService.calculateOrderTotal(orderDetail.getOrder());
-	    BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(orderDetail.getOrder());
-	    BigDecimal finalTotal = subTotal.add(orderDetail.getOrder().getShippingFee()).subtract(discountValue);
-	    finalTotal = finalTotal.max(BigDecimal.ZERO);
+		OrderDetail orderDetail = orderDetailList.get(0);
+		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(orderDetail.getOrder());
+		BigDecimal discountValue = orderUtilsService.calculateDiscountedPrice(orderDetail.getOrder());
+		BigDecimal finalTotal = subTotal.add(orderDetail.getOrder().getShippingFee()).subtract(discountValue);
+		finalTotal = finalTotal.max(BigDecimal.ZERO);
 
-	    String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
-	    String statusName = orderDetail.getOrder().getOrderStatus().getStatusName();
-	    Integer couponId = Optional.ofNullable(orderDetail.getOrder().getCoupon())
-	        .map(Coupon::getCouponId).orElse(null);
-	    String disCount = orderUtilsService.getDiscountDescription(orderDetail.getOrder());
-	    
-	    String paymentMethod = Optional.ofNullable(orderDetail.getOrder().getPayments())
-	            .map(payments -> payments.getPaymentMethod())
-	            .map(paymentMethodObj -> paymentMethodObj.getMethodName())
-	            .orElse(null);
+		String finalTotalInWords = NumberToWordsConverterUtil.convert(finalTotal);
+		String statusName = orderDetail.getOrder().getOrderStatus().getStatusName();
+		Integer couponId = Optional.ofNullable(orderDetail.getOrder().getCoupon()).map(Coupon::getCouponId)
+				.orElse(null);
+		String disCount = orderUtilsService.getDiscountDescription(orderDetail.getOrder());
 
-	    
-	    String email = Optional.ofNullable(orderDetail.getOrder().getUser())
-	        .map(user -> user.getEmail())
-	        .orElse("N/A");
+		String paymentMethod = Optional.ofNullable(orderDetail.getOrder().getPayments())
+				.map(payments -> payments.getPaymentMethod()).map(paymentMethodObj -> paymentMethodObj.getMethodName())
+				.orElse(null);
 
-	    List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
-	    return new OrderQRCodeDTO(
-	        orderDetail.getOrder().getOrderId(),
-	        orderDetail.getOrder().getUser().getGender(),
-	        orderDetail.getOrder().getAddress(),
-	        couponId,
-	        disCount,
-	        discountValue,
-	        subTotal,
-	        orderDetail.getOrder().getShippingFee(),
-	        finalTotal,
-	        finalTotalInWords,
-	        orderDetail.getOrder().getDeliveryDate(),
-	        orderDetail.getOrder().getFullname(),
-	        orderDetail.getOrder().getOrderDate(),
-	        orderDetail.getOrder().getPhone(),
-	        statusName,
-	        paymentMethod,
-	        orderDetail.getOrder().getPhone(),
-	        email,
-	        productDetails
-	    );
+		String email = Optional.ofNullable(orderDetail.getOrder().getUser()).map(user -> user.getEmail()).orElse("N/A");
+
+		List<OrderDetailProductDetailsDTO> productDetails = createProductDetailsList(orderDetailList);
+		return new OrderQRCodeDTO(orderDetail.getOrder().getOrderId(), orderDetail.getOrder().getUser().getGender(),
+				orderDetail.getOrder().getAddress(), couponId, disCount, discountValue, subTotal,
+				orderDetail.getOrder().getShippingFee(), finalTotal, finalTotalInWords,
+				orderDetail.getOrder().getDeliveryDate(), orderDetail.getOrder().getFullname(),
+				orderDetail.getOrder().getOrderDate(), orderDetail.getOrder().getPhone(), statusName, paymentMethod,
+				orderDetail.getOrder().getPhone(), email, productDetails);
 	}
 
 	// ty

@@ -1,6 +1,7 @@
 package com.entities;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -28,18 +29,19 @@ public class ReceiptDetail implements Serializable {
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
+    @Column(name = "price", nullable = false)
+    private BigDecimal price;
+
     @ManyToOne
     @JoinColumn(name = "product_version_id")
     @JsonBackReference("product_version-receipt_detail")
     private ProductVersion productVersion;
 
-    // bi-directional many-to-one association to Receipt
     @ManyToOne
     @JoinColumn(name = "receipt_id")
     @JsonBackReference("receipt-receipt_detail")
     private Receipt receipt;
 
-    public ReceiptDetail() {
-    }
-
+    public ReceiptDetail() {}
 }
+

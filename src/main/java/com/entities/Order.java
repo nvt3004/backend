@@ -52,7 +52,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
-	@Column(name = "order_date", nullable = false, updatable = false, insertable = false)
+	@Column(name = "order_date", nullable = false, updatable = false)
 	private Date orderDate;
 
 	@Column(name = "creator_is_admin")
@@ -88,6 +88,32 @@ public class Order implements Serializable {
 	@JoinColumn(name = "user_id")
 	@JsonBackReference("user-orders")
 	private User user;
+	
+	@ManyToOne
+	@JoinColumn(name = "last_updated_by")
+	@JsonBackReference("user-orders-update")
+	private User lastUpdatedBy;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name = "last_updated_date")
+	private Date lastUpdatedDate;
+
+	public User getLastUpdatedBy() {
+	    return lastUpdatedBy;
+	}
+
+	public void setLastUpdatedBy(User lastUpdatedBy) {
+	    this.lastUpdatedBy = lastUpdatedBy;
+	}
+
+	public Date getLastUpdatedDate() {
+	    return lastUpdatedDate;
+	}
+
+	public void setLastUpdatedDate(Date lastUpdatedDate) {
+	    this.lastUpdatedDate = lastUpdatedDate;
+	}
+
 
 	public Order() {
 	}

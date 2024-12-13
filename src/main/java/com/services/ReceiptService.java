@@ -158,7 +158,7 @@ public class ReceiptService {
 		for (ReceiptCreateDTO.ProductVersionDTO pvDto : dto.getProductVersions()) {
 			Integer productVersionId = pvDto.getProductVersionId();
 			Integer quantity = pvDto.getQuantity();
-
+			BigDecimal price = pvDto.getPrice();
 			ProductVersion prodVer = productVersionService.getProductVersionByID(productVersionId);
 			if (prodVer == null) {
 				errorResponse.setErrorCode(400);
@@ -166,16 +166,15 @@ public class ReceiptService {
 				return errorResponse;
 			}
 
-			// Update product inventory
 			int inventoryProductVersion = prodVer.getQuantity();
 			prodVer.setQuantity(inventoryProductVersion + quantity);
 			productVersionService.updateProdVerSion(prodVer);
 
-			// Save receipt details
 			ReceiptDetail receiptDetail = new ReceiptDetail();
 			receiptDetail.setReceipt(receipt);
 			receiptDetail.setProductVersion(prodVer);
 			receiptDetail.setQuantity(quantity);
+			receiptDetail.setPrice(price);
 			receiptDetailJpa.save(receiptDetail);
 		}
 
@@ -216,13 +215,13 @@ public class ReceiptService {
 
 		for (ReceiptDetail dt : receipt.getReceiptDetails()) {
 			ReceiptDetailResponse detail = new ReceiptDetailResponse();
-			BigDecimal total = dt.getProductVersion().getImportPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
+			BigDecimal total = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
 
 			if(dt.getProductVersion().getImage() != null) {
 				detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
 			}
 			
-			detail.setImportPrice(dt.getProductVersion().getImportPrice());
+			detail.setImportPrice(dt.getPrice());
 			detail.setName(dt.getProductVersion().getVersionName());
 			detail.setQuantity(dt.getQuantity());
 			detail.setTotal(total);

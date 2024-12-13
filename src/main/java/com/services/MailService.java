@@ -1,5 +1,7 @@
 package com.services;
 
+import java.io.ByteArrayOutputStream;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.util.ByteArrayDataSource;
 
 @Service
 public class MailService {
@@ -37,6 +40,21 @@ public class MailService {
         } catch (MessagingException e) {
             System.err.println("Lỗi khi gửi email: " + e.getMessage());
         }
+    }
+    
+    public void sendInvoiceEmail(String toEmail, String subject, String htmlContent, ByteArrayOutputStream pdfStream) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+        helper.setFrom("ngothai3004@gmail.com");
+        helper.setTo(toEmail);
+        helper.setSubject(subject);
+        helper.setText(htmlContent, true); 
+
+        ByteArrayDataSource dataSource = new ByteArrayDataSource(pdfStream.toByteArray(), "application/pdf");
+        helper.addAttachment("Invoice.pdf", dataSource);
+
+        mailSender.send(message);
     }
 
 }

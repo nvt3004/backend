@@ -2,6 +2,7 @@ package com.models;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -16,48 +17,50 @@ import lombok.Data;
 
 @Data
 public class CouponCreateDTO {
-    // private String code;
 
-    @DecimalMin(value = "5.0", message = "Discount percentage must be at least 5%.")
-    @DecimalMax(value = "50.0", message = "Discount percentage cannot exceed 50%.")
-    private BigDecimal disPercent;
+	@DecimalMin(value = "5.0", message = "Phần trăm giảm giá phải ít nhất là 5%.")
+	@DecimalMax(value = "50.0", message = "Phần trăm giảm giá không được vượt quá 50%.")
+	private BigDecimal disPercent;
 
-    @DecimalMin(value = "5000.0", message = "Discount price must be at least 5000.0.")
-    @DecimalMax(value = "100000.0", message = "Discount price cannot exceed 100,000 units.")
-    private BigDecimal disPrice;
+	@DecimalMin(value = "5000.0", message = "Giá trị giảm giá phải ít nhất là 5000.")
+	@DecimalMax(value = "100000.0", message = "Giá trị giảm giá không được vượt quá 100,000.")
+	private BigDecimal disPrice;
 
-    @Size(max = 255, message = "Description cannot exceed 255 characters.")
-    private String description;
+	@Size(max = 255, message = "Mô tả không được vượt quá 255 ký tự.")
+	private String description;
 
-    @NotNull(message = "Start date cannot be null.")
-    @FutureOrPresent(message = "Start date must be today or in the future.")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime startDate;
+	@FutureOrPresent(message = "Ngày bắt đầu phải là hôm nay hoặc trong tương lai.")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	private LocalDateTime startDate;
 
-    @NotNull(message = "End date cannot be null.")
-    @Future(message = "End date must be in the future.")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime endDate;
+	@Future(message = "Ngày kết thúc phải là trong tương lai.")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	private LocalDateTime endDate;
 
-    @NotNull(message = "Quantity cannot be null.")
-    @Min(value = 1, message = "Quantity must be at least 1.")
-    private Integer quantity;
+	@NotNull(message = "Số lượng không được để trống.")
+	@Min(value = 1, message = "Số lượng phải ít nhất là 1.")
+	private Integer quantity;
 
-    public boolean isDatesValid() {
-        return startDate != null && endDate != null && startDate.isBefore(endDate);
-    }
+	public boolean isDiscountValid() {
+		if (disPercent != null && disPrice != null) {
+			return false;
+		}
+		return true;
+	}
 
-    public boolean isDiscountValid() {
-        return (disPercent == null && disPrice != null) || (disPercent != null && disPrice == null);
-    }
+	public boolean isDisPercentValid() {
+		return disPercent != null && !disPercent.toString().trim().isEmpty();
+	}
 
-    // Hàm kiểm tra xem disPercent có rỗng hoặc null không
-    public boolean isDisPercentValid() {
-        return disPercent != null && !disPercent.toString().trim().isEmpty();
-    }
+	public boolean isDisPriceValid() {
+		return disPrice != null && !disPrice.toString().trim().isEmpty();
+	}
 
-    // Hàm kiểm tra xem disPrice có rỗng hoặc null không
-    public boolean isDisPriceValid() {
-        return disPrice != null && !disPrice.toString().trim().isEmpty();
-    }
+	private static final long MAX_DURATION_DAYS = 90;
+
+	public boolean isDatesValid() {
+		return startDate != null && endDate != null && startDate.isBefore(endDate)
+				&& ChronoUnit.DAYS.between(startDate, endDate) <= MAX_DURATION_DAYS;
+	}
+	
 }

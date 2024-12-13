@@ -13,7 +13,7 @@ public interface ReceiptJPA extends JpaRepository<Receipt, Integer> {
 	@Query("""
 		    SELECT r 
 		    FROM Receipt r
-		    JOIN FETCH r.receiptDetails rd
+		    LEFT JOIN FETCH r.receiptDetails rd
 		    WHERE (:keyword IS NULL OR :keyword = '' OR 
 		           rd.productVersion.versionName LIKE %:keyword% OR 
 		           CAST(r.receiptId AS STRING) LIKE %:keyword% OR 

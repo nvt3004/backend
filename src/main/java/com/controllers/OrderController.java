@@ -1,5 +1,6 @@
 package com.controllers;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +36,7 @@ import com.services.JWTService;
 import com.services.OrderDetailService;
 import com.services.OrderService;
 import com.services.OrderStatusService;
+import com.utils.UploadService;
 
 @RestController
 @RequestMapping("/api")
@@ -53,6 +56,9 @@ public class OrderController {
 
 	@Autowired
 	private JWTService jwtService;
+	
+	@Autowired
+	private UploadService uploadService;
 
 	@GetMapping("/staff/orders")
 	@PreAuthorize("hasPermission(#userId, 'View Order')")
@@ -62,7 +68,7 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-
+System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -272,8 +278,8 @@ public class OrderController {
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
 
-		ApiResponse<OrderDetail> response = orderDetailService.updateOrderDetail(orderDetailId, productId, colorId,
-				sizeId);
+		ApiResponse<OrderDetail> response = orderDetailService.updateOrderDetail(orderDetailId, user, productId,
+				colorId, sizeId);
 
 		if (response.getErrorCode() == 200) {
 			return ResponseEntity.ok(response);
@@ -329,7 +335,7 @@ public class OrderController {
 		}
 
 		ApiResponse<OrderDetail> validationResponse = orderDetailService
-				.validateAndUpdateOrderDetailQuantity(orderDetailId, quantity);
+				.validateAndUpdateOrderDetailQuantity(orderDetailId, user, quantity);
 
 		if (validationResponse.getErrorCode() != 200) {
 			return ResponseEntity.status(HttpStatus.valueOf(validationResponse.getErrorCode()))
@@ -384,7 +390,7 @@ public class OrderController {
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
 
-		errorResponse = orderService.updateOrderStatus(orderId, statusId);
+		errorResponse = orderService.updateOrderStatus(orderId, statusId, user);
 
 		if (errorResponse.getErrorCode() == 200) {
 			return ResponseEntity.ok(errorResponse);
@@ -397,7 +403,7 @@ public class OrderController {
 	@PreAuthorize("hasPermission(#userid, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-
+System.out.println("Chạy Vô OrderDetails");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -609,8 +615,8 @@ public class OrderController {
 	}
 
 	@GetMapping("/orders/{orderId}")
-	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId) {
-
+	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeaders) {
 		if (orderId == null) {
 			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
 			return ResponseEntity.badRequest().body(response);
@@ -624,5 +630,59 @@ public class OrderController {
 			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
 		}
 	}
+
+//	@PostMapping("/staff/orders/export")
+//	public void exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId, HttpServletResponse response) {
+//		try {
+//			ApiResponse<ByteArrayOutputStream> pdfStream = orderService.generateInvoicePdf(orderId);
+//
+//			ApiResponse<BufferedImage> image = orderService.convertPdfToImage(pdfStream.getData());
+//
+//			response.setContentType("image/png");
+//			ImageIO.write(image.getData(), "png", response.getOutputStream());
+//		} catch (IllegalArgumentException e) {
+//			response.setStatus(400);
+//			try {
+//				response.getWriter().write(e.getMessage());
+//			} catch (IOException ioException) {
+//				ioException.printStackTrace();
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			response.setStatus(500);
+//			try {
+//				response.getWriter().write("Error generating PDF: " + e.getMessage());
+//			} catch (IOException ioException) {
+//				ioException.printStackTrace();
+//			}
+//		}
+//	}
+	
+	@PostMapping("/staff/orders/export")
+	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId) {
+	    try {
+	        // 1. Tạo PDF từ Order ID
+	        ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
+	        ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
+	        byte[] pdfBytes = pdfStream.toByteArray();
+
+	        // 2. Trả về PDF dưới dạng file
+	        HttpHeaders headers = new HttpHeaders();
+	        headers.setContentType(MediaType.APPLICATION_PDF);
+	        headers.setContentDispositionFormData("attachment", "invoice.pdf");
+	        headers.setContentLength(pdfBytes.length);
+
+	        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+	    } catch (IllegalArgumentException e) {
+	        ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
+	        return ResponseEntity.badRequest().body(response);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+	    }
+	}
+
 
 }

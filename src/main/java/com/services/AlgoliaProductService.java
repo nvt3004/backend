@@ -154,6 +154,17 @@ public class AlgoliaProductService {
 		return CompletableFuture.completedFuture(null);
 	}
 
+	public CompletableFuture<Void> deleteProductFromAlgoliaAsync(String objectID) {
+	    try {
+	        // Xóa sản phẩm dựa trên objectID và chờ hoàn thành
+	        productIndex.deleteObject(objectID).waitTask();
+	        logger.info("Đã xóa sản phẩm với objectID: " + objectID);
+	    } catch (Exception e) {
+	        logger.severe("Lỗi khi xóa sản phẩm khỏi Algolia: " + e.getMessage());
+	    }
+	    return CompletableFuture.completedFuture(null);
+	}
+
 	@Async
 	public CompletableFuture<Void> addProductToAlgoliaAsync(ProductDTO product) {
 		try {

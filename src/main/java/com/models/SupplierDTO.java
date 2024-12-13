@@ -25,8 +25,7 @@ public class SupplierDTO {
     @Email(message = "Email should be valid")
     private String email;
 
-    @NotNull(message = "Active status cannot be null")
-    private Boolean isActive;
+    private Boolean isActive = true;
 
     @NotBlank(message = "Phone number cannot be blank")
     @Size(max = 20, message = "Phone number cannot be longer than 20 characters")

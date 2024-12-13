@@ -1,7 +1,7 @@
 package com.utils;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +27,23 @@ public class UploadService {
 		
 		return String.format("%s/images/%s", URL_DOMAIN, fileName);
 	}
+	
+	   public String saveBufferedImage(BufferedImage image, String folder) {
+	        Path root = Paths.get(String.format("static/%s", folder));
+	        String fileName = String.valueOf(new Date().getTime()) + ".png";
+
+	        try {
+	            Files.createDirectories(root);
+	            File outputFile = root.resolve(fileName).toFile();
+	            ImageIO.write(image, "png", outputFile);
+
+	            return fileName;
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+
+	        return null;
+	    }
 
 	public String save(MultipartFile file, String forder) {
 		Path root = Paths.get(String.format("static/%s", forder));

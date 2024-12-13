@@ -287,14 +287,14 @@ public class CustomerController {
 
 		if (exitUser == null) {
 			response.setCode(999);
-			response.setMessage("Account not found");
+			response.setMessage("Thất bại bởi vì tài khoản không tồn tại!");
 
 			return ResponseEntity.status(999).body(response);
 		}
 
 		if (user.getUserId() == exitUser.getUserId()) {
 			response.setCode(999);
-			response.setMessage("You cannot block yourself!");
+			response.setMessage("Bạn không thể khóa tài khoản chính bạn!");
 
 			return ResponseEntity.status(999).body(response);
 		}
@@ -302,14 +302,14 @@ public class CustomerController {
 		// Nếu cập nhật admin thì kh cho
 		if (exitUser.getUserRoles().get(0).getRole().getId() == 1) {
 			response.setCode(404);
-			response.setMessage("Block failed because user does not exist!");
+			response.setMessage("Thất bại bởi vì tài khoản không tồn tại!");
 
 			return ResponseEntity.status(404).body(response);
 		}
 
 		if (reason.trim().length() == 0 && exitUser.getStatus() == 1) {
 			response.setCode(999);
-			response.setMessage("Reason cannot be left blank!");
+			response.setMessage("Không được để trống lý do!");
 
 			return ResponseEntity.status(999).body(response);
 		}
@@ -317,10 +317,14 @@ public class CustomerController {
 		// Nếu trước đó bị khóa thì mở khóa và ngược lại
 		String email = exitUser.getEmail() != null ? exitUser.getEmail() : "minhty295@gmail.com";
 		if (exitUser.getStatus() == 1) {
-			mailService.sendEmail(email, "Step To Future Shop Block Account",
-					"Step to future shop informs you that your account has been locked for the following reasons: "
+			mailService.sendEmail(email, "Step To Future Shop Thông Báo",
+					"Tài khoản của bạn bị khóa vì lý do: "
 							+ reason);
+		}else{
+			mailService.sendEmail(email, "Step To Future Shop Thông Báo",
+					"Tài khoản của bạn đã được mở khóa, bây giờ bạn có thể đăng nhập vào hệ thống!");
 		}
+
 		permissionService.deleteCustomer(exitUser.getUserId());
 		response.setCode(200);
 		response.setMessage("Success");
