@@ -51,7 +51,7 @@ public class ProductImageUpdateScheduler {
 							productVector.setProductId(product.getProductId());
 
 							// Tạo URL ảnh và gọi phương thức imgConvert.getImageVector với URL
-							String imageUrl = "http://localhost:8080/images/" + productVer.getImage().getImageUrl();
+							String imageUrl = "https://api.stepstothefuture.store/images/" + productVer.getImage().getImageUrl();
 							String vector = imgConvert.getImageVector(imageUrl); // Gọi phương thức với URL ảnh
 							productVector.setImageVector(vector); // Set chuỗi vector vào productVector
 
