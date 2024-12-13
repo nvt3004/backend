@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -183,7 +180,9 @@ public class ReceiptService {
 	}
 
 	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size) {
-		Pageable pageable = PageRequest.of(page, size);
+		Sort sort = Sort.by(Sort.Direction.DESC, "receiptId");
+		Pageable pageable = PageRequest.of(page, size, sort);
+
 		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
 
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
