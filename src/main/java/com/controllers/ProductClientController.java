@@ -85,8 +85,8 @@ public class ProductClientController {
 	@Autowired
 	ProductSearchImageService productSearchImageService;
 
-//	@Autowired
-//	TranscriptService transcriptService;
+	@Autowired
+	TranscriptService transcriptService;
 
 	@PostMapping("/transcription")
 	public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
