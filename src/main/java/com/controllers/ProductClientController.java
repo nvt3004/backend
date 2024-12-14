@@ -71,38 +71,38 @@ public class ProductClientController {
 	@Autowired
 	ProductSearchImageService productSearchImageService;
 
-	@Autowired
-	TranscriptService transcriptService;
+//	@Autowired
+//	TranscriptService transcriptService;
 
-	@PostMapping("/transcription")
-	public ResponseEntity<?> transcribe(@RequestPart("file") MultipartFile file) {
-		ResponseAPI<String> response = new ResponseAPI<>();
-		if (file.isEmpty()) {
-			response.setCode(400);
-			response.setMessage("No file provided.");
-			response.setData(null);
-			return ResponseEntity.status(400).body(response);
-		}
-		try {
-			String transcriptText = transcriptService.transcribe(file);
-			if (transcriptText != null) {
-				response.setCode(200);
-				response.setMessage("Success");
-				response.setData(transcriptText);
-				return ResponseEntity.ok(response);
-			} else {
-				response.setCode(500);
-				response.setMessage("An error occurred during transcription.");
-				response.setData(null);
-				return ResponseEntity.status(500).body(response);
-			}
-		} catch (Exception e) {
-			response.setCode(500);
-			response.setMessage("Error: " + e.getMessage());
-			response.setData(null);
-			return ResponseEntity.status(500).body(response);
-		}
-	}
+//	@PostMapping("/transcription")
+//	public ResponseEntity<?> transcribe(@RequestPart("file") MultipartFile file) {
+//		ResponseAPI<String> response = new ResponseAPI<>();
+//		if (file.isEmpty()) {
+//			response.setCode(400);
+//			response.setMessage("No file provided.");
+//			response.setData(null);
+//			return ResponseEntity.status(400).body(response);
+//		}
+//		try {
+//			String transcriptText = transcriptService.transcribe(file);
+//			if (transcriptText != null) {
+//				response.setCode(200);
+//				response.setMessage("Success");
+//				response.setData(transcriptText);
+//				return ResponseEntity.ok(response);
+//			} else {
+//				response.setCode(500);
+//				response.setMessage("An error occurred during transcription.");
+//				response.setData(null);
+//				return ResponseEntity.status(500).body(response);
+//			}
+//		} catch (Exception e) {
+//			response.setCode(500);
+//			response.setMessage("Error: " + e.getMessage());
+//			response.setData(null);
+//			return ResponseEntity.status(500).body(response);
+//		}
+//	}
 
 	@PostMapping("/searchByImage")
 	public ResponseAPI<List<ProductDTO>> searchProductByImage(@RequestPart("image") Optional<MultipartFile> image,
