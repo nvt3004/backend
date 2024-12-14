@@ -78,11 +78,52 @@ public class SaleService {
     }
 
     public void addSale(SaleDTO saleDTO) {
-        saleDTO.setStatus(false);
+        saleDTO.setStatus(true);
         saleDTO.setId(-1);
 
         Sale saleSaved = createSale(saleDTO);
         createVersionSale(saleSaved, saleDTO.getVersionIds());
+    }
+
+    public List<Version> duplicateVersionSaleStartedAdd(SaleDTO saleDTO) {
+        List<Version> versionDuplicates = new ArrayList<>();
+        List<VersionSale> versionSales = versionSaleJPA.findAll();
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0);
+
+
+        for (int i = 0; i < saleDTO.getVersionIds().size(); i++) {
+            Integer versionId = saleDTO.getVersionIds().get(i);
+
+            for (int j = 0; j < versionSales.size(); j++) {
+                VersionSale versionSale = versionSales.get(j);
+                Sale sale = versionSale.getSale();
+                ProductVersion version = versionSale.getProductVersion();
+
+                LocalDateTime startDate = sale.getStartDate().minusHours(7);
+                LocalDateTime endDate = sale.getEndDate().minusHours(7);
+
+                if (
+                        ((!saleDTO.getStartDate().isBefore(startDate) && !saleDTO.getStartDate().isAfter(endDate)) ||
+                                (!saleDTO.getEndDate().isBefore(startDate) && !saleDTO.getEndDate().isAfter(endDate))) &&
+                                        versionId.equals(version.getId()) &&
+                                        !endDate.isBefore(dateNow) &&
+                                        sale.getStatus() == true
+                ) {
+                    Version vs = new Version();
+                    vs.setId(version.getId());
+                    vs.setVersionName(version.getVersionName());
+                    vs.setImage(version.getImage().getImageUrl());
+
+                    versionDuplicates.add(vs);
+
+                    // Thoát khỏi vòng lặp bên trong khi đã tìm thấy
+                    break;
+                }
+            }
+        }
+
+// 22 - 26     25 - 17:  21 - 23
+        return versionDuplicates;
     }
 
     public void updateSale(SaleDTO saleDTO) {
@@ -214,6 +255,7 @@ public class SaleService {
             Version versionResponse = new Version();
 
             versionResponse.setId(versionEntity.getId());
+            versionResponse.setVersionSaleId(versionSale.getId());
             versionResponse.setVersionName(versionEntity.getVersionName());
             versionResponse.setQuantity(versionService.getTotalStockQuantityVersion(versionEntity.getId()));
             versionResponse.setPrice(versionEntity.getRetailPrice());

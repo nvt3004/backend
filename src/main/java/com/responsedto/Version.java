@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Version {
 	private int id;
+	private int versionSaleId;
 	private String versionName;
 	private BigDecimal price;
 	private boolean active;
