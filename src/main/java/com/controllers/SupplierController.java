@@ -254,9 +254,9 @@ public class SupplierController {
 		}
 		Supplier createdSupplier = supplierService.createSupplier(supplierDetails);
 
-		errorResponse = new ApiResponse<>(201, "Supplier created successfully", createdSupplier);
+		errorResponse = new ApiResponse<>(200, "Supplier created successfully", createdSupplier);
 
-		return ResponseEntity.status(HttpStatus.CREATED).body(errorResponse);
+		return ResponseEntity.ok(errorResponse);
 	}
 
 	@PutMapping

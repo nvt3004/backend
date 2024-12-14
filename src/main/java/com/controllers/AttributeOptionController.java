@@ -47,13 +47,13 @@ public class AttributeOptionController {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
 			response.setCode(400);
-			response.setMessage("Invalid token format");
+			response.setMessage("Định dạng mã token không hợp lệ");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
 			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -61,7 +61,7 @@ public class AttributeOptionController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -77,14 +77,14 @@ public class AttributeOptionController {
 		if (attOptionDTO.getAttibuteName() == null || attOptionDTO.getAttibuteName().isEmpty()
 				|| attOptionDTO.getAttibuteName().isBlank()) {
 			response.setCode(422);
-			response.setMessage("Invalid format attribute name");
+			response.setMessage("Tên thuộc tính không được để trống");
 
 			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
 		}
 
 		if (attOptionDTO.getOptions() == null || attOptionDTO.getOptions().isEmpty()) {
 			response.setCode(999);
-			response.setMessage("Can't add because option is empty");
+			response.setMessage("Giá trị thuộc tính không được để trống");
 
 			return ResponseEntity.status(999).body(response);
 		}
@@ -92,9 +92,26 @@ public class AttributeOptionController {
 		for (String op : attOptionDTO.getOptions()) {
 			if (op == null || op.isBlank() || op.isEmpty()) {
 				response.setCode(999);
-				response.setMessage("Can't add because option is empty");
+				response.setMessage("Giá trị thuộc tính không được để trống");
 
 				return ResponseEntity.status(999).body(response);
+			}
+		}
+
+		for(int i = 0; i< attOptionDTO.getOptions().size(); i++){
+			String op1 = attOptionDTO.getOptions().get(i);
+
+			for(int j = 0; j< attOptionDTO.getOptions().size(); j++){
+				if(i == j) continue;
+
+				String op2 = attOptionDTO.getOptions().get(j);
+
+				if(op1.trim().equalsIgnoreCase(op2.trim())){
+					response.setCode(999);
+					response.setMessage("Giá trị thuộc tính không được trùng trùng");
+
+					return ResponseEntity.status(999).body(response);
+				}
 			}
 		}
 
@@ -122,13 +139,13 @@ public class AttributeOptionController {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
 			response.setCode(400);
-			response.setMessage("Invalid token format");
+			response.setMessage("Định dạng mã token không hợp lệ");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
 			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -136,7 +153,7 @@ public class AttributeOptionController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
@@ -158,7 +175,7 @@ public class AttributeOptionController {
 
 		if(optionModel.getAttributeId() == null) {
 			response.setCode(999);
-			response.setMessage("Invalid attribute id");
+			response.setMessage("Thuộc tính không hợp lệ");
 
 			return ResponseEntity.status(999).body(response);
 		}
@@ -167,16 +184,25 @@ public class AttributeOptionController {
 		
 		if(attribute == null) {
 			response.setCode(999);
-			response.setMessage("Attibute id not found!");
-
+			response.setMessage("Thuộc tính không hợp lệ");
 			return ResponseEntity.status(999).body(response);
 		}
 		
-		if(optionModel.getOptionName() == null || optionModel.getOptionName().isBlank() || optionModel.getOptionName().isEmpty()) {
+		if(optionModel.getOptionName() == null || optionModel.getOptionName().isEmpty()) {
 			response.setCode(999);
-			response.setMessage("Invalid option name");
+			response.setMessage("Giá trị thuộc tính không hợp lệ");
 
 			return ResponseEntity.status(999).body(response);
+		}
+
+		for(AttributeOption op: attribute.getAttributeOptions()){
+			for(String opvl : optionModel.getOptionName()){
+				if(op.getAttributeValue().trim().equalsIgnoreCase(opvl.trim())){
+					response.setMessage("Giá trị thuộc tính "+ opvl.trim() +" đã tồn tại vui lòng chọn giá trị khác");
+
+					return ResponseEntity.status(999).body(response);
+				}
+			}
 		}
 		
 		attributeService.createOption(optionModel);

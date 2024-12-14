@@ -218,7 +218,7 @@ public class FeedbackController {
 
 	@GetMapping("api/user/feedback")
 	public ResponseEntity<ResponseAPI<PageCustom<FeedbackResponseDTO>>> getFeedback(
-			@RequestParam("page") Optional<Integer> pageNumber,
+			@RequestParam(name="page" , defaultValue = "1") Optional<Integer> pageNumber,
 			@RequestParam("idProduct") Optional<Integer> idProduct) {
 		ResponseAPI<PageCustom<FeedbackResponseDTO>> response = new ResponseAPI<>();
 

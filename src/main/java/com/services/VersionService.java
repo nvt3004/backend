@@ -18,6 +18,7 @@ import com.responsedto.Attribute;
 import com.responsedto.ProductVersionResponse;
 import com.responsedto.StockQuantityDTO;
 import com.utils.UploadService;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class VersionService {
@@ -131,11 +132,10 @@ public class VersionService {
 		return reslut;
 	}
 
+	@Transactional
 	public Integer getTotalStockQuantityVersion(int versionId) {
 	    return versionJPA.getTotalStockQuantityVersion(versionId);
 	}
-
-
 
 
 }

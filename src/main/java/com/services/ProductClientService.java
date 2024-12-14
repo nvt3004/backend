@@ -50,6 +50,105 @@ public class ProductClientService {
 	@Autowired
 	AlgoliaProductService algoliaProductService;
 
+	public void deleteProductOnAlgolia(Product product) {
+		algoliaProductService.deleteProductFromAlgoliaAsync(String.valueOf(product.getProductId()));
+
+	}
+
+	public void updateProductOnAlgolia(Product product) {
+		algoliaProductService.deleteProductFromAlgoliaAsync(String.valueOf(product.getProductId()));
+
+		ProductDTO productDTO = new ProductDTO();
+
+		List<ProductSale> productSales = product.getProductSales();
+		if (productSales != null && !productSales.isEmpty()) {
+			ProductSale productSale = productSales.get(0);
+			Date now = new Date();
+
+			if (productSale.getEndDate() != null && productSale.getEndDate().after(now)) {
+				productDTO.setDiscount(productSale.getDiscount());
+			}
+		}
+
+		productDTO.setObjectID(String.valueOf(product.getProductId()));
+		productDTO.setId(String.valueOf(product.getProductId()));
+		productDTO.setName(product.getProductName());
+		productDTO.setDescription(product.getDescription());
+
+		// Xử lý rating từ feedbacks
+		List<Feedback> feedbacks = product.getFeedbacks();
+		if (feedbacks != null && !feedbacks.isEmpty()) {
+			int totalRating = 0;
+			for (Feedback fd : feedbacks) {
+				totalRating += fd.getRating();
+			}
+			double averageRating = (double) totalRating / feedbacks.size();
+			productDTO.setRating(averageRating);
+		} else {
+			productDTO.setRating(-1); // Không có feedback, giá trị mặc định là -1
+		}
+
+		// Set danh sách categories và ID
+		List<String> categories = new ArrayList<>();
+		List<Integer> categoryID = new ArrayList<>();
+		for (ProductCategory category : product.getProductCategories()) {
+			categories.add(category.getCategory().getCategoryName());
+			categoryID.add(category.getCategory().getCategoryId());
+		}
+		productDTO.setCategories(categories);
+		productDTO.setCategoryID(categoryID);
+
+		// Set phiên bản sản phẩm (versions), colors, sizes, images
+		List<String> versionName = new ArrayList<>();
+		List<String> attName = new ArrayList<>();
+		List<String> images = new ArrayList<>();
+		List<Integer> attId = new ArrayList<>();
+
+		BigDecimal minPrice = null;
+		BigDecimal maxPrice = new BigDecimal("0.00");
+
+		for (ProductVersion productVer : product.getProductVersions()) {
+			versionName.add(productVer.getVersionName());
+
+			// Xử lý thuộc tính màu sắc và kích thước
+			if (productVer.getAttributeOptionsVersions() != null
+					&& productVer.getAttributeOptionsVersions().size() >= 1) {
+
+				for (AttributeOptionsVersion att : productVer.getAttributeOptionsVersions()) {
+					attName.add(att.getAttributeOption().getAttributeValue());
+					attId.add(att.getAttributeOption().getId());
+				}
+
+			}
+
+			// Thêm ảnh sản phẩm và cập nhật min/max price
+			if (productVer.getImage() != null) {
+				images.add(productVer.getImage().getImageUrl());
+			}
+			if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+				minPrice = productVer.getRetailPrice();
+			}
+			if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+				maxPrice = productVer.getRetailPrice();
+			}
+
+			productDTO.setVersionName(versionName);
+
+			productDTO.setAttributeName(attName);
+
+			productDTO.setMinPrice(minPrice);
+			productDTO.setMaxPrice(maxPrice);
+			productDTO.setImages(images);
+			productDTO.setImgName(images.isEmpty() ? null : images.get(0));
+
+			productDTO.setAttributeId(attId);
+
+			if (product.isStatus()) {
+				algoliaProductService.addProductToAlgoliaAsync(productDTO);
+			}
+		}
+	}
+
 	public List<ProductDTO> getRecommendedProducts(User user) {
 
 		List<ProductDTO> topProducts = algoliaProductService.getTop50Products();

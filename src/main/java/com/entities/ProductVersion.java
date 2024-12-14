@@ -63,6 +63,9 @@ public class ProductVersion implements Serializable {
 	@JsonManagedReference("product_version-receipt_detail")
 	private List<ReceiptDetail> receiptDetail;
 
+	@OneToMany(fetch = FetchType.EAGER,mappedBy = "productVersion")
+	private List<VersionSale> versionSales;
+
 	public ProductVersion() {
 	}
 
@@ -207,4 +210,11 @@ public class ProductVersion implements Serializable {
 		this.status = status;
 	}
 
+	public List<VersionSale> getVersionSales() {
+		return versionSales;
+	}
+
+	public void setVersionSales(List<VersionSale> versionSales) {
+		this.versionSales = versionSales;
+	}
 }

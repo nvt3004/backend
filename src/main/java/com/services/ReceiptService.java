@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -182,9 +179,11 @@ public class ReceiptService {
 		return response;
 	}
 
-	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size, String keyword) {
-		Pageable pageable = PageRequest.of(page, size);
-		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
+	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size) {
+		Sort sort = Sort.by(Sort.Direction.DESC, "receiptId");
+		Pageable pageable = PageRequest.of(page, size, sort);
+
+		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
 
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
 
@@ -214,10 +213,20 @@ public class ReceiptService {
 	    BigDecimal totalPrice = BigDecimal.ZERO;
 	    int totalQuantity = 0;
 
-	    for (ReceiptDetail dt : receipt.getReceiptDetails()) {
-	        ReceiptDetailResponse detail = new ReceiptDetailResponse();
+		for (ReceiptDetail dt : receipt.getReceiptDetails()) {
+			ReceiptDetailResponse detail = new ReceiptDetailResponse();
+			BigDecimal total = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
 
-	        BigDecimal total = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
+			if(dt.getProductVersion().getImage() != null) {
+				detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
+			}
+			
+			detail.setImportPrice(dt.getPrice());
+			detail.setName(dt.getProductVersion().getVersionName());
+			detail.setQuantity(dt.getQuantity());
+			detail.setTotal(total);
+			
+			details.add(detail);
 
 	        if (dt.getProductVersion().getImage() != null) {
 	            detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));

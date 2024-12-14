@@ -52,7 +52,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
-	@Column(name = "order_date", nullable = false, updatable = false, insertable = false)
+	@Column(name = "order_date", nullable = false, updatable = false)
 	private Date orderDate;
 
 	@Column(name = "creator_is_admin")
