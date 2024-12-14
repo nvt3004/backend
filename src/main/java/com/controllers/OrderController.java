@@ -503,7 +503,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/user/orders/cancel-order")
-	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
+//	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
 	public ResponseEntity<ApiResponse<?>> cancelOrder(@RequestParam("orderId") Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
