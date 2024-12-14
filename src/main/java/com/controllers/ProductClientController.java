@@ -1,19 +1,31 @@
 package com.controllers;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.ParseException;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +37,8 @@ import com.entities.Category;
 import com.entities.User;
 import com.entities.Wishlist;
 import com.errors.ResponseAPI;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.responsedto.Att;
 import com.responsedto.FilterAttribute;
 import com.responsedto.ProductDTO;
@@ -74,7 +88,7 @@ public class ProductClientController {
 	TranscriptService transcriptService;
 
 	@PostMapping("/transcription")
-	public ResponseEntity<?> transcribe(@RequestPart("file") MultipartFile file) {
+	public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
 		ResponseAPI<String> response = new ResponseAPI<>();
 		if (file.isEmpty()) {
 			response.setCode(400);
@@ -83,11 +97,13 @@ public class ProductClientController {
 			return ResponseEntity.status(400).body(response);
 		}
 		try {
-			String transcriptText = transcriptService.transcribe(file);
-			if (transcriptText != null) {
+			String transcript = transcriptService.Transcript(file);
+
+			if (transcript != null) {
+			
 				response.setCode(200);
 				response.setMessage("Success");
-				response.setData(transcriptText);
+				response.setData(transcript);
 				return ResponseEntity.ok(response);
 			} else {
 				response.setCode(500);
