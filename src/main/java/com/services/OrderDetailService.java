@@ -209,7 +209,7 @@ public class OrderDetailService {
     }
 
     orderDetail.setProductVersionBean(newProductVersion.get());
-    orderDetail.setQuantity(1);
+    orderDetail.setQuantity(existingOrderDetail.get().getQuantity());
     orderDetail.setPrice(newProductVersion.get().getRetailPrice());
     orderDetail.getOrder().setLastUpdatedBy(currentUser);
     orderDetail.getOrder().setLastUpdatedDate(new Date());

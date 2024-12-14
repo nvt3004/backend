@@ -68,7 +68,6 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-		System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {

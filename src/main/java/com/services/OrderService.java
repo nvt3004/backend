@@ -897,7 +897,7 @@ public class OrderService {
 		headerCell.setPadding(5);
 		table.addCell(headerCell);
 
-		// Customize data cells
+
 		for (OrderDetailProductDetailsDTO product : orderData.getProductDetails()) {
 			PdfPCell cell = new PdfPCell();
 //			String color = product.getAttributeProductVersion().getColor() != null
