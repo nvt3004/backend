@@ -34,7 +34,6 @@ import com.services.GetProductService;
 import com.services.JWTService;
 import com.services.ProductClientService;
 import com.services.ProductSearchImageService;
-import com.services.TranscriptService;
 //import com.services.TranscriptService;
 import com.services.UserService;
 import com.utils.UploadService;
