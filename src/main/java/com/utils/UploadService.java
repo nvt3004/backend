@@ -98,6 +98,8 @@ public class UploadService {
 	}
 
 	public String save(String base64, String folder) {
+		if(base64 == null) return null;
+
 		byte[] bytes = converImageBase64ToImage(base64);
 		Path root = Paths.get(String.format("static/%s", folder));
 		String fileName = String.valueOf(new Date().getTime()) + ".jpg";

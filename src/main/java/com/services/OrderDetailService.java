@@ -175,50 +175,51 @@ public class OrderDetailService {
 	public ApiResponse<OrderDetail> updateOrderDetail(Integer orderDetailId, User currentUser, Integer productId,
 			Integer colorId, Integer sizeId) {
 
-		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
-		if (!existingOrderDetail.isPresent()) {
-			return new ApiResponse<>(404, "Order detail not found", null);
-		}
+    Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
+    if (!existingOrderDetail.isPresent()) {
+        return new ApiResponse<>(404, "Không tìm thấy chi tiết đơn hàng", null); 
+    }
 
-		OrderDetail orderDetail = existingOrderDetail.get();
-		Order order = orderDetail.getOrder();
+    OrderDetail orderDetail = existingOrderDetail.get();
+    Order order = orderDetail.getOrder();
 
-		if (!isValidOrderStatus(order.getOrderStatus().getStatusName())) {
-			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
-		}
+    if (!isValidOrderStatus(order.getOrderStatus().getStatusName())) {
+        return new ApiResponse<>(400, "Đơn hàng không thể cập nhật trong trạng thái hiện tại", null);  
+    }
 
-		String colorName = null;
-		String sizeName = null;
-		ProductVersion currentProductVersion = orderDetail.getProductVersionBean();
-		for (AttributeOptionsVersion aov : currentProductVersion.getAttributeOptionsVersions()) {
-			String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-			if ("Color".equalsIgnoreCase(attributeName)) {
-				colorName = aov.getAttributeOption().getAttributeValue();
-			} else if ("Size".equalsIgnoreCase(attributeName)) {
-				sizeName = aov.getAttributeOption().getAttributeValue();
-			}
-		}
+    String colorName = null;
+    String sizeName = null;
+    ProductVersion currentProductVersion = orderDetail.getProductVersionBean();
+    for (AttributeOptionsVersion aov : currentProductVersion.getAttributeOptionsVersions()) {
+        String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+        if ("Color".equalsIgnoreCase(attributeName)) {
+            colorName = aov.getAttributeOption().getAttributeValue();
+        } else if ("Size".equalsIgnoreCase(attributeName)) {
+            sizeName = aov.getAttributeOption().getAttributeValue();
+        }
+    }
 
-		Optional<ProductVersion> newProductVersion = getProductVersion(productId, colorId, sizeId);
-		if (!newProductVersion.isPresent()) {
-			String productName = currentProductVersion.getProduct().getProductName();
-			return new ApiResponse<>(400,
-					String.format("The product '%s', color '%s', and size '%s' combination does not exist.",
-							productName, colorName, sizeName),
-					null);
-		}
+    Optional<ProductVersion> newProductVersion = getProductVersion(productId, colorId, sizeId);
+    if (!newProductVersion.isPresent()) {
+        String productName = currentProductVersion.getProduct().getProductName();
+        return new ApiResponse<>(400,
+                String.format("Không tìm thấy sản phẩm '%s', màu '%s', và kích thước '%s'.",
+                        productName, colorName, sizeName),
+                null);
+    }
 
-		orderDetail.setProductVersionBean(newProductVersion.get());
-		orderDetail.setQuantity(1);
-		orderDetail.setPrice(newProductVersion.get().getRetailPrice());
-		orderDetail.getOrder().setLastUpdatedBy(currentUser);
-		orderDetail.getOrder().setLastUpdatedDate(new Date());
-		OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
-		sendOrderDetailUpdateEmail(orderDetail, currentProductVersion, order.getUser().getEmail(),
-				newProductVersion.get());
+    orderDetail.setProductVersionBean(newProductVersion.get());
+    orderDetail.setQuantity(existingOrderDetail.get().getQuantity());
+    orderDetail.setPrice(newProductVersion.get().getRetailPrice());
+    orderDetail.getOrder().setLastUpdatedBy(currentUser);
+    orderDetail.getOrder().setLastUpdatedDate(new Date());
+    OrderDetail updatedOrderDetail = orderDetailJpa.save(orderDetail);
+    sendOrderDetailUpdateEmail(orderDetail, currentProductVersion, order.getUser().getEmail(),
+            newProductVersion.get());
 
-		return new ApiResponse<>(200, "Order detail updated successfully", updatedOrderDetail);
-	}
+    return new ApiResponse<>(200, "Cập nhật chi tiết đơn hàng thành công", updatedOrderDetail); 
+}
+
 
 	private void sendOrderDetailUpdateEmail(OrderDetail orderDetail, ProductVersion productVersion, String userEmail,
 			ProductVersion newProductVersion) {
@@ -297,61 +298,62 @@ public class OrderDetailService {
 	}
 
 	public ApiResponse<OrderDetail> validateAndUpdateOrderDetailQuantity(Integer orderDetailId, User currentUser,
-			Integer quantity) {
+            Integer quantity) {
 
-		Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
-		if (!existingOrderDetail.isPresent()) {
-			return new ApiResponse<>(404, "Order detail not found", null);
-		}
+        Optional<OrderDetail> existingOrderDetail = findOrderDetailById(orderDetailId);
+        if (!existingOrderDetail.isPresent()) {
+            return new ApiResponse<>(404, "Chi tiết đơn hàng không tồn tại", null);
+        }
 
-		OrderDetail orderDetail = existingOrderDetail.get();
-		String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
+        OrderDetail orderDetail = existingOrderDetail.get();
+        String orderStatusName = orderDetail.getOrder().getOrderStatus().getStatusName();
 
-		if (!isValidOrderStatus(orderStatusName)) {
-			return new ApiResponse<>(400, "Order cannot be updated in its current state", null);
-		}
+        if (!isValidOrderStatus(orderStatusName)) {
+            return new ApiResponse<>(400, "Đơn hàng không thể cập nhật trong trạng thái hiện tại", null);
+        }
 
-		if (!isValidQuantity(quantity)) {
-			return new ApiResponse<>(400, "Quantity must be positive.", null);
-		}
+        if (!isValidQuantity(quantity)) {
+            return new ApiResponse<>(400, "Số lượng phải là số dương.", null);
+        }
 
-		ProductVersion productVersion = orderDetail.getProductVersionBean();
-		Integer productVersionStock = productVersion.getQuantity();
-		productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
+        ProductVersion productVersion = orderDetail.getProductVersionBean();
+        Integer productVersionStock = productVersion.getQuantity();
+        productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-		Integer processedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-		Integer cancelledOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-		Integer shippedOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-		Integer deliveredOrderQuantity = productVersionJpa
-				.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+        Integer processedOrderQuantity = productVersionJpa
+                .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+        Integer cancelledOrderQuantity = productVersionJpa
+                .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+        Integer shippedOrderQuantity = productVersionJpa
+                .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+        Integer deliveredOrderQuantity = productVersionJpa
+                .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
 
-		processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-		cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-		shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-		deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+        processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+        cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+        shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+        deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
 
-		Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+        Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
 
-		Integer availableProductVersionStock = productVersionStock - totalQuantitySold;
+        Integer availableProductVersionStock = productVersionStock - totalQuantitySold;
 
-		if (quantity > availableProductVersionStock) {
-			return new ApiResponse<>(400,
-					"Requested quantity exceeds available stock. Available stock: " + availableProductVersionStock,
-					null);
-		}
+        if (quantity > availableProductVersionStock) {
+            return new ApiResponse<>(400,
+                    "Số lượng yêu cầu vượt quá số lượng có sẵn. Số lượng có sẵn: " + availableProductVersionStock,
+                    null);
+        }
 
-		orderDetail.getOrder().setLastUpdatedBy(currentUser);
-		orderDetail.getOrder().setLastUpdatedDate(new Date());
-		orderDetail.setQuantity(quantity);
-		orderDetailJpa.save(orderDetail);
+        orderDetail.getOrder().setLastUpdatedBy(currentUser);
+        orderDetail.getOrder().setLastUpdatedDate(new Date());
+        orderDetail.setQuantity(quantity);
+        orderDetailJpa.save(orderDetail);
 
-		sendQuantityUpdateEmail(orderDetail, orderDetail.getOrder().getUser().getEmail());
+        sendQuantityUpdateEmail(orderDetail, orderDetail.getOrder().getUser().getEmail());
 
-		return new ApiResponse<>(200, "Order detail quantity updated successfully", orderDetail);
-	}
+        return new ApiResponse<>(200, "Cập nhật số lượng chi tiết đơn hàng thành công", orderDetail);
+    }
+
 
 	private void sendQuantityUpdateEmail(OrderDetail orderDetail, String userEmail) {
 		CompletableFuture.runAsync(() -> {
@@ -402,8 +404,9 @@ public class OrderDetailService {
 	}
 
 	public OrderQRCodeDTO convertToOrderQRCode(List<OrderDetail> orderDetailList) {
+		
 		if (orderDetailList == null || orderDetailList.isEmpty()) {
-			throw new IllegalArgumentException("orderDetailList cannot be null or empty");
+		    throw new IllegalArgumentException("Danh sách chi tiết đơn hàng không được trống hoặc null");
 		}
 
 		OrderDetail orderDetail = orderDetailList.get(0);
@@ -433,7 +436,6 @@ public class OrderDetailService {
 				orderDetail.getOrder().getPhone(), email, productDetails);
 	}
 
-	// ty
 	public OrderDetail createOrderDetail(OrderDetail orderDetail) {
 		return orderDetailJpa.save(orderDetail);
 	}
