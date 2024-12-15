@@ -779,8 +779,8 @@ public class OrderService {
 		}
 
 		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-		Font font = new Font(bf, 5, Font.NORMAL);
-		Font fontBold = new Font(bf, 6, Font.NORMAL);
+		Font font = new Font(bf, 5, Font.BOLD);
+		Font fontBold = new Font(bf, 6, Font.BOLD);
 		Font infoFont = new Font(Font.FontFamily.HELVETICA, 4, Font.BOLD);
 
 		Float height = calculateRequiredHeight(orderData, font);
@@ -839,11 +839,11 @@ public class OrderService {
 		PdfPCell billFromCell = new PdfPCell();
 		billFromCell.setBorder(Rectangle.NO_BORDER);
 
-		Paragraph companyInfoTitle = new Paragraph("Công ty bán hàng:", fontBold);
+		Paragraph companyInfoTitle = new Paragraph("Đơn vị bán hàng:", fontBold);
 		companyInfoTitle.setAlignment(Element.ALIGN_LEFT);
 		billFromCell.addElement(companyInfoTitle);
 
-		Paragraph companyName = new Paragraph("Công ty TNHH Step To The Future", font);
+		Paragraph companyName = new Paragraph("Cửa hàng thời trang Step To The Future", font);
 		companyName.setAlignment(Element.ALIGN_LEFT);
 		billFromCell.addElement(companyName);
 
@@ -878,10 +878,6 @@ public class OrderService {
 		Paragraph customerPhone = new Paragraph("Điện thoại: " + orderData.getPhone(), font);
 		customerPhone.setAlignment(Element.ALIGN_LEFT);
 		billToCell.addElement(customerPhone);
-
-		Paragraph customerEmail = new Paragraph("Email: " + orderData.getEmail(), font);
-		customerEmail.setAlignment(Element.ALIGN_LEFT);
-		billToCell.addElement(customerEmail);
 
 		billToTable.setSpacingAfter(10);
 
