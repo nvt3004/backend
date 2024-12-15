@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -26,7 +23,6 @@ import com.errors.ApiResponse;
 import com.errors.FieldErrorDTO;
 import com.models.ReceiptCreateDTO;
 import com.models.ReceiptDTO;
-import com.models.ReceiptInfoDTO;
 import com.repositories.ReceiptDetailJPA;
 import com.repositories.ReceiptJPA;
 import com.responsedto.ReceiptDetailResponse;
@@ -55,28 +51,29 @@ public class ReceiptService {
 		return receiptJpa.findById(id);
 	}
 
-	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size, String keyword) {
-		Pageable pageable = PageRequest.of(page, size);
-		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
+//	public Page<ReceiptInfoDTO> getAllWarehouses(int page, int size, String keyword) {
+//		
+//		Pageable pageable = PageRequest.of(page, size);
+//		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
+//
+//		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
+//
+//		for (Receipt receipt : receiptPage.getContent()) {
+//			ReceiptInfoDTO receiptDTO = convertReceipt(receipt);
+//			receiptDTOList.add(receiptDTO);
+//		}
+//
+//		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
+//	}
 
-		List<ReceiptInfoDTO> receiptDTOList = new ArrayList<>();
-
-		for (Receipt receipt : receiptPage.getContent()) {
-			ReceiptInfoDTO receiptDTO = convertReceipt(receipt);
-			receiptDTOList.add(receiptDTO);
-		}
-
-		return new PageImpl<>(receiptDTOList, pageable, receiptPage.getTotalElements());
-	}
-
-	private ReceiptInfoDTO convertReceipt(Receipt receipt) {
-		ReceiptInfoDTO receiptInfoDTO = new ReceiptInfoDTO();
-		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
-		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
-		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
-		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
-		return receiptInfoDTO;
-	}
+//	private ReceiptInfoDTO convertReceipt(Receipt receipt) {
+//		ReceiptInfoDTO receiptInfoDTO = new ReceiptInfoDTO();
+//		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
+//		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
+//		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+//		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
+//		return receiptInfoDTO;
+//	}
 
 	public ReceiptDTO getWarehouseById(Integer id) {
 		Receipt receipt = receiptJpa.findById(id).orElse(null);
@@ -183,12 +180,15 @@ public class ReceiptService {
 	}
 
 	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size) {
-		Pageable pageable = PageRequest.of(page, size);
+		Sort sort = Sort.by(Sort.Direction.DESC, "receiptId");
+		Pageable pageable = PageRequest.of(page, size, sort);
+
 		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
 
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
 
 		for (Receipt receipt : receiptPage.getContent()) {
+			System.out.println(receipt.getReceiptId() + " ReceiptIdEEE");
 			ReceiptResponse receiptDTO = convertReceiptStf(receipt);
 			receiptDTOList.add(receiptDTO);
 		}
@@ -197,21 +197,21 @@ public class ReceiptService {
 	}
 
 	private ReceiptResponse convertReceiptStf(Receipt receipt) {
-		ReceiptResponse receiptInfoDTO = new ReceiptResponse();
+	    ReceiptResponse receiptInfoDTO = new ReceiptResponse();
 
-		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
-		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
-		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
-		receiptInfoDTO.setSupplierEmail(receipt.getSupplier().getEmail());
-		receiptInfoDTO.setSupplierPhone(receipt.getSupplier().getPhone());
-		receiptInfoDTO.setSupplierAddress(receipt.getSupplier().getAddress());
-		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
-		receiptInfoDTO.setFullname(receipt.getUser().getFullName());
+	    receiptInfoDTO.setReceiptId(receipt.getReceiptId());
+	    receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
+	    receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+	    receiptInfoDTO.setSupplierEmail(receipt.getSupplier().getEmail());
+	    receiptInfoDTO.setSupplierPhone(receipt.getSupplier().getPhone());
+	    receiptInfoDTO.setSupplierAddress(receipt.getSupplier().getAddress());
+	    receiptInfoDTO.setUsername(receipt.getUser().getUsername());
+	    receiptInfoDTO.setFullname(receipt.getUser().getFullName());
 
-		List<ReceiptDetailResponse> details = new ArrayList<>();
+	    List<ReceiptDetailResponse> details = new ArrayList<>();
 
-		BigDecimal totalPrice = BigDecimal.ZERO;
-		int totalQuantity = 0;
+	    BigDecimal totalPrice = BigDecimal.ZERO;
+	    int totalQuantity = 0;
 
 		for (ReceiptDetail dt : receipt.getReceiptDetails()) {
 			ReceiptDetailResponse detail = new ReceiptDetailResponse();
@@ -228,14 +228,25 @@ public class ReceiptService {
 			
 			details.add(detail);
 
-			totalQuantity += dt.getQuantity();
-			totalPrice = totalPrice.add(total);
-		}
+	        if (dt.getProductVersion().getImage() != null) {
+	            detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
+	        }
+	        detail.setImportPrice(dt.getPrice());
+	        detail.setName(dt.getProductVersion().getVersionName());
+	        detail.setQuantity(dt.getQuantity());
+	        detail.setTotal(total);
 
-		receiptInfoDTO.setTotalQuantity(totalQuantity);
-		receiptInfoDTO.setTotalPrice(totalPrice);
-		receiptInfoDTO.setDetais(details);
+	        details.add(detail);
 
-		return receiptInfoDTO;
+	        totalQuantity += dt.getQuantity();
+	        totalPrice = totalPrice.add(total);
+	    }
+
+	    receiptInfoDTO.setTotalQuantity(totalQuantity);
+	    receiptInfoDTO.setTotalPrice(totalPrice);
+	    receiptInfoDTO.setDetais(details);
+
+	    return receiptInfoDTO;
 	}
+
 }
