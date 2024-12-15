@@ -27,12 +27,13 @@ public class OrderDTO {
 	private Date orderDate;
 	private String statusName;
 	private String paymentMethod;
+	private BigDecimal amount;
 
 	public OrderDTO(Integer orderId, Integer lastUpdatedById, String lastUpdatedByFullname, Date lastUpdatedDate,
 			Boolean isOpenOrderDetail, Integer gender, String address, Integer couponId, String disCount,
 			BigDecimal discountValue, BigDecimal subTotal, BigDecimal shippingFee, BigDecimal finalTotal,
 			String finalTotalInWords, Date deliveryDate, String fullname, Date orderDate, String phone,
-			String statusName, String paymentMethod) {
+			String statusName, String paymentMethod, BigDecimal amount) {
 		this.orderId = orderId;
 		this.lastUpdatedById = lastUpdatedById;
 		this.lastUpdatedByFullname = lastUpdatedByFullname;
@@ -53,5 +54,7 @@ public class OrderDTO {
 		this.phone = phone;
 		this.statusName = statusName;
 		this.paymentMethod = paymentMethod;
+		this.amount = amount; 
 	}
 }
+

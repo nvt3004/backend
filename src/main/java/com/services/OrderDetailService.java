@@ -120,7 +120,7 @@ public class OrderDetailService {
 					item.getProductVersionBean().getVersionName(), price, item.getQuantity(),
 					uploadService.getUrlImage(imageUrl), item.getProductVersionBean().getProduct().getDescription(),
 					total, item.getOrderDetailId(), attributeProductVersion, attributesProducts,
-					item.getProductVersionBean().getProduct().getProductName()));
+					item.getProductVersionBean().getVersionName()));
 		}
 		return productDetails;
 	}
