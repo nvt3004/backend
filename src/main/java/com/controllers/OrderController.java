@@ -231,6 +231,54 @@ public class OrderController {
 		return ResponseEntity.ok(response);
 
 	}
+	
+	@GetMapping("/user/orders/statuses")
+	
+	public ResponseEntity<ApiResponse<?>> getAllOrderStatus2(
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
+		List<OrderStatusDTO> orderStatusDTOList = orderStatusService.getAllOrderStatusDTOs();
+		ApiResponse<List<OrderStatusDTO>> response = new ApiResponse<>(200, "Order statuses fetched successfully",
+				orderStatusDTOList);
+
+		return ResponseEntity.ok(response);
+
+	}
 
 	@PutMapping("/staff/orders/update-order-detail")
 	@PreAuthorize("hasPermission(#userid, 'Update Order')")
