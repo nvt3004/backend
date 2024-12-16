@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,13 +27,16 @@ import com.entities.ProductSale;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.Wishlist;
+import com.models.VersionSaleDTO;
 import com.repositories.AttributeOptionJPA;
 import com.repositories.CartJPA;
 import com.repositories.CategoryJPA;
 import com.repositories.OrderJPA;
 import com.repositories.ProductJPA;
 import com.repositories.UserJPA;
+import com.responsedto.PriceSale;
 import com.responsedto.ProductDTO;
+import com.responsedto.SaleProductDTO;
 import com.utils.UploadService;
 
 @Service
@@ -52,15 +57,51 @@ public class ProductClientService {
 	OrderJPA orderJPA;
 	@Autowired
 	AlgoliaProductService algoliaProductService;
-	
+
 	@Autowired
 	UploadService uploadService;
-	
+
+	@Autowired
+	VersionService versionService;
+
+	@Autowired
+	SaleService saleService;
+
+	public PriceSale getSale(int prodId) {
+		Optional<Product> productOpt = productJPA.findById(prodId);
+		BigDecimal minPriceSale = null;
+		BigDecimal maxPriceSale = new BigDecimal("0.00");
+
+		BigDecimal discountPercent = new BigDecimal("0.00");
+		int quantity = 0;
+		for (ProductVersion productVersion : productOpt.get().getProductVersions()) {
+			quantity += productVersion.getQuantity();
+			SaleProductDTO verSale = saleService.getVersionSaleDTO(productVersion.getId());
+			if (verSale != null) {
+				if (minPriceSale == null || verSale.getPrice().compareTo(minPriceSale) < 0) {
+					minPriceSale = verSale.getPrice();
+				}
+				if (verSale.getPrice().compareTo(maxPriceSale) > 0) {
+					maxPriceSale = verSale.getPrice();
+				}
+				if (verSale.getSale().compareTo(discountPercent) > 0) {
+					discountPercent = verSale.getSale();
+				}
+			}
+		}
+		PriceSale priceSale = new PriceSale();
+		priceSale.setQuantity(quantity);
+		priceSale.setMinPriceSale(minPriceSale);
+		priceSale.setMaxPriceSale(maxPriceSale);
+		priceSale.setDiscountPercent(discountPercent);
+		return priceSale;
+	}
+
 	public List<ProductDTO> getNewProduct(User user) {
-		
+
 		List<ProductDTO> productDTOs = new ArrayList<>();
 		try {
-			org.springframework.data.domain.Pageable pageable = PageRequest.of(0, 8); 
+			org.springframework.data.domain.Pageable pageable = PageRequest.of(0, 8);
 			List<Product> products = productJPA.getTopProducts(pageable);
 			if (products == null || products.isEmpty()) {
 				return productDTOs;
@@ -73,6 +114,7 @@ public class ProductClientService {
 
 			for (Product product : products) {
 				ProductDTO productDTO = new ProductDTO();
+
 				if (wishlist != null) {
 					for (Wishlist wishlistItem : wishlist) {
 						if (wishlistItem.getProduct().getProductId() == product.getProductId()) {
@@ -92,7 +134,7 @@ public class ProductClientService {
 					}
 				}
 
-			//	productDTO.setObjectID(String.valueOf(product.getProductId()));
+				// productDTO.setObjectID(String.valueOf(product.getProductId()));
 				productDTO.setId(String.valueOf(product.getProductId()));
 				productDTO.setName(product.getProductName());
 				productDTO.setDescription(product.getDescription());
@@ -129,7 +171,14 @@ public class ProductClientService {
 				BigDecimal minPrice = null;
 				BigDecimal maxPrice = new BigDecimal("0.00");
 
+				BigDecimal minPriceSale = null;
+				BigDecimal maxPriceSale = new BigDecimal("0.00");
+
+				BigDecimal discountPercent = new BigDecimal("0.00");
+
+				int quantity = 0;
 				for (ProductVersion productVer : product.getProductVersions()) {
+					quantity += productVer.getQuantity();
 					versionName.add(productVer.getVersionName());
 
 					// Xử lý thuộc tính màu sắc và kích thước
@@ -153,7 +202,25 @@ public class ProductClientService {
 					if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
 						maxPrice = productVer.getRetailPrice();
 					}
+
+					SaleProductDTO verSale = saleService.getVersionSaleDTO(productVer.getId());
+					if (verSale != null) {
+						if (minPriceSale == null || verSale.getPrice().compareTo(minPriceSale) < 0) {
+							minPriceSale = verSale.getPrice();
+						}
+						if (verSale.getPrice().compareTo(maxPriceSale) > 0) {
+							maxPriceSale = verSale.getPrice();
+						}
+						if (verSale.getSale().compareTo(discountPercent) > 0) {
+							discountPercent = verSale.getSale();
+						}
+					}
 				}
+
+				productDTO.setQuantity(quantity);
+				productDTO.setDiscountPercent(discountPercent);
+				productDTO.setMinPriceSale(minPriceSale);
+				productDTO.setMaxPriceSale(maxPriceSale);
 
 				productDTO.setVersionName(versionName);
 
@@ -176,7 +243,7 @@ public class ProductClientService {
 			System.out.println("Error: " + e);
 			return productDTOs;
 		}
-		
+
 	}
 
 	public void deleteProductOnAlgolia(Product product) {

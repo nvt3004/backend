@@ -37,6 +37,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.responsedto.Att;
 import com.responsedto.FilterAttribute;
+import com.responsedto.PriceSale;
 import com.responsedto.ProductDTO;
 //import com.services.TranscriptService;
 import com.utils.UploadService;
@@ -89,7 +90,7 @@ public class ProductClientController {
 			String transcript = transcriptService.Transcript(file);
 
 			if (transcript != null) {
-			
+
 				response.setCode(200);
 				response.setMessage("Success");
 				response.setData(transcript);
@@ -138,6 +139,11 @@ public class ProductClientController {
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 			}
 			// Thiết lập dữ liệu vào response
 			response.setCode(200);
@@ -189,6 +195,11 @@ public class ProductClientController {
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 			}
 
 			if (items.isEmpty()) {
@@ -231,8 +242,6 @@ public class ProductClientController {
 			}
 
 			items = inforService.getNewProduct(user);
-
-		
 
 			if (items.isEmpty()) {
 				response.setCode(204);
@@ -362,6 +371,11 @@ public class ProductClientController {
 							productDTO.setImgName(imageUrl);
 						}
 					}
+					PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+					productDTO.setQuantity(priceSale.getQuantity());
+					productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+					productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+					productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 				}
 			}
 
