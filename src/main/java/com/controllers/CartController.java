@@ -8,6 +8,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import com.repositories.CouponJPA;
+import com.responsedto.SaleProductDTO;
+import com.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,20 +44,6 @@ import com.repositories.CartProductJPA;
 import com.repositories.UserCouponJPA;
 import com.responsedto.CartItemResponse;
 import com.responsedto.CartOrderResponse;
-import com.services.AuthService;
-import com.services.CartProductService;
-import com.services.CartService;
-import com.services.CouponService;
-import com.services.JWTService;
-import com.services.OrderDetailService;
-import com.services.OrderService;
-import com.services.PaymentMethodService;
-import com.services.PaymentService;
-import com.services.ProductService;
-import com.services.ProductVersionService;
-import com.services.UserCouponService;
-import com.services.UserService;
-import com.services.VersionService;
 
 @RestController
 @RequestMapping("api/user/cart")
@@ -107,6 +96,11 @@ public class CartController {
 	@Autowired
 	VersionService vsService;
 
+	@Autowired
+	SaleService saleService;
+    @Autowired
+    private CouponJPA couponJPA;
+
 	// @RequestHeader("Authorization") Optional<String> authHeader
 	@PostMapping("/add")
 	public ResponseEntity<ResponseAPI<Boolean>> addCart(@RequestHeader("Authorization") Optional<String> authHeader,
@@ -117,14 +111,14 @@ public class CartController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -132,31 +126,31 @@ public class CartController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (productCartModel.getQuantity() <= 0) {
-			response.setCode(422);
-			response.setMessage("Quantity invalid");
+			response.setCode(999);
+			response.setMessage("Số lượng không hợp lệ");
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+			return ResponseEntity.status(999).body(response);
 		}
 
 		ProductVersion version = versionService.getProductVersionById(productCartModel.getVersionId());
-		// False: nếu sản phẩm gốc bị xóa hoặc phiên bản sản phẩm này không tồn tại
+// False: nếu sản phẩm gốc bị xóa hoặc phiên bản sản phẩm này không tồn tại
 		if (!versionService.isValidProductVersion(version)) {
 			response.setCode(404);
-			response.setMessage("Products not found");
+			response.setMessage("Không tìm thấy sản phẩm");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
@@ -164,18 +158,19 @@ public class CartController {
 		int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
 
 		if (stockQuantity <= 0) {
-			response.setCode(422);
-			response.setMessage("Products that exceed the quantity in stock");
+			response.setCode(999);
+			response.setMessage("Sản phẩm đã hết hàng");
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+			return ResponseEntity.status(999).body(response);
 		}
 
 		if (productCartModel.getQuantity() > stockQuantity) {
-			response.setCode(422);
-			response.setMessage("The product currently has only " + stockQuantity + " versions left");
+			response.setCode(999);
+			response.setMessage("Sản phẩm hiện chỉ còn " + stockQuantity + " phiên bản trong kho");
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+			return ResponseEntity.status(999).body(response);
 		}
+
 
 		Cart cartEntity = new Cart();
 		cartEntity.setUser(user);
@@ -206,14 +201,14 @@ public class CartController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -221,17 +216,17 @@ public class CartController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		List<CartItemResponse> items = cartService.getAllCartItemByUser(user.getUserId());
@@ -254,14 +249,14 @@ public class CartController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -269,22 +264,22 @@ public class CartController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (!cartItemId.isPresent()) {
 			response.setCode(400);
-			response.setMessage("Id cannot be blank");
+			response.setMessage("ID không được để trống");
 
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 		}
@@ -292,14 +287,14 @@ public class CartController {
 		CartProduct cartItem = cartProductService.getCartItemById(cartItemId.get());
 		if (cartItem == null) {
 			response.setCode(404);
-			response.setMessage("Cart item not found");
+			response.setMessage("Không tìm thấy sản phẩm trong giỏ hàng");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (!cartProductService.isValidItem(user, cartItem.getCartPrdId())) {
 			response.setCode(404);
-			response.setMessage("Cart item not found");
+			response.setMessage("Không tìm thấy sản phẩm trong giỏ hàng");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
@@ -308,11 +303,12 @@ public class CartController {
 
 		if (!isRemoveSuccess) {
 			response.setCode(500);
-			response.setMessage("Server error, deletion failed");
+			response.setMessage("Lỗi hệ thống, xóa sản phẩm không thành công");
 			response.setData(isRemoveSuccess);
 
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
+
 
 		response.setCode(200);
 		response.setMessage("Success");
@@ -330,14 +326,14 @@ public class CartController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -345,87 +341,92 @@ public class CartController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
-		
-		if(orderModel.getFee().compareTo(BigDecimal.ZERO)<0) {
-			response.setCode(422);
-			response.setMessage("Invalid shipping fee");
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+		if(orderModel.getFee().compareTo(BigDecimal.ZERO) < 0) {
+			response.setCode(999);
+			response.setMessage("Phí vận chuyển không hợp lệ");
+
+			return ResponseEntity.status(999).body(response);
 		}
 
 		ResponseAPI<Boolean> validOrder = validDataOrder(orderModel);
 		if (!validOrder.getData()) {
-			response.setCode(422);
+			response.setCode(999);
 			response.setMessage(validOrder.getMessage());
 
-			return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+			return ResponseEntity.status(999).body(response);
 		}
 
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			ProductVersion version = versionService.getProductVersionById(detail.getIdVersion());
 
 			if (detail.getIdVersion() == null) {
-				response.setCode(422);
-				response.setMessage("Id product canot be null");
+				response.setCode(999);
+				response.setMessage("ID sản phẩm không được để trống");
 
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
 
-
 			if (detail.getQuantity() <= 0) {
-				response.setCode(422);
-				response.setMessage("Quantity must be positive");
+				response.setCode(999);
+				response.setMessage("Số lượng phải lớn hơn 0");
 
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
 
 			if (version == null) {
-				response.setCode(404);
-				response.setMessage(String.format("Product id %s does not exist", detail.getIdVersion()));
+				response.setCode(999);
+				response.setMessage(String.format("Sản phẩm với ID %s không tồn tại", detail.getIdVersion()));
 
-				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
 
 			if (!version.getProduct().isStatus() || !version.isStatus()) {
-				response.setCode(404);
-				response.setMessage(String.format("Product id %s does not exist", detail.getIdVersion()));
+				response.setCode(999);
+				response.setMessage(String.format("Sản phẩm với ID %s không tồn tại", detail.getIdVersion()));
 
-				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
 
 			int stockQuantity = vsService.getTotalStockQuantityVersion(version.getId());
 
 			if (stockQuantity <= 0) {
-				response.setCode(422);
-				response.setMessage("Products that exceed the quantity in stock");
+				response.setCode(999);
+				response.setMessage("Sản phẩm đã hết hàng trong kho");
 
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
 
 			if (detail.getQuantity() > stockQuantity) {
-				response.setCode(422);
-				response.setMessage("The product version id " + detail.getIdVersion() + " currently has only "
-						+ stockQuantity + " versions left");
+				response.setCode(999);
+				response.setMessage("Sản phẩm với ID " + detail.getIdVersion() + " hiện chỉ còn "
+						+ stockQuantity + " phiên bản trong kho");
 
-				return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+				return ResponseEntity.status(999).body(response);
 			}
+		}
 
+		Coupon coupon = couponJPA.getCouponByCode(orderModel.getCouponCode());
+		if (coupon == null && orderModel.getCouponCode() != null && !orderModel.getCouponCode().isBlank()) {
+			response.setCode(999);
+			response.setMessage("Mã giảm giá không tồn tại");
+
+			return ResponseEntity.status(999).body(response);
 		}
 
 		Order orderEntity = new Order();
-		Coupon coupon = couponService.getCouponByCode(orderModel.getCouponCode());
 		OrderStatus status = new OrderStatus();
 		status.setStatusId(1);
 
@@ -451,8 +452,8 @@ public class CartController {
 		Date date = Date.from(adjustedTime.toInstant());
 
 		// Gán vào orderEntity
-		orderEntity.setOrderDate(new Date());
-		orderEntity.setDeliveryDate(new Date());
+		orderEntity.setOrderDate(date);
+		orderEntity.setDeliveryDate(orderModel.getLeadTime());
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
@@ -487,6 +488,7 @@ public class CartController {
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			OrderDetail orderDetailEntity = new OrderDetail();
 			ProductVersion product = versionService.getProductVersionById(detail.getIdVersion());
+			SaleProductDTO productDTO = saleService.getVersionSaleDTO(detail.getIdVersion());
 			product.setId(detail.getIdVersion());
 
 			totalProduct += detail.getQuantity();
@@ -494,7 +496,7 @@ public class CartController {
 			orderDetailEntity.setOrder(orderSaved);
 			orderDetailEntity.setProductVersionBean(product);
 			orderDetailEntity.setQuantity(detail.getQuantity());
-			orderDetailEntity.setPrice(product.getRetailPrice());
+			orderDetailEntity.setPrice(productDTO == null?product.getRetailPrice(): productDTO.getPrice());
 
 			orderDetailService.createOrderDetail(orderDetailEntity);
 		}
@@ -767,58 +769,52 @@ public class CartController {
 		final BigDecimal limitDispercent = new BigDecimal(0.7);
 
 		if (order.getAddress() == null) {
-			response.setMessage("Address cannot be null");
+			response.setMessage("Địa chỉ không được để trống");
 			return response;
 		}
 
 		if (order.getAddress().trim().length() == 0) {
-			response.setMessage("Address cannot be blank");
+			response.setMessage("Địa chỉ không được để trống");
 			return response;
 		}
 
 		if (order.getPaymentMethodId() == null) {
-			response.setMessage("Payment method id cannot be null");
+			response.setMessage("Phương thức thanh toán không được để trống");
 			return response;
 		}
 
 		if (paymentMethodService.getPaymentMethodById(order.getPaymentMethodId()) == null) {
 			response.setCode(404);
-			response.setMessage("Payment method not found");
+			response.setMessage("Phương thức thanh toán không tồn tại");
 			return response;
 		}
 
 		if (order.getOrderDetails() == null) {
-			response.setMessage("Order details cannot be null");
+			response.setMessage("Chi tiết đơn hàng không được để trống");
 			return response;
 		}
 
 		if (order.getOrderDetails().size() <= 0) {
-			response.setMessage("Order details cannot empty");
+			response.setMessage("Chi tiết đơn hàng không được để trống");
 			return response;
 		}
 
 		if (order.getCouponCode() != null) {
-			Coupon coupon = couponService.getCouponByCode(order.getCouponCode());
+			Coupon coupon = couponJPA.getCouponByCode(order.getCouponCode());
 
 			if (coupon == null) {
 				response.setCode(404);
-				response.setMessage("Coupon code not found");
-				return response;
-			}
-
-			LocalDateTime now = LocalDateTime.now();
-			if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
-				response.setCode(402);
-				response.setMessage("Coupon code expired");
+				response.setMessage("Mã giảm giá không tồn tại");
 				return response;
 			}
 		}
 
 		response.setCode(200);
-		response.setMessage("Success");
+		response.setMessage("Thành công");
 		response.setData(true);
 
 		return response;
 	}
+
 
 }

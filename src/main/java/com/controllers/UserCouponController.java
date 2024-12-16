@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.repositories.CouponJPA;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,8 @@ public class UserCouponController {
 
 	@Autowired
 	CouponService couponService;
+    @Autowired
+    private CouponJPA couponJPA;
 
 	@GetMapping("/get-all-coupon-home")
 	public ResponseEntity<ResponseAPI<List<CouponDTO>>> getAllCouponHomeByUser(
@@ -63,14 +66,14 @@ public class UserCouponController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -78,17 +81,17 @@ public class UserCouponController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		List<CouponDTO> list = couponService.getCouponsHome(user.getUserId());
@@ -110,14 +113,14 @@ public class UserCouponController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -125,49 +128,51 @@ public class UserCouponController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
-		
+
 		if(userCouponModel.getCode() == null || userCouponModel.getCode().isBlank() || userCouponModel.getCode().isEmpty()) {
 			response.setCode(999);
-			response.setMessage("Coupon code invalid");
+			response.setMessage("Mã giảm giá không hợp lệ");
 
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-
-		Coupon coupon = userCouponJPA.findCouponByCode(userCouponModel.getCode());
+		Coupon coupon = couponService.getCouponByCode(userCouponModel.getCode());
 
 		if (coupon == null) {
-			response.setCode(404);
-			response.setMessage("Coupon not found!");
-
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
-		
-		if(!userCouponService.checkQuantityCoupon(coupon.getCouponId())) {
 			response.setCode(999);
-			response.setMessage("Coupons have expired. Please check again!");
+			response.setMessage("Mã giảm giá không tồn tại!");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(999).body(response);
 		}
-		
+
+		if (coupon.getQuantity() <= 0) {
+			response.setCode(999);
+			response.setMessage("Mã giảm giá đã đã hết do số lượng có hạn!");
+
+			return ResponseEntity.status(999).body(response);
+		}
+
+
 		UserCoupon userCouponEntity = new UserCoupon();
 		userCouponEntity.setCoupon(coupon);
 		userCouponEntity.setUser(user);
 		userCouponEntity.setRetrievalDate(LocalDateTime.now());
 		userCouponEntity.setStatus(true);
-		
+
+		coupon.setQuantity(coupon.getQuantity()-1);
+		couponJPA.save(coupon);
 		userCouponService.createUserCoupon(userCouponEntity);
 
 		response.setCode(200);
@@ -186,14 +191,14 @@ public class UserCouponController {
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
-			response.setCode(400);
+			response.setCode(403);
 			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+			response.setCode(999);
+			response.setMessage("Phiên đăng nhập đã hết hạn");
 
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
 		}
@@ -201,17 +206,17 @@ public class UserCouponController {
 		String username = jwtService.extractUsername(token);
 		User user = userService.getUserByUsername(username);
 		if (user == null) {
-			response.setCode(404);
+			response.setCode(403);
 			response.setMessage("Account not found");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		if (user.getStatus() == 0) {
 			response.setCode(403);
 			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+			return ResponseEntity.status(403).body(response);
 		}
 
 		List<UserCouponResponse> list = userCouponService.getAllCouponByUser(user.getUserId());
@@ -229,11 +234,7 @@ public class UserCouponController {
 			@RequestParam(value = "code", defaultValue = "") String code) {
 		ResponseAPI<UserCouponResponse> response = new ResponseAPI<>();
 		String token = authService.readTokenFromHeader(authHeader);
-		if (code.isEmpty() || code.isBlank()) {
-			response.setCode(400);
-			response.setMessage("Invalid coupon code");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-		}
+
 		try {
 			jwtService.extractUsername(token);
 		} catch (Exception e) {
@@ -265,14 +266,21 @@ public class UserCouponController {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 		}
 
-		Coupon coupon = userCouponJPA.findCouponByCode(code);
+		if (code.isEmpty() || code.isBlank()) {
+			response.setCode(400);
+			response.setMessage("Mã giảm giá không hợp lệ");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+		}
+
+		Coupon coupon = couponJPA.getCouponByCode(code);
 
 		if (coupon == null) {
 			response.setCode(404);
-			response.setMessage("Coupon not found!");
+			response.setMessage("Mã giảm gia không tồn tại!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
+
 
 		UserCouponResponse couponResponse = new UserCouponResponse();
 		couponResponse.setId(coupon.getCouponId());

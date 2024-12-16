@@ -48,11 +48,12 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		        ON o.couponId = uc.coupon.couponId 
 		       AND uc.user.userId = :userId 
 		    WHERE o.startDate<=:dateNow AND o.endDate > :dateNow 
-		      AND uc.coupon.couponId IS NULL
+		      AND uc.coupon.couponId IS NULL AND o.quantity > 0 AND o.status =:status
 		    """)
 		List<Coupon> getCouponHomeByUser(
 		    @Param("userId") Integer userId, 
-		    @Param("dateNow") LocalDateTime dateNow
+		    @Param("dateNow") LocalDateTime dateNow,
+			boolean status
 		);
 
 		@Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Coupon c WHERE c.couponCode = :couponCode")

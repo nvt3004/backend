@@ -27,180 +27,189 @@ import com.utils.RandomStringUtils;
 @Service
 public class CouponService {
 
-	@Autowired
-	private CouponJPA couponJpa;
+    @Autowired
+    private CouponJPA couponJpa;
 
-	@Autowired
-	private OrderJPA orderJpa;
+    @Autowired
+    private OrderJPA orderJpa;
 
-	@Autowired
-	private UserCouponJPA userCouponJpa;
+    @Autowired
+    private UserCouponJPA userCouponJpa;
 
-	public boolean isCouponCodeExists(String couponCode) {
-		return couponJpa.existsByCouponCode(couponCode);
-	}
-	public List<FieldErrorDTO> validateCoupon(CouponCreateDTO couponCreateDTO, BindingResult errors) {
-	    List<FieldErrorDTO> fieldErrors = new ArrayList<>();
+    public boolean isCouponCodeExists(String couponCode) {
+        return couponJpa.existsByCouponCode(couponCode);
+    }
 
-	    if (errors.hasErrors()) {
-	        for (ObjectError error : errors.getAllErrors()) {
-	            String field = ((FieldError) error).getField();
-	            String errorMessage = error.getDefaultMessage();
-	            fieldErrors.add(new FieldErrorDTO(field, errorMessage));
-	        }
-	    }
+    public List<FieldErrorDTO> validateCoupon(CouponCreateDTO couponCreateDTO, BindingResult errors) {
+        List<FieldErrorDTO> fieldErrors = new ArrayList<>();
 
-	    if (couponCreateDTO.getStartDate() == null) {
-	        fieldErrors.add(new FieldErrorDTO("startDate", "Ngày bắt đầu không được để trống."));
-	    }
-	    if (couponCreateDTO.getEndDate() == null) {
-	        fieldErrors.add(new FieldErrorDTO("endDate", "Ngày kết thúc không được để trống."));
-	    }
+        if (errors.hasErrors()) {
+            for (ObjectError error : errors.getAllErrors()) {
+                String field = ((FieldError) error).getField();
+                String errorMessage = error.getDefaultMessage();
+                fieldErrors.add(new FieldErrorDTO(field, errorMessage));
+            }
+        }
 
-	    if (couponCreateDTO.getStartDate() != null && couponCreateDTO.getEndDate() != null) {
-	        if (!couponCreateDTO.isDatesValid()) {
-	            fieldErrors.add(new FieldErrorDTO(
-	                "startDate", 
-	                "Ngày bắt đầu phải trước ngày kết thúc và không vượt quá 3 tháng."
-	            ));
-	        }
-	    }
+        if (couponCreateDTO.getStartDate() == null) {
+            fieldErrors.add(new FieldErrorDTO("startDate", "Ngày bắt đầu không được để trống."));
+        }
+        if (couponCreateDTO.getEndDate() == null) {
+            fieldErrors.add(new FieldErrorDTO("endDate", "Ngày kết thúc không được để trống."));
+        }
 
-	    if (!couponCreateDTO.isDiscountValid()) {
-	        fieldErrors.add(new FieldErrorDTO(
-	            "discount", 
-	            "Chỉ được áp dụng một loại giảm giá: phần trăm hoặc số tiền."
-	        ));
-	    }
+        if (couponCreateDTO.getStartDate() != null && couponCreateDTO.getEndDate() != null) {
+            if (!couponCreateDTO.isDatesValid()) {
+                fieldErrors.add(new FieldErrorDTO(
+                        "startDate",
+                        "Ngày bắt đầu phải trước ngày kết thúc và không vượt quá 3 tháng."
+                ));
+            }
+        }
 
-	    if (!couponCreateDTO.isDisPercentValid() && !couponCreateDTO.isDisPriceValid()) {
-	        fieldErrors.add(new FieldErrorDTO(
-	            "discount", 
-	            "Phải cung cấp ít nhất một loại giảm giá: phần trăm hoặc số tiền."
-	        ));
-	    }
+        if (!couponCreateDTO.isDiscountValid()) {
+            fieldErrors.add(new FieldErrorDTO(
+                    "discount",
+                    "Chỉ được áp dụng một loại giảm giá: phần trăm hoặc số tiền."
+            ));
+        }
 
-	    return fieldErrors;
-	}
-	
-	public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
-		Coupon coupon = new Coupon();
-		String couponCode;
+        if (!couponCreateDTO.isDisPercentValid() && !couponCreateDTO.isDisPriceValid()) {
+            fieldErrors.add(new FieldErrorDTO(
+                    "discount",
+                    "Phải cung cấp ít nhất một loại giảm giá: phần trăm hoặc số tiền."
+            ));
+        }
 
-		do {
-			couponCode = RandomStringUtils.randomAlphanumeric(10);
-		} while (couponJpa.existsByCouponCode(couponCode));
-		coupon.setCouponCode(couponCode);
+        return fieldErrors;
+    }
 
-		coupon.setDisPercent(couponCreateDTO.getDisPercent());
-		coupon.setDisPrice(couponCreateDTO.getDisPrice());
-		coupon.setDescription(couponCreateDTO.getDescription());
+    public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
+        Coupon coupon = new Coupon();
+        String couponCode;
 
-		LocalDateTime startDate = couponCreateDTO.getStartDate().plusHours(7);
-		LocalDateTime endDate = couponCreateDTO.getEndDate().plusHours(7);
+        do {
+            couponCode = RandomStringUtils.randomAlphanumeric(10);
+        } while (couponJpa.existsByCouponCode(couponCode));
+        coupon.setCouponCode(couponCode);
 
-		coupon.setStartDate(startDate);
-		coupon.setEndDate(endDate);
+        coupon.setDisPercent(couponCreateDTO.getDisPercent());
+        coupon.setDisPrice(couponCreateDTO.getDisPrice());
+        coupon.setDescription(couponCreateDTO.getDescription());
 
-		coupon.setQuantity(couponCreateDTO.getQuantity());
-		coupon.setStatus(true);
+        LocalDateTime startDate = couponCreateDTO.getStartDate().plusHours(7);
+        LocalDateTime endDate = couponCreateDTO.getEndDate().plusHours(7);
 
-		return couponJpa.save(coupon);
-	}
+        coupon.setStartDate(startDate);
+        coupon.setEndDate(endDate);
 
-	public Coupon updateCoupon(Integer id, CouponCreateDTO couponCreateDTO) throws InvalidException {
+        coupon.setQuantity(couponCreateDTO.getQuantity());
+        coupon.setStatus(true);
 
-		Coupon existingCoupon = couponJpa.findById(id)
-				.orElseThrow(() -> new InvalidException("Không tìm thấy mã giảm giá với ID " + id));
+        return couponJpa.save(coupon);
+    }
 
-		boolean isCouponApplied = orderJpa.existsByCouponId(id);
-		boolean isCouponUsedByUser = userCouponJpa.existsByCouponId(id);
+    public Coupon updateCoupon(Integer id, CouponCreateDTO couponCreateDTO) throws InvalidException {
 
-		if (isCouponApplied || isCouponUsedByUser) {
-			throw new InvalidException(
-					"Không thể cập nhật mã giảm giá này vì đã được người dùng lấy về hoặc áp dụng vào đơn hàng.");
-		}
+        Coupon existingCoupon = couponJpa.findById(id)
+                .orElseThrow(() -> new InvalidException("Không tìm thấy mã giảm giá với ID " + id));
 
-		existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
-		existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
-		existingCoupon.setDescription(couponCreateDTO.getDescription());
-		existingCoupon.setStartDate(couponCreateDTO.getStartDate());
-		existingCoupon.setEndDate(couponCreateDTO.getEndDate());
+        boolean isCouponApplied = orderJpa.existsByCouponId(id);
+        boolean isCouponUsedByUser = userCouponJpa.existsByCouponId(id);
 
-		if (!isCouponApplied) {
-			existingCoupon.setQuantity(couponCreateDTO.getQuantity());
-		}
+        if (isCouponApplied || isCouponUsedByUser) {
+            throw new InvalidException(
+                    "Không thể cập nhật mã giảm giá này vì đã được người dùng lấy về hoặc áp dụng vào đơn hàng.");
+        }
 
-		return couponJpa.save(existingCoupon);
-	}
+        existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
+        existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
+        existingCoupon.setDescription(couponCreateDTO.getDescription());
+        existingCoupon.setStartDate(couponCreateDTO.getStartDate());
+        existingCoupon.setEndDate(couponCreateDTO.getEndDate());
 
-	public void deleteCoupon(Integer id) {
-		if (!couponJpa.existsById(id)) {
-			throw new InvalidException("Không tìm thấy mã giảm giá với ID " + id);
-		}
+        if (!isCouponApplied) {
+            existingCoupon.setQuantity(couponCreateDTO.getQuantity());
+        }
 
-		if (userCouponJpa.existsByCouponId(id)) {
-			throw new InvalidException("Không thể xóa mã giảm giá này vì đã được người dùng sử dụng.");
-		}
+        return couponJpa.save(existingCoupon);
+    }
 
-		if (orderJpa.existsByCouponId(id)) {
-			throw new InvalidException("Không thể xóa mã giảm giá này vì đã được liên kết với một đơn hàng.");
-		}
+    public void deleteCoupon(Integer id) {
+        if (!couponJpa.existsById(id)) {
+            throw new InvalidException("Không tìm thấy mã giảm giá với ID " + id);
+        }
 
-		couponJpa.deleteById(id);
-	}
+        if (userCouponJpa.existsByCouponId(id)) {
+            throw new InvalidException("Không thể xóa mã giảm giá này vì đã được người dùng sử dụng.");
+        }
 
-	public Page<CouponDTO> getCoupons(LocalDateTime startDate, LocalDateTime endDate, String discountType,
-			Pageable pageable) throws ParseException {
+        if (orderJpa.existsByCouponId(id)) {
+            throw new InvalidException("Không thể xóa mã giảm giá này vì đã được liên kết với một đơn hàng.");
+        }
 
-		Page<Coupon> couponPage = couponJpa.findActiveCoupons(startDate, endDate, discountType, pageable);
+        couponJpa.deleteById(id);
+    }
 
-		List<CouponDTO> couponDTOs = new ArrayList<>();
-		for (Coupon coupon : couponPage.getContent()) {
-			CouponDTO dto = new CouponDTO();
-			dto.setId(coupon.getCouponId());
-			dto.setCode(coupon.getCouponCode());
-			dto.setDescription(coupon.getDescription());
-			dto.setStartDate(coupon.getStartDate());
-			dto.setEndDate(coupon.getEndDate());
-			dto.setDisPercent(coupon.getDisPercent());
-			dto.setDisPrice(coupon.getDisPrice());
-			dto.setQuantity(coupon.getQuantity());
-			couponDTOs.add(dto);
-		}
+    public Page<CouponDTO> getCoupons(LocalDateTime startDate, LocalDateTime endDate, String discountType,
+                                      Pageable pageable) throws ParseException {
 
-		return new PageImpl<>(couponDTOs, pageable, couponPage.getTotalElements());
-	}
+        Page<Coupon> couponPage = couponJpa.findActiveCoupons(startDate, endDate, discountType, pageable);
 
-	public Coupon getCouponByCode(String code) {
-		if (code == null) {
-			return null;
-		}
+        List<CouponDTO> couponDTOs = new ArrayList<>();
+        for (Coupon coupon : couponPage.getContent()) {
+            CouponDTO dto = new CouponDTO();
+            dto.setId(coupon.getCouponId());
+            dto.setCode(coupon.getCouponCode());
+            dto.setDescription(coupon.getDescription());
+            dto.setStartDate(coupon.getStartDate());
+            dto.setEndDate(coupon.getEndDate());
+            dto.setDisPercent(coupon.getDisPercent());
+            dto.setDisPrice(coupon.getDisPrice());
+            dto.setQuantity(coupon.getQuantity());
+            couponDTOs.add(dto);
+        }
 
-		return couponJpa.getCouponByCode(code);
-	}
+        return new PageImpl<>(couponDTOs, pageable, couponPage.getTotalElements());
+    }
 
-	public List<CouponDTO> getCouponsHome(Integer userId) {
+    public Coupon getCouponByCode(String code) {
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        Coupon coupon = couponJpa.getCouponByCode(code);
+        if (code == null) {
+            return null;
+        }
 
-		List<Coupon> couponPage = couponJpa.getCouponHomeByUser(userId, LocalDateTime.now());
+        if (coupon == null ||
+                coupon.getStartDate().isAfter(dateNow) ||
+                coupon.getEndDate().isBefore(dateNow) || !coupon.isStatus()) {
+            return null;
+        }
 
-		List<CouponDTO> couponDTOs = new ArrayList<>();
-		for (Coupon coupon : couponPage) {
-			CouponDTO dto = new CouponDTO();
-			dto.setId(coupon.getCouponId());
-			dto.setCode(coupon.getCouponCode());
-			dto.setDescription(coupon.getDescription());
+        return coupon;
+    }
 
-			dto.setStartDate(coupon.getStartDate().minusHours(7));
-			dto.setEndDate(coupon.getEndDate().minusHours(7));
+    public List<CouponDTO> getCouponsHome(Integer userId) {
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        List<Coupon> couponPage = couponJpa.getCouponHomeByUser(userId, dateNow, true);
 
-			dto.setDisPercent(coupon.getDisPercent());
-			dto.setDisPrice(coupon.getDisPrice());
-			dto.setQuantity(coupon.getQuantity());
-			couponDTOs.add(dto);
-		}
+        List<CouponDTO> couponDTOs = new ArrayList<>();
+        for (Coupon coupon : couponPage) {
+            CouponDTO dto = new CouponDTO();
+            dto.setId(coupon.getCouponId());
+            dto.setCode(coupon.getCouponCode());
+            dto.setDescription(coupon.getDescription());
 
-		return couponDTOs;
-	}
+            dto.setStartDate(coupon.getStartDate().minusHours(7));
+            dto.setEndDate(coupon.getEndDate().minusHours(7));
+
+            dto.setDisPercent(coupon.getDisPercent());
+            dto.setDisPrice(coupon.getDisPrice());
+            dto.setQuantity(coupon.getQuantity());
+            couponDTOs.add(dto);
+        }
+
+        return couponDTOs;
+    }
 
 }

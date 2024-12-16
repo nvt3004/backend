@@ -17,6 +17,9 @@ public class ProductVersionResponse {
 	private BigDecimal retailPrice;
 	private BigDecimal importPrice;
 	private boolean active;
+	private Integer idSale;
+	private BigDecimal sale;
+	private String saleName;
 	private int quantity;
 	private ImageResponse image;
 	private List<Attribute> attributes;
