@@ -20,6 +20,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
 
+import com.repositories.CouponJPA;
+import com.responsedto.SaleProductDTO;
+import com.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,20 +51,6 @@ import com.models.CartOrderModel;
 import com.repositories.OrderJPA;
 import com.repositories.UserCouponJPA;
 import com.responsedto.CartOrderResponse;
-import com.services.AuthService;
-import com.services.CartProductService;
-import com.services.CartService;
-import com.services.CouponService;
-import com.services.JWTService;
-import com.services.OrderDetailService;
-import com.services.OrderService;
-import com.services.PaymentMethodService;
-import com.services.PaymentService;
-import com.services.ProductService;
-import com.services.ProductVersionService;
-import com.services.UserCouponService;
-import com.services.UserService;
-import com.services.VersionService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -114,6 +103,11 @@ public class VnPayController {
 	
 	@Autowired
 	VersionService vsService;
+
+	@Autowired
+	SaleService saleService;
+    @Autowired
+    private CouponJPA couponJPA;
 
 	@PostMapping("/create-payment")
 	public ResponseEntity<ResponseAPI<String>> createPayment(
@@ -330,7 +324,7 @@ public class VnPayController {
 		
 		if(orderModel.getFee().compareTo(BigDecimal.ZERO)<0) {
 			response.setCode(422);
-			response.setMessage("Invalid shipping fee");
+			response.setMessage("Phí vận chuyển không hợp lệ");
 
 			return response;
 		}
@@ -341,37 +335,36 @@ public class VnPayController {
 
 			return response;
 		}
-		
-		
+
+
 
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			ProductVersion version = versionService.getProductVersionById(detail.getIdVersion());
 
 			if (detail.getIdVersion() == null) {
 				response.setCode(422);
-				response.setMessage("Id product canot be null");
+				response.setMessage("Mã sản phẩm không được để trống");
 
 				return response;
 			}
 
-
 			if (detail.getQuantity() <= 0) {
 				response.setCode(422);
-				response.setMessage("Quantity must be positive");
+				response.setMessage("Số lượng phải lớn hơn 0");
 
 				return response;
 			}
 
 			if (version == null) {
 				response.setCode(404);
-				response.setMessage(String.format("Product id %s does not exist", detail.getIdVersion()));
+				response.setMessage(String.format("Sản phẩm với mã id %s không tồn tại", detail.getIdVersion()));
 
 				return response;
 			}
 
 			if (!version.getProduct().isStatus() || !version.isStatus()) {
 				response.setCode(404);
-				response.setMessage("Product not found");
+				response.setMessage("Sản phẩm không tồn tại");
 
 				return response;
 			}
@@ -380,20 +373,20 @@ public class VnPayController {
 
 			if (stockQuantity <= 0) {
 				response.setCode(422);
-				response.setMessage("Products that exceed the quantity in stock");
+				response.setMessage("Sản phẩm này đã hết hàng");
 
 				return response;
 			}
 
 			if (detail.getQuantity() > stockQuantity) {
 				response.setCode(422);
-				response.setMessage("The product version id " + detail.getIdVersion() + " currently has only "
-						+ stockQuantity + " versions left");
+				response.setMessage("Phiên bản sản phẩm với mã id " + detail.getIdVersion() + " hiện chỉ còn "
+						+ stockQuantity + " sản phẩm");
 
 				return response;
 			}
-
 		}
+
 
 		Order orderEntity = new Order();
 		Coupon coupon = couponService.getCouponByCode(orderModel.getCouponCode());
@@ -424,7 +417,7 @@ public class VnPayController {
 
 		// Gán vào orderEntity
 		orderEntity.setOrderDate(date);
-		orderEntity.setDeliveryDate(date);
+		orderEntity.setDeliveryDate(orderModel.getLeadTime());
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());
@@ -460,7 +453,11 @@ public class VnPayController {
 		for (CartOrderDetailModel detail : orderModel.getOrderDetails()) {
 			OrderDetail orderDetailEntity = new OrderDetail();
 			ProductVersion product = versionService.getProductVersionById(detail.getIdVersion());
+			SaleProductDTO saleProductDTO = saleService.getVersionSaleDTO(detail.getIdVersion());
+
 			product.setId(detail.getIdVersion());
+			orderDetailEntity.setPrice(saleProductDTO==null? product.getRetailPrice():saleProductDTO.getPrice());
+			product.setRetailPrice(saleProductDTO==null? product.getRetailPrice():saleProductDTO.getPrice());
 
 			totalProduct += detail.getQuantity();
 			amount = amount.add(product.getRetailPrice().multiply(new BigDecimal(detail.getQuantity())));
@@ -468,7 +465,6 @@ public class VnPayController {
 			orderDetailEntity.setOrder(orderSaved);
 			orderDetailEntity.setProductVersionBean(product);
 			orderDetailEntity.setQuantity(detail.getQuantity());
-			orderDetailEntity.setPrice(product.getRetailPrice());
 
 			orderDetailService.createOrderDetail(orderDetailEntity);
 		}
@@ -504,46 +500,40 @@ public class VnPayController {
 		final BigDecimal limitDispercent = new BigDecimal(0.7);
 
 		if (order.getAddress() == null) {
-			response.setMessage("Address cannot be null");
+			response.setMessage("Địa chỉ không được để trống");
 			return response;
 		}
 
 		if (order.getAddress().trim().length() == 0) {
-			response.setMessage("Address cannot be blank");
+			response.setMessage("Địa chỉ không được để rỗng");
 			return response;
 		}
 
 		if (order.getOrderDetails() == null) {
-			response.setMessage("Order details cannot be null");
+			response.setMessage("Chi tiết đơn hàng không được để trống");
 			return response;
 		}
 
 		if (order.getOrderDetails().size() <= 0) {
-			response.setMessage("Order details cannot empty");
+			response.setMessage("Chi tiết đơn hàng không được để trống");
 			return response;
 		}
 
 		if (order.getCouponCode() != null) {
-			Coupon coupon = couponService.getCouponByCode(order.getCouponCode());
+			Coupon coupon = couponJPA.getCouponByCode(order.getCouponCode());
 
 			if (coupon == null) {
 				response.setCode(404);
-				response.setMessage("Coupon code not found");
-				return response;
-			}
-
-			LocalDateTime now = LocalDateTime.now();
-			if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getEndDate())) {
-				response.setCode(402);
-				response.setMessage("Coupon code expired");
+				response.setMessage("Mã giảm giá không tồn tại");
 				return response;
 			}
 		}
 
 		response.setCode(200);
-		response.setMessage("Success");
+		response.setMessage("Thành công");
 		response.setData(true);
 
 		return response;
 	}
+
 }

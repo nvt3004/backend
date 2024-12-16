@@ -165,19 +165,19 @@ public class SaleController {
             return ResponseEntity.status(999).body(response);
         }
 
-//        if (!saleDTO.getStartDate().isAfter(LocalDateTime.now())) {
-//            response.setCode(999);
-//            response.setMessage("Thời gian bắt đầu phải từ thời gian hiện tại trở đi");
-//
-//            return ResponseEntity.status(999).body(response);
-//        }
-//
-//        if (!saleDTO.getEndDate().isAfter(saleDTO.getStartDate())) {
-//            response.setCode(999);
-//            response.setMessage("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
-//
-//            return ResponseEntity.status(999).body(response);
-//        }
+        if (!saleDTO.getStartDate().isAfter(LocalDateTime.now())) {
+            response.setCode(999);
+            response.setMessage("Thời gian bắt đầu phải từ thời gian hiện tại trở đi");
+
+            return ResponseEntity.status(999).body(response);
+        }
+
+        if (!saleDTO.getEndDate().isAfter(saleDTO.getStartDate())) {
+            response.setCode(999);
+            response.setMessage("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
+
+            return ResponseEntity.status(999).body(response);
+        }
 
         if (saleDTO.getVersionIds() == null) {
             response.setCode(999);
@@ -214,9 +214,13 @@ public class SaleController {
             return ResponseEntity.status(999).body(response);
         }
 
-//        for(Version vs : saleService.duplicateVersionSaleStartedAdd(saleDTO)){
-//            System.out.println(vs.getId() + "-/"+vs.getVersionName());
-//        }
+        if(saleService.duplicateVersionSaleStartedAdd(saleDTO)){
+            response.setCode(999);
+            response.setMessage("Sản phẩm đã áp dụng trong một chương trình giảm giá khác trong cùng khoảng thời gian");
+
+            return ResponseEntity.status(999).body(response);
+        }
+
         saleService.addSale(saleDTO);
 
         response.setCode(200);
@@ -337,6 +341,13 @@ public class SaleController {
         if (set.size() < saleDTO.getVersionSaleDTOS().size()) {
             response.setCode(999);
             response.setMessage("Sản phẩm không được trùng");
+
+            return ResponseEntity.status(999).body(response);
+        }
+
+        if(saleService.duplicateVersionSaleStartedUpdate(saleDTO)){
+            response.setCode(999);
+            response.setMessage("Sản phẩm đã áp dụng trong một chương trình giảm giá khác trong cùng khoảng thời gian");
 
             return ResponseEntity.status(999).body(response);
         }

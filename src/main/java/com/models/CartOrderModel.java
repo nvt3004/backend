@@ -1,6 +1,7 @@
 package com.models;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -23,5 +24,6 @@ public class CartOrderModel {
 	private Integer statusId;
 	private BigDecimal fee;
 	private List<CartOrderDetailModel> orderDetails;
+	private Date leadTime;
 	private VnpayDTO vnpay;
 }

@@ -56,7 +56,6 @@ public class ProductHomeController {
 		ResponseAPI<PageCustom<ProductHomeResponse>> response = new ResponseAPI<>();
 		PageCustom<ProductHomeResponse> products = null;
 		int size = 10;
-		
 
 		if (!page.isPresent()) {
 			products = productService.getProducts(1, size);
