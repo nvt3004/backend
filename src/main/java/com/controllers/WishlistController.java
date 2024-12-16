@@ -20,6 +20,7 @@ import com.entities.User;
 import com.entities.Wishlist;
 import com.errors.ResponseAPI;
 import com.models.WishlistModel;
+import com.responsedto.PriceSale;
 import com.responsedto.ProductDTO;
 import com.responsedto.WishlistResponse;
 import com.services.AuthService;
@@ -53,7 +54,7 @@ public class WishlistController {
 
 	@Autowired
 	ProductClientService inforService;
-	
+
 	@Autowired
 	UploadService uploadService;
 
@@ -113,6 +114,11 @@ public class WishlistController {
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 			}
 			response.setCode(200); // 200 OK
 			response.setMessage("Success");
