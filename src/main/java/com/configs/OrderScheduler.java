@@ -29,16 +29,14 @@ public class OrderScheduler {
 
     private final OrderJPA orderJpa;
     private final OrderStatusJPA orderStatusJpa;
-    private final UserJPA userJpa;
-	private final MailService mailService;
+    private final MailService mailService;
     private final OrderUtilsService orderUtilsService;
 
     public OrderScheduler(OrderJPA orderJpa, OrderStatusJPA orderStatusJpa, 
                           UserJPA userJpa, MailService mailService, OrderUtilsService orderUtilsService) {
         this.orderJpa = orderJpa;
         this.orderStatusJpa = orderStatusJpa;
-        this.userJpa = userJpa;
-		this.mailService = mailService;
+        this.mailService = mailService;
         this.orderUtilsService = orderUtilsService;
     }
 

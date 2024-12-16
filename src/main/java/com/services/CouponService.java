@@ -96,11 +96,8 @@ public class CouponService {
 		coupon.setDisPrice(couponCreateDTO.getDisPrice());
 		coupon.setDescription(couponCreateDTO.getDescription());
 
-		LocalDateTime startDate = couponCreateDTO.getStartDate().plusHours(7);
-		LocalDateTime endDate = couponCreateDTO.getEndDate().plusHours(7);
-
-		coupon.setStartDate(startDate);
-		coupon.setEndDate(endDate);
+		coupon.setStartDate(couponCreateDTO.getStartDate());
+		coupon.setEndDate(couponCreateDTO.getEndDate());
 
 		coupon.setQuantity(couponCreateDTO.getQuantity());
 		coupon.setStatus(true);
