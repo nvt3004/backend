@@ -242,24 +242,9 @@ public class ProductClientController {
 				}
 			}
 
-			items = algoliaProductService.getTopProducts();
+			items = inforService.getNewProduct(user);
 
-			for (ProductDTO productDTO : items) {
-				if (user != null) {
-					for (Wishlist wishlistItem : wishlist) {
-						if (String.valueOf(wishlistItem.getProduct().getProductId())
-								.equalsIgnoreCase(productDTO.getId())) {
-							productDTO.setLike(true);
-							break;
-						}
-					}
-				}
-
-				String img = productDTO.getImgName();
-				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(uploadService.getUrlImage(img));
-				}
-			}
+		
 
 			if (items.isEmpty()) {
 				response.setCode(204);

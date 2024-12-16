@@ -16,7 +16,8 @@ public interface ProductJPA extends JpaRepository<Product, Integer> {
 	public Page<Product> getAllProductByKeyword(@Param("status") boolean status, @Param("keyword") String keyword,
 			Pageable pageable);
 
-	@Query("SELECT o " + "FROM Product o " + "WHERE o.status=:status " + "AND o.productName LIKE:keyword "+"ORDER BY o.productId DESC")
+	@Query("SELECT o " + "FROM Product o " + "WHERE o.status=:status " + "AND o.productName LIKE:keyword "
+			+ "ORDER BY o.productId DESC")
 	public List<Product> getAllProductByKeyword(@Param("status") boolean status, @Param("keyword") String keyword);
 
 	@Query("SELECT DISTINCT o " + "FROM Product o " + "JOIN o.productCategories pc " + "JOIN pc.category c "
@@ -24,28 +25,30 @@ public interface ProductJPA extends JpaRepository<Product, Integer> {
 	public Page<Product> getAllProductByKeywordAndCategory(@Param("status") boolean status,
 			@Param("keyword") String keyword, @Param("idCat") int idCat, Pageable pageable);
 
-	
 	@Query(value = """
-	        SELECT 
-	            vs.version_name, 
-	            vs.quantity - SUM(IF(ISNULL(od.order_id), 0, odt.quantity)) AS quantity
-	        FROM 
-	            product_version vs
-	        LEFT JOIN 
-	            order_details odt ON odt.product_version = vs.id
-	        LEFT JOIN 
-	            orders od ON od.order_id = odt.order_id 
-	                   AND od.status_id NOT IN (1, 6, 5)  -- Trạng thái tạm, chờ xác nhận, hủy
-	        WHERE 
-	            vs.status = true
-	        GROUP BY 
-	            vs.id, vs.quantity
-	        ORDER BY 
-	            vs.quantity - SUM(IF(ISNULL(od.order_id), 0, odt.quantity)) DESC
-	        LIMIT 5
-	    """, nativeQuery = true)
-	    List<Object[]> getTopProductsWithHighestStock();
+			    SELECT
+			        vs.version_name,
+			        vs.quantity - SUM(IF(ISNULL(od.order_id), 0, odt.quantity)) AS quantity
+			    FROM
+			        product_version vs
+			    LEFT JOIN
+			        order_details odt ON odt.product_version = vs.id
+			    LEFT JOIN
+			        orders od ON od.order_id = odt.order_id
+			               AND od.status_id NOT IN (1, 6, 5)  -- Trạng thái tạm, chờ xác nhận, hủy
+			    WHERE
+			        vs.status = true
+			    GROUP BY
+			        vs.id, vs.quantity
+			    ORDER BY
+			        vs.quantity - SUM(IF(ISNULL(od.order_id), 0, odt.quantity)) DESC
+			    LIMIT 5
+			""", nativeQuery = true)
+	List<Object[]> getTopProductsWithHighestStock();
+
+	@Query("SELECT o FROM Product o ORDER BY o.productId DESC")
+	public List<Product> getTopProducts(Pageable pageable);
 
 //Đổi lại thành nút tra cứu hêt, phân trang đổi lại thành tiếng việt
-	//Chứng chỉ tin học, ngoại ngữ
+	// Chứng chỉ tin học, ngoại ngữ
 }
