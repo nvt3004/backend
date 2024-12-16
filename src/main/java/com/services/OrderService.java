@@ -202,7 +202,7 @@ public class OrderService {
 			products.add(mapToProductDTO(orderDetail, productIsDelivered));
 		}
 
-		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(), order.getOrderStatus().getStatusName(),
+		return new OrderByUserDTO(order.getOrderId(), order.getOrderDate(),order.getDeliveryDate(), order.getOrderStatus().getStatusName(),
 				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
 				products);
 	}
