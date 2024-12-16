@@ -151,8 +151,6 @@ public class OrderService {
 
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Order> ordersPage;
-
-		System.out.println(username + " tên người dùng");
 		if (statusId == null) {
 			ordersPage = orderJpa.findOrdersByUsername(username, keyword, null, pageable);
 		} else {
@@ -188,7 +186,6 @@ public class OrderService {
 		String disCount = orderUtilsService.getDiscountDescription(order);
 
 		boolean isDelivered = "Delivered".equalsIgnoreCase(order.getOrderStatus().getStatusName());
-		System.out.println(isDelivered + " isDelivered");
 		List<OrderByUserDTO.ProductDTO> products = new ArrayList<>();
 
 		for (OrderDetail orderDetail : order.getOrderDetails()) {
@@ -220,29 +217,18 @@ public class OrderService {
 	}
 
 	private String getVariantFromOrderDetail(OrderDetail orderDetail) {
-		String color = null;
-		String size = null;
+	    List<String> attributes = new ArrayList<>();
 
-		for (AttributeOptionsVersion aov : orderDetail.getProductVersionBean().getAttributeOptionsVersions()) {
-			String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
-			String attributeValue = aov.getAttributeOption().getAttributeValue();
-			if ("Color".equalsIgnoreCase(attributeName)) {
-				color = attributeValue;
-			} else if ("Size".equalsIgnoreCase(attributeName)) {
-				size = attributeValue;
-			}
-		}
+	    for (AttributeOptionsVersion aov : orderDetail.getProductVersionBean().getAttributeOptionsVersions()) {
+	        String attributeName = aov.getAttributeOption().getAttribute().getAttributeName();
+	        String attributeValue = aov.getAttributeOption().getAttributeValue();            
 
-		if (color != null && size != null) {
-			return color + ", " + size;
-		} else if (color != null) {
-			return color;
-		} else if (size != null) {
-			return size;
-		}
+	        attributes.add(attributeName + ": " + attributeValue);
+	    }
 
-		return "";
+	    return String.join(", ", attributes);
 	}
+
 
 	private OrderDTO createOrderDTO(Order order) {
 		BigDecimal subTotal = orderUtilsService.calculateOrderTotal(order);
@@ -285,53 +271,64 @@ public class OrderService {
 
 		return new ApiResponse<>(200, "Lấy chi tiết đơn hàng thành công", responseMap);
 	}
-
+	
 	public ApiResponse<?> updateOrderStatus(Integer orderId, Integer statusId, User currentUser, String reason) {
-		if (statusId == null) {
-			return new ApiResponse<>(400, "Trạng thái là bắt buộc.", null);
-		}
+	    if (statusId == null) {
+	        return new ApiResponse<>(400, "Trạng thái là bắt buộc.", null);
+	    }
 
-		Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
-		if (!newOrderStatus.isPresent()) {
-			return new ApiResponse<>(400, "Trạng thái được cung cấp không tồn tại.", null);
-		}
+	    Optional<OrderStatus> newOrderStatus = orderStatusJpa.findById(statusId);
+	    if (!newOrderStatus.isPresent()) {
+	        return new ApiResponse<>(400, "Trạng thái được cung cấp không tồn tại.", null);
+	    }
 
-		Optional<Order> updatedOrder = orderJpa.findById(orderId);
-		if (!updatedOrder.isPresent()) {
-			return new ApiResponse<>(404, "Không tìm thấy đơn hàng với ID được cung cấp.", null);
-		}
+	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
+	    if (!updatedOrder.isPresent()) {
+	        return new ApiResponse<>(404, "Không tìm thấy đơn hàng với ID được cung cấp.", null);
+	    }
 
-		Order order = updatedOrder.get();
-		String currentStatus = order.getOrderStatus().getStatusName();
-		String newStatus = newOrderStatus.get().getStatusName();
+	    Order order = updatedOrder.get();
+	    String currentStatus = order.getOrderStatus().getStatusName();
+	    String newStatus = newOrderStatus.get().getStatusName();
 
-		if (!isValidStatusTransition(currentStatus, newStatus)) {
-			return new ApiResponse<>(400,
-					"Chuyển đổi trạng thái không hợp lệ từ " + currentStatus + " sang " + newStatus, null);
-		}
+	    if ("Delivered".equalsIgnoreCase(currentStatus) || "WaitingForConfirmation".equalsIgnoreCase(currentStatus)) {
+	        String currentStatusVietnamese = OrderUtilsService.translateStatus(currentStatus);
+	        String newStatusVietnamese = OrderUtilsService.translateStatus(newStatus);
 
-		if (isOrderStatusChanged(order, newStatus)) {
-			if ("Processed".equalsIgnoreCase(newStatus)) {
-				List<String> insufficientStockMessages = checkProductVersionsStock(order.getOrderDetails());
-				if (!insufficientStockMessages.isEmpty()) {
-					return new ApiResponse<>(400, String.join(", ", insufficientStockMessages), null);
-				}
-			}
-			if ("Cancelled".equalsIgnoreCase(newStatus)) {
-				if(order.getPayments().getPaymentMethod().getMethodName().equalsIgnoreCase("Chuyển khoản")) {
-					order.getPayments().setAmount(BigDecimal.valueOf(-1));
-				}
-			}
-			order.setOrderStatus(newOrderStatus.get());
-			order.setLastUpdatedBy(currentUser);
-			order.setLastUpdatedDate(new Date());
-			orderJpa.save(order);
-			if (!newStatus.equalsIgnoreCase("Shipped")) {
-				sendOrderStatusUpdateEmail(order, newStatus, reason);
-			}
-		}
+	        return new ApiResponse<>(400,
+	            "Không thể chuyển đổi trạng thái từ " + currentStatusVietnamese + " sang " + newStatusVietnamese, null);
+	    }
 
-		return new ApiResponse<>(200, "Cập nhật trạng thái đơn hàng thành công", null);
+	    if (!isValidStatusTransition(currentStatus, newStatus)) {
+	        String currentStatusVietnamese = OrderUtilsService.translateStatus(currentStatus);
+	        String newStatusVietnamese = OrderUtilsService.translateStatus(newStatus);
+
+	        return new ApiResponse<>(400,
+	            "Chuyển đổi trạng thái không hợp lệ từ " + currentStatusVietnamese + " sang " + newStatusVietnamese, null);
+	    }
+
+	    if (isOrderStatusChanged(order, newStatus)) {
+	        if ("Processed".equalsIgnoreCase(newStatus)) {
+	            List<String> insufficientStockMessages = checkProductVersionsStock(order.getOrderDetails());
+	            if (!insufficientStockMessages.isEmpty()) {
+	                return new ApiResponse<>(400, String.join(", ", insufficientStockMessages), null);
+	            }
+	        }
+	        if ("Cancelled".equalsIgnoreCase(newStatus)) {
+	            if (order.getPayments().getPaymentMethod().getMethodName().equalsIgnoreCase("Chuyển khoản")) {
+	                order.getPayments().setAmount(BigDecimal.valueOf(-1));
+	            }
+	        }
+	        order.setOrderStatus(newOrderStatus.get());
+	        order.setLastUpdatedBy(currentUser);
+	        order.setLastUpdatedDate(new Date());
+	        orderJpa.save(order);
+	        if (!newStatus.equalsIgnoreCase("Shipped")) {
+	            sendOrderStatusUpdateEmail(order, newStatus, reason);
+	        }
+	    }
+
+	    return new ApiResponse<>(200, "Cập nhật trạng thái đơn hàng thành công", null);
 	}
 
 	private void sendOrderStatusUpdateEmail(Order order, String newStatus, String reason) {
@@ -426,7 +423,7 @@ public class OrderService {
 				<p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
 				<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
 				<p class="footer">
-				    Đây là email tự động. Vui lòng không trả lời email này.
+				    <small>Đây là email tự động, vui lòng không trả lời email này.</small>
 				</p>
 
 				     </div>
@@ -494,53 +491,57 @@ public class OrderService {
 	}
 
 	private List<String> checkProductVersionsStock(List<OrderDetail> orderDetailList) {
-		List<String> insufficientStockMessages = new ArrayList<>();
+	    List<String> insufficientStockMessages = new ArrayList<>();
 
-		for (OrderDetail orderDetail : orderDetailList) {
+	    for (OrderDetail orderDetail : orderDetailList) {
 
-			if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
+	        if (!orderDetail.getOrder().getOrderStatus().getStatusName().equalsIgnoreCase("Processed")) {
 
-				Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
-				ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
-						.orElse(null);
+	            Integer orderDetailRequestedQuantity = orderDetail.getQuantity();
+	            ProductVersion productVersion = productVersionJpa.findById(orderDetail.getProductVersionBean().getId())
+	                    .orElse(null);
 
-				if (productVersion != null) {
+	            if (productVersion != null) {
 
-					Integer productVersionStock = productVersion.getQuantity();
-					productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
+	                Integer productVersionStock = productVersion.getQuantity();
+	                productVersionStock = (productVersionStock != null) ? productVersionStock : 0;
 
-					Integer processedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
-					Integer cancelledOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
-					Integer shippedOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
-					Integer deliveredOrderQuantity = productVersionJpa
-							.getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	                Integer processedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInProcessedOrders(productVersion.getId());
+	                Integer cancelledOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInCancelledOrders(productVersion.getId());
+	                Integer shippedOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
+	                Integer deliveredOrderQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+	                Integer waitingForConfirmationQuantity = productVersionJpa
+	                        .getTotalQuantityByProductVersionInWaitingForConfirmationOrders(productVersion.getId());
 
-					processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
-					cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
-					shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
-					deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	                processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
+	                cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
+	                shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
+	                deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+	                waitingForConfirmationQuantity = (waitingForConfirmationQuantity != null) ? waitingForConfirmationQuantity : 0;
 
-					Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+	                Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity + waitingForConfirmationQuantity;
 
-					Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
+	                Integer availableProductVersionStock = productVersionStock + totalQuantitySold;
 
-					if (availableProductVersionStock < orderDetailRequestedQuantity) {
-						insufficientStockMessages.add("Không đủ tồn kho cho phiên bản sản phẩm ID "
-								+ productVersion.getId() + ": Tồn kho hiện tại " + availableProductVersionStock
-								+ ", Số lượng yêu cầu: " + orderDetailRequestedQuantity);
-					}
+	                if (availableProductVersionStock < orderDetailRequestedQuantity) {
+	                    insufficientStockMessages.add("Không đủ tồn kho cho phiên bản sản phẩm ID "
+	                            + productVersion.getId() + ": Tồn kho hiện tại " + availableProductVersionStock
+	                            + ", Số lượng yêu cầu: " + orderDetailRequestedQuantity);
+	                }
 
-				} else {
-					insufficientStockMessages.add("Không tìm thấy phiên bản sản phẩm ID "
-							+ orderDetail.getProductVersionBean().getId() + ".");
-				}
-			}
-		}
-		return insufficientStockMessages;
+	            } else {
+	                insufficientStockMessages.add("Không tìm thấy phiên bản sản phẩm ID "
+	                        + orderDetail.getProductVersionBean().getId() + ".");
+	            }
+	        }
+	    }
+	    return insufficientStockMessages;
 	}
+
 
 	public ApiResponse<?> deleteOrderDetail(Integer orderId, Integer orderDetailId) {
 		try {
@@ -623,7 +624,7 @@ public class OrderService {
 					 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
 					<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
 					<p class="footer">
-					    Đây là email tự động. Vui lòng không trả lời email này.
+					    <small>Đây là email tự động, vui lòng không trả lời email này.</small>
 					</p>
 					     </body>
 					 </html>
@@ -713,6 +714,35 @@ public class OrderService {
 	private boolean isCancellable(String currentStatus) {
 		return "pending".equalsIgnoreCase(currentStatus);
 	}
+	
+	public ApiResponse<?> confirmOrderReceived(Integer orderId, User currentUser) {
+	    Optional<Order> updatedOrder = orderJpa.findById(orderId);
+	    if (updatedOrder.isEmpty()) {
+	        return new ApiResponse<>(404, "Không tìm thấy đơn hàng với ID được cung cấp.", null);
+	    }
+
+	    Order order = updatedOrder.get();
+
+	    if (!isUserAuthorized(order, currentUser)) {
+	        return new ApiResponse<>(403, "Bạn không có quyền xác nhận đơn hàng này.", null);
+	    }
+
+	    String currentStatus = order.getOrderStatus().getStatusName();
+	    if (!"Waitingforconfirmation".equalsIgnoreCase(currentStatus)) {
+	        return new ApiResponse<>(400, "Chỉ có thể xác nhận đơn hàng ở trạng thái Chờ xác nhận.", null);
+	    }
+
+	    Optional<OrderStatus> deliveredStatus = orderStatusJpa.findByStatusNameIgnoreCase("Delivered");
+	    if (deliveredStatus.isEmpty()) {
+	        return new ApiResponse<>(500, "Trạng thái đã nhận hàng chưa được cấu hình trong hệ thống.", null);
+	    }
+
+	    order.setOrderStatus(deliveredStatus.get());
+	    orderJpa.save(order);
+
+	    return new ApiResponse<>(200, "Đơn hàng đã được xác nhận là đã nhận.", null);
+	}
+
 
 	public ByteArrayResource exportOrdersToExcel(Boolean isAdminOrder, String keyword, Integer statusId, int page,
 			int size) {
@@ -1050,7 +1080,7 @@ public class OrderService {
 				 <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
 				<p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
 				<p class="footer">
-				    Đây là email tự động. Vui lòng không trả lời email này.
+				   <small>Đây là email tự động, vui lòng không trả lời email này.</small>
 				</p>
 				  </body>
 				  </html>
@@ -1178,7 +1208,7 @@ public class OrderService {
 	        order.setLastUpdatedDate(new Date());
 
 	        orderJpa.save(order);
-	        return ResponseEntity.ok(new ApiResponse<>(200, "Hoàn tiền thành công cho đơn hàng #" + orderId, null));
+	        return ResponseEntity.ok(new ApiResponse<>(200, "Hoàn tiền thành công cho đơn hàng #" + order.getOrderId(), null));
 
 	    } catch (Exception e) {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

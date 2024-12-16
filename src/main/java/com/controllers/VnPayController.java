@@ -423,8 +423,8 @@ public class VnPayController {
 		Date date = Date.from(adjustedTime.toInstant());
 
 		// Gán vào orderEntity
-		orderEntity.setOrderDate(date);
-		orderEntity.setDeliveryDate(date);
+		orderEntity.setOrderDate(new Date());
+		orderEntity.setDeliveryDate(new Date());
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
 		orderEntity.setPhone(user.getPhone());

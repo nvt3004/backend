@@ -46,6 +46,8 @@ public interface ProductVersionJPA extends JpaRepository<ProductVersion, Integer
 	@Query("SELECT SUM(od.quantity) FROM Order o JOIN o.orderDetails od JOIN od.productVersionBean pv WHERE o.orderStatus.statusName = 'Delivered' AND pv.id = :productVersionId")
 	Integer getTotalQuantityByProductVersionInDeliveredOrders(@Param("productVersionId") Integer productVersionId);
 
+	@Query("SELECT SUM(od.quantity) FROM Order o JOIN o.orderDetails od JOIN od.productVersionBean pv WHERE o.orderStatus.statusName = 'Waitingforconfirmation' AND pv.id = :productVersionId")
+	Integer getTotalQuantityByProductVersionInWaitingForConfirmationOrders(@Param("productVersionId") Integer productVersionId);
 
 	@Procedure(name = "ProductVersion.rp_stock_quantity")
 	Integer getTotalStockQuantityVersion(@Param("versionId") int versionId);

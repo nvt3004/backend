@@ -284,7 +284,7 @@ public class OrderDetailService {
 				        <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
 				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
 				        <p class="footer">
-				            Đây là email tự động. Vui lòng không trả lời email này.
+				           <small>Đây là email tự động, vui lòng không trả lời email này.</small>
 				        </p>
 				    </body>
 				    </html>
@@ -328,13 +328,16 @@ public class OrderDetailService {
                 .getTotalQuantityByProductVersionInShippedOrders(productVersion.getId());
         Integer deliveredOrderQuantity = productVersionJpa
                 .getTotalQuantityByProductVersionInDeliveredOrders(productVersion.getId());
+        Integer waitingForConfirmationQuantity = productVersionJpa
+                .getTotalQuantityByProductVersionInWaitingForConfirmationOrders(productVersion.getId());
 
         processedOrderQuantity = (processedOrderQuantity != null) ? processedOrderQuantity : 0;
         cancelledOrderQuantity = (cancelledOrderQuantity != null) ? cancelledOrderQuantity : 0;
         shippedOrderQuantity = (shippedOrderQuantity != null) ? shippedOrderQuantity : 0;
         deliveredOrderQuantity = (deliveredOrderQuantity != null) ? deliveredOrderQuantity : 0;
+        waitingForConfirmationQuantity = (waitingForConfirmationQuantity != null) ? waitingForConfirmationQuantity : 0;
 
-        Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity;
+        Integer totalQuantitySold = processedOrderQuantity + shippedOrderQuantity + deliveredOrderQuantity + waitingForConfirmationQuantity;
 
         Integer availableProductVersionStock = productVersionStock - totalQuantitySold;
 
@@ -394,7 +397,7 @@ public class OrderDetailService {
 				         <p>Xin cảm ơn bạn đã mua sắm cùng chúng tôi!</p>
 				        <p>Trân trọng,<br>Công ty TNHH Step To The Future</p>
 				        <p class="footer">
-				            Đây là email tự động. Vui lòng không trả lời email này.
+				            <small>Đây là email tự động, vui lòng không trả lời email này.</small>
 				        </p>
 				    </body>
 				    </html>
