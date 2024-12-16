@@ -505,7 +505,6 @@ public class OrderController {
 	}
 
 	@PutMapping("/user/orders/cancel-order")
-//	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
 	public ResponseEntity<ApiResponse<?>> cancelOrder(@RequestParam("orderId") Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -557,8 +556,58 @@ public class OrderController {
 		}
 	}
 
+	@PutMapping("/user/orders/confirm-received")
+	public ResponseEntity<ApiResponse<?>> confirmOrderReceived(@RequestParam("orderId") Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
+		if (orderId == null) {
+			return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Order ID is required.", null));
+		}
+
+		ApiResponse<?> response = orderService.confirmOrderReceived(orderId, user);
+
+		if (response.getErrorCode() == 200) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
+		}
+	}
+
 	@GetMapping("/staff/orders/export")
-//	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<?> exportOrdersToExcel(
 			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
@@ -616,8 +665,7 @@ public class OrderController {
 	}
 
 	@GetMapping("/orders/{orderId}")
-	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId,
-			@RequestHeader("Authorization") Optional<String> authHeaders) {
+	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId) {
 		if (orderId == null) {
 			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
 			return ResponseEntity.badRequest().body(response);

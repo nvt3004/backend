@@ -20,8 +20,8 @@ public interface OrderStatusJPA extends JpaRepository<OrderStatus, Integer> {
 
 	Optional<OrderStatus> findByStatusName(String statusName);
 
-	@Query("SELECT s.statusName FROM OrderStatus s ORDER BY s.sortOrder ASC")
-	List<String> getStatusOrder();
+	@Query("SELECT s FROM OrderStatus s ORDER BY s.sortOrder ASC")
+	List<OrderStatus> getStatusOrder();
 
 	@Query("SELECT os FROM OrderStatus os WHERE LOWER(os.statusName) = LOWER(:statusName)")
 	Optional<OrderStatus> findByStatusNameIgnoreCase(@Param("statusName") String statusName);

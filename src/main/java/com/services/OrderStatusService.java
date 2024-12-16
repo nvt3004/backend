@@ -18,7 +18,7 @@ public class OrderStatusService {
 	private OrderStatusJPA orderStatusJpa;
 
 	public List<OrderStatusDTO> getAllOrderStatusDTOs() {
-	    List<OrderStatus> orderStatuses = orderStatusJpa.findAll();
+	    List<OrderStatus> orderStatuses = orderStatusJpa.getStatusOrder();
 	    List<OrderStatusDTO> orderStatusDTOList = new ArrayList<>();
 
 	    for (OrderStatus orderStatus : orderStatuses) {
