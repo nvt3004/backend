@@ -17,10 +17,11 @@ import com.entities.OrderStatus;
 import com.entities.Product;
 
 public interface OrderJPA extends JpaRepository<Order, Integer> {
-
+	
 	@Query("""
 		    SELECT o FROM Order o
 		    WHERE (:keyword IS NULL OR :keyword = '' OR 
+		           CAST(o.orderId AS STRING) LIKE %:keyword% OR 
 		           o.fullname LIKE %:keyword% OR 
 		           o.address LIKE %:keyword% OR 
 		           o.phone LIKE %:keyword%)
@@ -31,7 +32,6 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 		    @Param("keyword") String keyword, 
 		    @Param("statusId") Integer statusId, 
 		    Pageable pageable);
-
 
 	@Query("""
 		    SELECT o FROM Order o

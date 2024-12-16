@@ -179,11 +179,11 @@ public class ReceiptService {
 		return response;
 	}
 
-	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size) {
+	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size, String keyword) {
 		Sort sort = Sort.by(Sort.Direction.DESC, "receiptId");
 		Pageable pageable = PageRequest.of(page, size, sort);
 
-		Page<Receipt> receiptPage = receiptJpa.findAll(pageable);
+		Page<Receipt> receiptPage = receiptJpa.findByKeyword(keyword, pageable);
 
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
 
@@ -197,56 +197,56 @@ public class ReceiptService {
 	}
 
 	private ReceiptResponse convertReceiptStf(Receipt receipt) {
-	    ReceiptResponse receiptInfoDTO = new ReceiptResponse();
+		ReceiptResponse receiptInfoDTO = new ReceiptResponse();
 
-	    receiptInfoDTO.setReceiptId(receipt.getReceiptId());
-	    receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
-	    receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
-	    receiptInfoDTO.setSupplierEmail(receipt.getSupplier().getEmail());
-	    receiptInfoDTO.setSupplierPhone(receipt.getSupplier().getPhone());
-	    receiptInfoDTO.setSupplierAddress(receipt.getSupplier().getAddress());
-	    receiptInfoDTO.setUsername(receipt.getUser().getUsername());
-	    receiptInfoDTO.setFullname(receipt.getUser().getFullName());
+		receiptInfoDTO.setReceiptId(receipt.getReceiptId());
+		receiptInfoDTO.setReceiptDate(receipt.getReceiptDate());
+		receiptInfoDTO.setSupplierName(receipt.getSupplier().getSupplierName());
+		receiptInfoDTO.setSupplierEmail(receipt.getSupplier().getEmail());
+		receiptInfoDTO.setSupplierPhone(receipt.getSupplier().getPhone());
+		receiptInfoDTO.setSupplierAddress(receipt.getSupplier().getAddress());
+		receiptInfoDTO.setUsername(receipt.getUser().getUsername());
+		receiptInfoDTO.setFullname(receipt.getUser().getFullName());
 
-	    List<ReceiptDetailResponse> details = new ArrayList<>();
+		List<ReceiptDetailResponse> details = new ArrayList<>();
 
-	    BigDecimal totalPrice = BigDecimal.ZERO;
-	    int totalQuantity = 0;
+		BigDecimal totalPrice = BigDecimal.ZERO;
+		int totalQuantity = 0;
 
 		for (ReceiptDetail dt : receipt.getReceiptDetails()) {
 			ReceiptDetailResponse detail = new ReceiptDetailResponse();
 			BigDecimal total = dt.getPrice().multiply(BigDecimal.valueOf(dt.getQuantity()));
 
-			if(dt.getProductVersion().getImage() != null) {
+			if (dt.getProductVersion().getImage() != null) {
 				detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
 			}
-			
+
 			detail.setImportPrice(dt.getPrice());
 			detail.setName(dt.getProductVersion().getVersionName());
 			detail.setQuantity(dt.getQuantity());
 			detail.setTotal(total);
-			
+
 			details.add(detail);
 
-	        if (dt.getProductVersion().getImage() != null) {
-	            detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
-	        }
-	        detail.setImportPrice(dt.getPrice());
-	        detail.setName(dt.getProductVersion().getVersionName());
-	        detail.setQuantity(dt.getQuantity());
-	        detail.setTotal(total);
+			if (dt.getProductVersion().getImage() != null) {
+				detail.setImage(uploadService.getUrlImage(dt.getProductVersion().getImage().getImageUrl()));
+			}
+			detail.setImportPrice(dt.getPrice());
+			detail.setName(dt.getProductVersion().getVersionName());
+			detail.setQuantity(dt.getQuantity());
+			detail.setTotal(total);
 
-	        details.add(detail);
+			details.add(detail);
 
-	        totalQuantity += dt.getQuantity();
-	        totalPrice = totalPrice.add(total);
-	    }
+			totalQuantity += dt.getQuantity();
+			totalPrice = totalPrice.add(total);
+		}
 
-	    receiptInfoDTO.setTotalQuantity(totalQuantity);
-	    receiptInfoDTO.setTotalPrice(totalPrice);
-	    receiptInfoDTO.setDetais(details);
+		receiptInfoDTO.setTotalQuantity(totalQuantity);
+		receiptInfoDTO.setTotalPrice(totalPrice);
+		receiptInfoDTO.setDetais(details);
 
-	    return receiptInfoDTO;
+		return receiptInfoDTO;
 	}
 
 }

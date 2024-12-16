@@ -52,6 +52,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "order_date", nullable = false, updatable = false)
 	private Date orderDate;
 

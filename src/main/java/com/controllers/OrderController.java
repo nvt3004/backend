@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -68,7 +69,6 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-		System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -348,7 +348,8 @@ public class OrderController {
 	@PutMapping("/staff/orders/update-status")
 	@PreAuthorize("hasPermission(#userid, 'Update Order')")
 	public ResponseEntity<ApiResponse<?>> updateOrderStatus(@RequestParam("orderId") Integer orderId,
-			@RequestParam("statusId") Integer statusId, @RequestHeader("Authorization") Optional<String> authHeader) {
+			@RequestBody(required = false) Map<String, String> payload, @RequestParam("statusId") Integer statusId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
@@ -389,8 +390,8 @@ public class OrderController {
 			return ResponseEntity.badRequest()
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
-
-		errorResponse = orderService.updateOrderStatus(orderId, statusId, user);
+		String reason = payload != null ? payload.get("reason") : null;
+		errorResponse = orderService.updateOrderStatus(orderId, statusId, user, reason);
 
 		if (errorResponse.getErrorCode() == 200) {
 			return ResponseEntity.ok(errorResponse);
@@ -504,7 +505,7 @@ public class OrderController {
 	}
 
 	@PutMapping("/user/orders/cancel-order")
-	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
+//	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
 	public ResponseEntity<ApiResponse<?>> cancelOrder(@RequestParam("orderId") Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -718,6 +719,47 @@ public class OrderController {
 			ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
+	}
+
+	@PutMapping("/staff/orders/refund/{orderId}")
+	public ResponseEntity<ApiResponse<?>> refundOrder(@PathVariable Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) throws Exception {
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		return orderService.refundOrder(orderId, user);
+
 	}
 
 }

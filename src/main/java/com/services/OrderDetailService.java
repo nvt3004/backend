@@ -120,7 +120,7 @@ public class OrderDetailService {
 					item.getProductVersionBean().getVersionName(), price, item.getQuantity(),
 					uploadService.getUrlImage(imageUrl), item.getProductVersionBean().getProduct().getDescription(),
 					total, item.getOrderDetailId(), attributeProductVersion, attributesProducts,
-					item.getProductVersionBean().getProduct().getProductName()));
+					item.getProductVersionBean().getVersionName()));
 		}
 		return productDetails;
 	}
@@ -209,7 +209,7 @@ public class OrderDetailService {
     }
 
     orderDetail.setProductVersionBean(newProductVersion.get());
-    orderDetail.setQuantity(1);
+    orderDetail.setQuantity(existingOrderDetail.get().getQuantity());
     orderDetail.setPrice(newProductVersion.get().getRetailPrice());
     orderDetail.getOrder().setLastUpdatedBy(currentUser);
     orderDetail.getOrder().setLastUpdatedDate(new Date());
