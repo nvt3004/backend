@@ -49,7 +49,7 @@ public class PermissionUserController {
 	private UserJPA userRepo;
 
 	// Lấy toàn bộ quyền của user
-	@GetMapping("/api/admin/userpermissions/{userId}")
+	@GetMapping("/api/staff/userpermissions/{userId}")
 	public ResponseEntity<ResponseAPI<List<PermissionResponse>>> getPermissions(
 			@RequestHeader("Authorization") Optional<String> authHeader, @PathVariable Integer userId) {
 		ResponseAPI<List<PermissionResponse>> response = new ResponseAPI<>();
