@@ -63,7 +63,12 @@ public class AdvertisementController {
 
         LocalDateTime now = LocalDateTime.now();
 
-
+        // Validate startDate and endDate
+        if (startDate.isBefore(now)) {
+            response.setCode(444);
+            response.setMessage("Start date must be greater than the current date.");
+            return ResponseEntity.ok(response);
+        }
 
         if (endDate.isBefore(startDate)) {
             response.setCode(445);
@@ -149,10 +154,10 @@ public class AdvertisementController {
     private void saveImageAdvertisement(Advertisement advertisement, List<MultipartFile> images) {
         for (MultipartFile image : images) {
             try {
-                // Save the image to Cloudinary and get the URL
-                String fileUrl = uploadService.save(image, "advertisements");
+                // Save the image file
+                String fileName = uploadService.save(image, "images"); // Save method adapted to handle MultipartFile
                 Image imageEntity = new Image();
-                imageEntity.setImageUrl(fileUrl);
+                imageEntity.setImageUrl(fileName);
                 imageEntity.setAdvertisement(advertisement);
                 imageJPA.save(imageEntity);
             } catch (Exception e) {
@@ -160,7 +165,6 @@ public class AdvertisementController {
             }
         }
     }
-
 
     private List<String> updateImages(Advertisement advertisement, List<MultipartFile> images,
             List<String> imagesToDelete) {
