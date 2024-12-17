@@ -8,7 +8,6 @@ services:
       - '8080:8080'
 
 volumes:
-  file:static/images:/app/static/images:
   postgres-data:
   redis-data:
 
