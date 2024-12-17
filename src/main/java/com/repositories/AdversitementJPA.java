@@ -15,4 +15,7 @@ public interface AdversitementJPA extends JpaRepository<Advertisement, Integer>{
 
     @Query("SELECT a FROM Advertisement a WHERE CURRENT_DATE BETWEEN a.startDate AND a.endDate")
     List<Advertisement> findAdvertisementsForToday();
+
+    @Query("SELECT a FROM Advertisement a WHERE a.status = 1")
+    List<Advertisement> findAllAdvertisementsWithStatus1();
 }
