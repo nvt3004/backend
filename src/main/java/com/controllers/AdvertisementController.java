@@ -97,6 +97,7 @@ public class AdvertisementController {
     }
 
     @PutMapping("/update/{id}")
+    @PreAuthorize("hasPermission(#userId, 'Update Advertisement')")
     public ResponseEntity<ResponseAPI<Boolean>> updateAdvertisement(
             @PathVariable("id") Integer id,
             @RequestParam("advName") String advName,
