@@ -49,9 +49,10 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		httpSecurity.csrf(AbstractHttpConfigurer::disable).cors(Customizer.withDefaults())
 				.authorizeHttpRequests(request -> request
-						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send", "/api/verify-otp",
-								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**","/api/today/**,/api/orders/**")
+						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
+								"/api/verify-otp", "/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**",
+								"api/product/**", "api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**",
+								"/api/today/**,/api/orders/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/analytics/**").hasAnyAuthority("User", "Admin", "Staff")
 						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
@@ -59,8 +60,8 @@ public class SecurityConfig {
 						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin", "Staff")
 						.requestMatchers("/api/adminuser/**").hasAnyAuthority("Admin", "User", "Staff").anyRequest()
 						.authenticated())
-				.exceptionHandling(exception -> exception
-						.accessDeniedHandler((request, response, accessDeniedException) -> {
+				.exceptionHandling(
+						exception -> exception.accessDeniedHandler((request, response, accessDeniedException) -> {
 							ApiResponse<String> res = new ApiResponse<>();
 							res.setErrorCode(998);
 							res.setMessage(accessDeniedException.getMessage());

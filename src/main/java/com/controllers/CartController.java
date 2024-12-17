@@ -452,7 +452,7 @@ public class CartController {
 		Date date = Date.from(adjustedTime.toInstant());
 
 		// Gán vào orderEntity
-		orderEntity.setOrderDate(date);
+		orderEntity.setOrderDate(new Date());
 		orderEntity.setDeliveryDate(orderModel.getLeadTime());
 		orderEntity.setUser(user);
 		orderEntity.setFullname(user.getFullName());
