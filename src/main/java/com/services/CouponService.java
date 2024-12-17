@@ -170,14 +170,18 @@ public class CouponService {
 
 	    Coupon existingCoupon = couponJpa.findById(id)
 	            .orElseThrow(() -> new InvalidException("Không tìm thấy mã giảm giá với ID " + id));
-
+	    
 	    boolean isCouponApplied = orderJpa.existsByCouponId(id);
 	    boolean isCouponUsedByUser = userCouponJpa.existsByCouponId(id);
 
-	    if (isCouponApplied || isCouponUsedByUser) {
-	        throw new InvalidException(
-	                "Không thể cập nhật mã giảm giá này vì đã được người dùng lấy về hoặc áp dụng vào đơn hàng.");
+	    if (isCouponApplied) {
+	        throw new InvalidException("Không thể cập nhật mã giảm giá này vì đã được áp dụng vào đơn hàng.");
 	    }
+
+	    if (isCouponUsedByUser) {
+	        throw new InvalidException("Không thể cập nhật mã giảm giá này vì đã được người dùng lấy về.");
+	    }
+
 
 	    if (couponUpdateDTO.getStartDate() != null 
 	            && couponUpdateDTO.getStartDate().isBefore(existingCoupon.getCreateDate())) {
