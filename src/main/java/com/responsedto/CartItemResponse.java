@@ -22,6 +22,8 @@ public class CartItemResponse {
 	private int quantity;
 	private List<Attribute> attributes;
 	private ProductDetailResponse productDetail;
+	private BigDecimal sale;
+	private BigDecimal salePrice;
 	
 	public CartItemResponse(int catrItemId, int versionId, boolean statusVersion, int inventory, String versionName,
 			BigDecimal price, int quantity, int stock, boolean active) {

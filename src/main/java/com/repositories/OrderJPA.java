@@ -108,7 +108,13 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 
 	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId=4")
 	List<Order> getAllOrderByDate(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-	
+
+	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId=:statusId")
+	List<Order> getAllOrderByDateAndStatus(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("status") int statusId);
+
+	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId!=6")
+	List<Order> getAllOrders(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
 	@Query(value = "SELECT o.* FROM `orders` o JOIN order_status os ON o.status_id = os.status_id WHERE DATE(o.delivery_date) = DATE(:expectedDeliveryDate) AND os.status_name = :statusName", nativeQuery = true)
 	List<Order> findAllByExpectedDeliveryDateAndOrderStatusStatusName(@Param("expectedDeliveryDate") Date expectedDeliveryDate, @Param("statusName") String statusName);
 	
