@@ -242,6 +242,13 @@ public class ProductClientController {
 			}
 
 			items = inforService.getNewProduct(user);
+			for (ProductDTO productDTO : items) {
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
+			}
 
 			if (items.isEmpty()) {
 				response.setCode(204);
