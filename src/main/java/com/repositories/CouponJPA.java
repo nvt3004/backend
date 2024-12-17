@@ -33,7 +33,6 @@ public interface CouponJPA extends JpaRepository<Coupon, Integer> {
 		    Pageable pageable
 		);
 
-
 		@Query("""
 		    SELECT o 
 		    FROM Coupon o 
