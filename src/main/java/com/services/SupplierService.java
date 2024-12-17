@@ -54,7 +54,7 @@ public class SupplierService {
 	}
 
 	public Supplier updateSupplier(int id, SupplierDTO supplierDetails) {
-		Supplier supplier = supplierJpa.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
+		Supplier supplier = supplierJpa.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy nhà cung cấp."));
 		supplier.setAddress(supplierDetails.getAddress());
 		supplier.setContactName(supplierDetails.getContactName());
 		supplier.setEmail(supplierDetails.getEmail());
@@ -66,7 +66,7 @@ public class SupplierService {
 
 	public ApiResponse<?> deleteSupplier(Integer id) {
 	    if (receiptJpa.existsBySupplierSupplierId(id)) {
-	        return new ApiResponse<>(400, "Cannot delete Supplier, it is referenced in a receipt.", null);
+	        return new ApiResponse<>(400, "Không thể xóa nhà cung cấp vì đã được tham chiếu trong phiếu nhập.", null);
 	    }
 
 	    Optional<Supplier> supplier = supplierJpa.findById(id);
@@ -76,9 +76,9 @@ public class SupplierService {
 	        existingSupplier.setStatus(false);
 	        supplierJpa.save(existingSupplier);
 
-	        return new ApiResponse<>(200, "Supplier marked as deleted successfully.", null);
+	        return new ApiResponse<>(200, "Nhà cung cấp đã được đánh dấu là đã xóa thành công.", null);
 	    } else {
-	        return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
+	        return new ApiResponse<>(404, "Không tìm thấy nhà cung cấp với ID " + id + ".", null);
 	    }
 	}
 	
@@ -90,15 +90,15 @@ public class SupplierService {
 	        if (existingSupplier.getStatus() == false) {
 	            existingSupplier.setStatus(true);
 	            supplierJpa.save(existingSupplier);
-	            return new ApiResponse<>(200, "Supplier restored successfully.", null);
+	            return new ApiResponse<>(200, "Nhà cung cấp đã được khôi phục thành công.", null);
 	        } else {
-	            return new ApiResponse<>(400, "Supplier is already active.", null);
+	            return new ApiResponse<>(400, "Nhà cung cấp đã ở trạng thái hoạt động.", null);
 	        }
 	    } else {
-	        return new ApiResponse<>(404, "Supplier with ID " + id + " not found.", null);
+	        return new ApiResponse<>(404, "Không tìm thấy nhà cung cấp với ID " + id + ".", null);
 	    }
 	}
-	
+
 	public ByteArrayResource exportSuppliersToExcel(String keyword, Boolean status, Pageable pageable) {
 	    try {
 
