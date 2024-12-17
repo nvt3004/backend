@@ -59,7 +59,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/login", "/api/login-social", "/api/register", "/api/send",
 								"/api/verify-otp",
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
-								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**", "/api/today/**")
+								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**", "/api/today/**", "/api/analytics/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
 						.requestMatchers("/api/analytics/**").hasAnyAuthority("User", "Admin", "Staff")
 						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
