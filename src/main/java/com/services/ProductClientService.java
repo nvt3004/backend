@@ -1,20 +1,17 @@
 package com.services;
 
-import java.awt.print.Pageable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +25,6 @@ import com.entities.ProductSale;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.Wishlist;
-import com.models.VersionSaleDTO;
 import com.repositories.AttributeOptionJPA;
 import com.repositories.CartJPA;
 import com.repositories.CategoryJPA;
@@ -330,22 +326,10 @@ public class ProductClientService {
 		}
 
 		// Lấy sản phẩm từ giỏ hàng, đơn hàng (chỉ lấy sản phẩm có status = true)
-		List<Product> prodFromCart = cartJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus) // Lọc
-																														// sản
-																														// phẩm
-																														// có
-																														// status
-																														// =
-																														// true
+		List<Product> prodFromCart = cartJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus)
 				.collect(Collectors.toList());
 
-		List<Product> prodFromOrder = orderJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus) // Lọc
-																														// sản
-																														// phẩm
-																														// có
-																														// status
-																														// =
-																														// true
+		List<Product> prodFromOrder = orderJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus)
 				.collect(Collectors.toList());
 
 		// Lấy tất cả sản phẩm trong kho (đã lọc status = true trong getProduct2)
@@ -357,6 +341,7 @@ public class ProductClientService {
 		List<ProductDTO> productsFromOrder = getProductCart(prodFromOrder);
 
 		// Random sản phẩm để đa dạng kết quả
+		allProducts = getRandomProducts(allProducts, 25);
 		wishlistProducts = getRandomProducts(wishlistProducts, 25);
 		productsFromCart = getRandomProducts(productsFromCart, 25);
 		productsFromOrder = getRandomProducts(productsFromOrder, 25);
@@ -383,7 +368,7 @@ public class ProductClientService {
 
 		// Xáo trộn danh sách sản phẩm và trả về tối đa 24 sản phẩm
 		Collections.shuffle(combinedProducts);
-		return combinedProducts.stream().limit(24).collect(Collectors.toList());
+		return combinedProducts.stream().limit(12).collect(Collectors.toList());
 	}
 
 	// Phương thức chuyển đổi Product thành ProductDTO
