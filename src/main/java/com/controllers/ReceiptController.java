@@ -93,14 +93,15 @@ public class ReceiptController {
 		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf(page, size, keyword);
 
 		if (receiptDTOPage.isEmpty()) {
-			ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "No receipts found", null);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+		    ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "Không tìm thấy phiếu nhập nào.", null);
+		    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		PageImpl<ReceiptResponse> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(),
-				receiptDTOPage.getPageable(), receiptDTOPage.getTotalElements());
+		        receiptDTOPage.getPageable(), receiptDTOPage.getTotalElements());
 
-		ApiResponse<?> response = new ApiResponse<>(200, "Success", receiptDTOList);
+		ApiResponse<?> response = new ApiResponse<>(200, "Lấy danh sách phiếu nhập thành công.", receiptDTOList);
+
 		return ResponseEntity.ok(response);
 	}
 
@@ -147,11 +148,11 @@ public class ReceiptController {
 		ReceiptDTO receiptDTO = warehouseService.getWarehouseById(id);
 
 		if (receiptDTO == null) {
-			ApiResponse<ReceiptDTO> response = new ApiResponse<>(404, "Not found receipt", null);
+			ApiResponse<ReceiptDTO> response = new ApiResponse<>(404, "Không tìm thấy phiếu nhập.", null);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		ApiResponse<ReceiptDTO> response = new ApiResponse<>(200, "Success", receiptDTO);
+		ApiResponse<ReceiptDTO> response = new ApiResponse<>(200, "Không tìm thấy chi tiết phiếu nhập.", receiptDTO);
 		return ResponseEntity.ok(response);
 	}
 

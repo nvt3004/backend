@@ -19,17 +19,22 @@ import com.entities.Product;
 public interface OrderJPA extends JpaRepository<Order, Integer> {
 
 	@Query("""
-			    SELECT o FROM Order o
-			    WHERE (:keyword IS NULL OR :keyword = '' OR
-			           CAST(o.orderId AS STRING) LIKE %:keyword% OR
-			           o.fullname LIKE %:keyword% OR
-			           o.address LIKE %:keyword% OR
-			           o.phone LIKE %:keyword%)
-			      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
-			    ORDER BY o.orderStatus.sortOrder ASC, o.orderDate DESC
-			""")
-	Page<Order> findOrdersByCriteria(@Param("keyword") String keyword, @Param("statusId") Integer statusId,
-			Pageable pageable);
+		    SELECT o FROM Order o
+		    WHERE (:keyword IS NULL OR :keyword = '' OR
+		           CAST(o.orderId AS STRING) LIKE %:keyword% OR
+		           o.fullname LIKE %:keyword% OR
+		           o.address LIKE %:keyword% OR
+		           o.phone LIKE %:keyword%)
+		      AND (:statusId IS NULL OR o.orderStatus.statusId = :statusId)
+		    ORDER BY 
+		        CASE WHEN o.payment.amount = -1 THEN 0 ELSE 1 END ASC, 
+		        o.orderStatus.sortOrder ASC, 
+		        o.orderDate DESC
+		""")
+		Page<Order> findOrdersByCriteria(@Param("keyword") String keyword, 
+		                                 @Param("statusId") Integer statusId,
+		                                 Pageable pageable);
+
 
 	@Query("""
 			    SELECT o FROM Order o

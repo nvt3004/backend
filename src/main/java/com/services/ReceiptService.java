@@ -134,50 +134,51 @@ public class ReceiptService {
 	}
 
 	public ApiResponse<?> createReceipt(ReceiptCreateDTO dto, User user) {
-		ApiResponse<?> errorResponse = new ApiResponse<>();
-		Integer supplierId = dto.getSupplierId();
-		Optional<Supplier> supp = supplierService.getSupplierById(supplierId);
-		if (!supp.isPresent()) {
-			errorResponse.setErrorCode(400);
-			errorResponse.setMessage("Supplier does not exist.");
-			return errorResponse;
-		}
+	    ApiResponse<?> errorResponse = new ApiResponse<>();
+	    Integer supplierId = dto.getSupplierId();
+	    Optional<Supplier> supp = supplierService.getSupplierById(supplierId);
+	    if (!supp.isPresent()) {
+	        errorResponse.setErrorCode(400);
+	        errorResponse.setMessage("Nhà cung cấp không tồn tại.");
+	        return errorResponse;
+	    }
 
-		Supplier supplier = supp.get();
+	    Supplier supplier = supp.get();
 
-		Receipt receipt = new Receipt();
-		receipt.setSupplier(supplier);
-		receipt.setReceiptDate(LocalDateTime.now());
-		receipt.setUser(user);
-		receipt.setSupplierName(supplier.getSupplierName());
-		receiptJpa.save(receipt);
+	    Receipt receipt = new Receipt();
+	    receipt.setSupplier(supplier);
+	    receipt.setReceiptDate(LocalDateTime.now());
+	    receipt.setUser(user);
+	    receipt.setSupplierName(supplier.getSupplierName());
+	    receiptJpa.save(receipt);
 
-		for (ReceiptCreateDTO.ProductVersionDTO pvDto : dto.getProductVersions()) {
-			Integer productVersionId = pvDto.getProductVersionId();
-			Integer quantity = pvDto.getQuantity();
-			BigDecimal price = pvDto.getPrice();
-			ProductVersion prodVer = productVersionService.getProductVersionByID(productVersionId);
-			if (prodVer == null) {
-				errorResponse.setErrorCode(400);
-				errorResponse.setMessage("ProductVersion with ID " + productVersionId + " does not exist.");
-				return errorResponse;
-			}
+	    for (ReceiptCreateDTO.ProductVersionDTO pvDto : dto.getProductVersions()) {
+	        Integer productVersionId = pvDto.getProductVersionId();
+	        Integer quantity = pvDto.getQuantity();
+	        BigDecimal price = pvDto.getPrice();
+	        ProductVersion prodVer = productVersionService.getProductVersionByID(productVersionId);
+	        if (prodVer == null) {
+	            errorResponse.setErrorCode(400);
+	            errorResponse.setMessage("Phiên bản sản phẩm với ID " + productVersionId + " không tồn tại.");
+	            return errorResponse;
+	        }
 
-			int inventoryProductVersion = prodVer.getQuantity();
-			prodVer.setQuantity(inventoryProductVersion + quantity);
-			productVersionService.updateProdVerSion(prodVer);
+	        int inventoryProductVersion = prodVer.getQuantity();
+	        prodVer.setQuantity(inventoryProductVersion + quantity);
+	        productVersionService.updateProdVerSion(prodVer);
 
-			ReceiptDetail receiptDetail = new ReceiptDetail();
-			receiptDetail.setReceipt(receipt);
-			receiptDetail.setProductVersion(prodVer);
-			receiptDetail.setQuantity(quantity);
-			receiptDetail.setPrice(price);
-			receiptDetailJpa.save(receiptDetail);
-		}
+	        ReceiptDetail receiptDetail = new ReceiptDetail();
+	        receiptDetail.setReceipt(receipt);
+	        receiptDetail.setProductVersion(prodVer);
+	        receiptDetail.setQuantity(quantity);
+	        receiptDetail.setPrice(price);
+	        receiptDetailJpa.save(receiptDetail);
+	    }
 
-		ApiResponse<?> response = new ApiResponse<>(200, "Receipt created successfully", null);
-		return response;
+	    ApiResponse<?> response = new ApiResponse<>(200, "Tạo phiếu nhập thành công.", null);
+	    return response;
 	}
+
 
 	public Page<ReceiptResponse> getAllWarehousesStf(int page, int size, String keyword) {
 		Sort sort = Sort.by(Sort.Direction.DESC, "receiptId");
@@ -188,7 +189,6 @@ public class ReceiptService {
 		List<ReceiptResponse> receiptDTOList = new ArrayList<>();
 
 		for (Receipt receipt : receiptPage.getContent()) {
-			System.out.println(receipt.getReceiptId() + " ReceiptIdEEE");
 			ReceiptResponse receiptDTO = convertReceiptStf(receipt);
 			receiptDTOList.add(receiptDTO);
 		}
