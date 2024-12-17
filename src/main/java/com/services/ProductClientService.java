@@ -75,7 +75,7 @@ public class ProductClientService {
 		BigDecimal discountPercent = new BigDecimal("0.00");
 		int quantity = 0;
 		for (ProductVersion productVersion : productOpt.get().getProductVersions()) {
-			quantity += productVersion.getQuantity();
+			quantity += versionService.getTotalStockQuantityVersion(productVersion.getId());
 			SaleProductDTO verSale = saleService.getVersionSaleDTO(productVersion.getId());
 			if (verSale != null) {
 				if (minPriceSale == null || verSale.getPrice().compareTo(minPriceSale) < 0) {
@@ -171,14 +171,7 @@ public class ProductClientService {
 				BigDecimal minPrice = null;
 				BigDecimal maxPrice = new BigDecimal("0.00");
 
-				BigDecimal minPriceSale = null;
-				BigDecimal maxPriceSale = new BigDecimal("0.00");
-
-				BigDecimal discountPercent = new BigDecimal("0.00");
-
-				int quantity = 0;
 				for (ProductVersion productVer : product.getProductVersions()) {
-					quantity += productVer.getQuantity();
 					versionName.add(productVer.getVersionName());
 
 					// Xử lý thuộc tính màu sắc và kích thước
@@ -203,24 +196,7 @@ public class ProductClientService {
 						maxPrice = productVer.getRetailPrice();
 					}
 
-					SaleProductDTO verSale = saleService.getVersionSaleDTO(productVer.getId());
-					if (verSale != null) {
-						if (minPriceSale == null || verSale.getPrice().compareTo(minPriceSale) < 0) {
-							minPriceSale = verSale.getPrice();
-						}
-						if (verSale.getPrice().compareTo(maxPriceSale) > 0) {
-							maxPriceSale = verSale.getPrice();
-						}
-						if (verSale.getSale().compareTo(discountPercent) > 0) {
-							discountPercent = verSale.getSale();
-						}
-					}
 				}
-
-				productDTO.setQuantity(quantity);
-				productDTO.setDiscountPercent(discountPercent);
-				productDTO.setMinPriceSale(minPriceSale);
-				productDTO.setMaxPriceSale(maxPriceSale);
 
 				productDTO.setVersionName(versionName);
 

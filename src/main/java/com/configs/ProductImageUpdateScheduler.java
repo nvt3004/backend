@@ -27,7 +27,7 @@ public class ProductImageUpdateScheduler {
 	ConvertImageToVectorService imgConvert;
 
 	//@Scheduled(cron = "*/10 * * * * ?") // 10s
-	// @Scheduled(cron = "0 55 23 * * ?") // Giờ - Phút - Giây, mỗi ngày vào lúc
+	@Scheduled(cron = "0 55 23 * * ?") // Giờ - Phút - Giây, mỗi ngày vào lúc
 	// 23:55
 	public void updateProductImage() {
 		try {
