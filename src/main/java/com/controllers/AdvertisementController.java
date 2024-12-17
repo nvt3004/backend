@@ -63,12 +63,7 @@ public class AdvertisementController {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // Validate startDate and endDate
-        if (startDate.isBefore(now)) {
-            response.setCode(444);
-            response.setMessage("Start date must be greater than the current date.");
-            return ResponseEntity.ok(response);
-        }
+
 
         if (endDate.isBefore(startDate)) {
             response.setCode(445);
