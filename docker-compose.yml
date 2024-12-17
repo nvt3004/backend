@@ -6,11 +6,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - '8080:8080'
-
-volumes:
-  postgres-data:
-  redis-data:
-
-networks:
-  my-network:
-    driver: bridge
+    environment:
+      - APP_PORT=8080
+    volumes:
+      - /backend/backend/static/images:/app/static/images
