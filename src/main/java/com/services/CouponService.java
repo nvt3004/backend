@@ -97,11 +97,8 @@ public class CouponService {
         coupon.setDisPrice(couponCreateDTO.getDisPrice());
         coupon.setDescription(couponCreateDTO.getDescription());
 
-        LocalDateTime startDate = couponCreateDTO.getStartDate().plusHours(7);
-        LocalDateTime endDate = couponCreateDTO.getEndDate().plusHours(7);
-
-        coupon.setStartDate(startDate);
-        coupon.setEndDate(endDate);
+        coupon.setStartDate(couponCreateDTO.getStartDate());
+        coupon.setEndDate(couponCreateDTO.getEndDate());
 
         coupon.setQuantity(couponCreateDTO.getQuantity());
         coupon.setStatus(true);
@@ -190,7 +187,7 @@ public class CouponService {
     }
 
     public List<CouponDTO> getCouponsHome(Integer userId) {
-        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0);
         List<Coupon> couponPage = couponJpa.getCouponHomeByUser(userId, dateNow, true);
 
         List<CouponDTO> couponDTOs = new ArrayList<>();

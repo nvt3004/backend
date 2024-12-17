@@ -69,11 +69,11 @@ public class VersionController {
 			return ResponseEntity.status(999).body(response);
 		}
 
-		if (importPrice == null || importPrice.compareTo(BigDecimal.ZERO) <= 0) {
-			response.setCode(999);
-			response.setMessage("ImportPrice price invalid!");
-			return ResponseEntity.status(999).body(response);
-		}
+		// if (importPrice == null || importPrice.compareTo(BigDecimal.ZERO) <= 0) {
+		// 	response.setCode(999);
+		// 	response.setMessage("ImportPrice price invalid!");
+		// 	return ResponseEntity.status(999).body(response);
+		// }
 
 		boolean isExitVersion = versionService.isExitVersionInProduct(product, versionModal.getAttributes());
 

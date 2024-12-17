@@ -809,8 +809,9 @@ public class OrderService {
 		}
 
 		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-		Font font = new Font(bf, 5, Font.BOLD);
-		Font fontBold = new Font(bf, 6, Font.BOLD);
+		Font font = new Font(bf, 7, Font.NORMAL); 
+		Font fontBold = new Font(bf, 8, Font.BOLD);
+
 		Font infoFont = new Font(Font.FontFamily.HELVETICA, 4, Font.BOLD);
 
 		Float height = calculateRequiredHeight(orderData, font);
@@ -1096,7 +1097,7 @@ public class OrderService {
 
 		com.google.zxing.common.BitMatrix matrix = new MultiFormatWriter().encode(qrCodeData, BarcodeFormat.QR_CODE,
 				size, size);
-		Integer dpi = 200;
+		Integer dpi = 3000;
 		BufferedImage image = matrixToBufferedImage(matrix, dpi);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ImageIO.write(image, "png", baos);
@@ -1120,7 +1121,7 @@ public class OrderService {
 	}
 
 	private String generateQrCodeData(OrderQRCodeDTO orderData) {
-		return "https://stepstothefuture.store/orders/" + orderData.getOrderId();
+	    return "http://localhost:3000/orders/" + orderData.getOrderId();
 	}
 
 	public ApiResponse<BufferedImage> convertPdfToImage(ByteArrayOutputStream pdfStream) {
@@ -1140,14 +1141,14 @@ public class OrderService {
 
 	private float calculateRequiredHeight(OrderQRCodeDTO orderData, Font font) {
 		float height = 0;
-		height += 30f * 2;
+		height += 40f * 2;
 
 		int numRows = orderData.getProductDetails().size() + 1;
 		height += 10f * numRows;
 
 		for (OrderDetailProductDetailsDTO productDetail : orderData.getProductDetails()) {
 			String productName = productDetail.getProductName();
-			float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 17);
+			float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 6);
 			height += productNameHeight;
 		}
 
@@ -1160,7 +1161,7 @@ public class OrderService {
 
 		String customerAddress = orderData.getAddress();
 		if (customerAddress != null) {
-			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 25);
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 15);
 		}
 
 		String customerPhone = orderData.getPhone();
