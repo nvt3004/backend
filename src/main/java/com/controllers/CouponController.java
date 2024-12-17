@@ -34,6 +34,7 @@ import com.errors.InvalidException;
 import com.errors.UserServiceException;
 import com.models.CouponCreateDTO;
 import com.models.CouponDTO;
+import com.responsedto.CouponUpdateDTO;
 import com.services.AuthService;
 import com.services.CouponService;
 import com.services.JWTService;
@@ -94,7 +95,7 @@ public class CouponController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		List<FieldErrorDTO> validationErrors = couponService.validateCoupon(couponCreateDTO, errors);
+		List<FieldErrorDTO> validationErrors = couponService.valiCreateDTO(couponCreateDTO, errors);
 		if (!validationErrors.isEmpty()) {
 			System.out.println("Có chạy vào đây");
 			errorResponse = new ApiResponse<>(400, "Validation failed.", validationErrors);
@@ -116,7 +117,7 @@ public class CouponController {
 	@PutMapping
 	@PreAuthorize("hasPermission(#userId, 'Update Coupon')")
 	public ResponseEntity<ApiResponse<?>> updateCoupon(@RequestParam("id") Integer id,
-			@Valid @RequestBody CouponCreateDTO couponCreateDTO, BindingResult errors,
+			@Valid @RequestBody CouponUpdateDTO couponUpdateDTO, BindingResult errors,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
@@ -154,7 +155,7 @@ public class CouponController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		List<FieldErrorDTO> fieldErrors = couponService.validateCoupon(couponCreateDTO, errors);
+		List<FieldErrorDTO> fieldErrors = couponService.valiUpdateDTO(couponUpdateDTO, errors);
 
 		if (!fieldErrors.isEmpty()) {
 			errorResponse = new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "Validation failed", fieldErrors);
@@ -162,7 +163,7 @@ public class CouponController {
 		}
 
 		try {
-			Coupon updatedCoupon = couponService.updateCoupon(id, couponCreateDTO);
+			Coupon updatedCoupon = couponService.updateCoupon(id, couponUpdateDTO);
 			ApiResponse<Coupon> response = new ApiResponse<>(HttpStatus.OK.value(), "Cập nhật mã giảm giá thành công.",
 					updatedCoupon);
 			return new ResponseEntity<>(response, HttpStatus.OK);

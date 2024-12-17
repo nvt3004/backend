@@ -19,10 +19,10 @@ import com.errors.FieldErrorDTO;
 import com.errors.InvalidException;
 import com.models.CouponCreateDTO;
 import com.models.CouponDTO;
-import com.models.CouponUpdateDTO;
 import com.repositories.CouponJPA;
 import com.repositories.OrderJPA;
 import com.repositories.UserCouponJPA;
+import com.responsedto.CouponUpdateDTO;
 import com.utils.RandomStringUtils;
 
 @Service
