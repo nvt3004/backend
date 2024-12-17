@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.entities.Product;
+import com.responsedto.WishlistProductRes;
+import com.utils.UploadService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +27,9 @@ public class ReportService {
 
     @Autowired
     ProductJPA productJPA;
+
+    @Autowired
+    UploadService uploadService;
 
     // Thống kê doanh thu theo ngày
     public BigDecimal getReportRevenue(LocalDateTime startDate, LocalDateTime endDate) {
@@ -154,6 +160,28 @@ public class ReportService {
         return results.stream()
                 .map(row -> new ReportProductInventoryResponse((String) row[0], ((Number) row[1]).intValue()))
                 .collect(Collectors.toList());
+    }
+
+    public List<WishlistProductRes> getTopSanPhamYeuThichNhieuNhat(){
+        List<WishlistProductRes> res = new ArrayList<>();
+        List<Product> products = productJPA.findAll();
+        int top = 5;
+
+        for (Product p : products) {
+            WishlistProductRes wishlistProductRes = new WishlistProductRes();
+
+            wishlistProductRes.setIdProduct(p.getProductId());
+            wishlistProductRes.setProductName(p.getProductName());
+            wishlistProductRes.setLike(p.getWishlists().size());
+            wishlistProductRes.setImage(uploadService.getUrlImage(p.getProductImg()));
+
+            res.add(wishlistProductRes);
+        }
+
+        res.sort((a, b) -> b.getLike().compareTo(a.getLike()));
+        res = res.subList(0, Math.min(top, res.size()));
+
+        return res;
     }
 
 }

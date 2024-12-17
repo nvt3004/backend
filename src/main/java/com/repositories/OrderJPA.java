@@ -110,7 +110,7 @@ public interface OrderJPA extends JpaRepository<Order, Integer> {
 	List<Order> getAllOrderByDate(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
 	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId=:statusId")
-	List<Order> getAllOrderByDateAndStatus(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("status") int statusId);
+	List<Order> getAllOrderByDateAndStatus(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("statusId") int statusId);
 
 	@Query("SELECT o FROM Order o WHERE o.orderDate>=:startDate AND o.orderDate<=:endDate AND o.orderStatus.statusId!=6")
 	List<Order> getAllOrders(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);

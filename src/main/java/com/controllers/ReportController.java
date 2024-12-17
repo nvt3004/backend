@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
+import com.responsedto.WishlistProductRes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -198,6 +199,54 @@ public class ReportController {
 
         response.setCode(200);
         response.setData(products);
+        response.setMessage("Success");
+
+        return ResponseEntity.ok(response);
+    }
+
+    //Top 5 sản phẩm yêu thích nhất
+    @GetMapping("/product-favorite")
+    public ResponseEntity<ResponseAPI<List<WishlistProductRes>>> getReportProductFavorite(
+            @RequestHeader("Authorization") Optional<String> authHeader
+    ) {
+        ResponseAPI<List<WishlistProductRes>> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
+
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        List<WishlistProductRes> result = reportService.getTopSanPhamYeuThichNhieuNhat();
+
+        response.setCode(200);
+        response.setData(result);
         response.setMessage("Success");
 
         return ResponseEntity.ok(response);
