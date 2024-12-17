@@ -185,6 +185,7 @@ public class OrderScheduler {
 						FormarCurrencyUtil.formatCurrency(discountValue),
 						FormarCurrencyUtil.formatCurrency(finalTotal));
 	}
+	
 	private String generateOrderItemsHtml(Order order) {
 		StringBuilder html = new StringBuilder();
 		for (OrderDetail detail : order.getOrderDetails()) {
@@ -216,21 +217,21 @@ public class OrderScheduler {
 	}
 
 //	@Scheduled(cron = "0 */1 * * * ?")
-	@Scheduled(cron = "0 0 7 * * ?") 
-	public void scheduleOrderToWaitingForConfirmation() {
-	    List<Order> orders = orderJpa.findAllByExpectedDeliveryDateAndOrderStatusStatusName(new Date(), "Shipped");
-	    System.out.println(orders.size());
-	    for (Order order : orders) {
-	        if (order.getOrderStatus().getStatusName().equalsIgnoreCase("Shipped")) {
-	            Optional<OrderStatus> waitingForConfirmationStatus = orderStatusJpa.findByStatusNameIgnoreCase("Waitingforconfirmation");
-	            if (waitingForConfirmationStatus.isPresent()) {
-	                order.setOrderStatus(waitingForConfirmationStatus.get());
-	                orderJpa.save(order);
-	                sendConfirmationEmail(order);
-	            }
-	        }
-	    }
-	}
+//	@Scheduled(cron = "0 0 7 * * ?") 
+//	public void scheduleOrderToWaitingForConfirmation() {
+//	    List<Order> orders = orderJpa.findAllByExpectedDeliveryDateAndOrderStatusStatusName(new Date(), "Shipped");
+//	    System.out.println(orders.size());
+//	    for (Order order : orders) {
+//	        if (order.getOrderStatus().getStatusName().equalsIgnoreCase("Shipped")) {
+//	            Optional<OrderStatus> waitingForConfirmationStatus = orderStatusJpa.findByStatusNameIgnoreCase("Waitingforconfirmation");
+//	            if (waitingForConfirmationStatus.isPresent()) {
+//	                order.setOrderStatus(waitingForConfirmationStatus.get());
+//	                orderJpa.save(order);
+//	                sendConfirmationEmail(order);
+//	            }
+//	        }
+//	    }
+//	}
 	
 	private void sendConfirmationEmail(Order order) {
 	    String to = order.getUser().getEmail(); 

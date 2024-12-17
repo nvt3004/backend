@@ -5,6 +5,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,9 +21,6 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 
 /**
@@ -60,6 +62,10 @@ public class Coupon implements Serializable {
 
 	@Column(name = "start_date")
 	private LocalDateTime startDate;
+	
+	@Column(name = "created_date", updatable = false)
+	@CreationTimestamp
+	private LocalDateTime createdDate;
 	
 	private boolean status;
 	
@@ -117,6 +123,14 @@ public class Coupon implements Serializable {
 
 	public void setEndDate(LocalDateTime endDate) {
 		this.endDate = endDate;
+	}
+	
+	public LocalDateTime getCreateDate() {
+		return this.createdDate;
+	}
+
+	public void setCreateDate(LocalDateTime createdDate) {
+		this.createdDate = createdDate;
 	}
 
 	public int getQuantity() {
