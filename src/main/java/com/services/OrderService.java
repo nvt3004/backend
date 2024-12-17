@@ -75,6 +75,7 @@ import com.repositories.OrderStatusJPA;
 import com.repositories.PaymentJPA;
 import com.repositories.ProductVersionJPA;
 import com.repositories.UserJPA;
+import com.utils.DateUtils;
 import com.utils.ExcelUtil;
 import com.utils.FormarCurrencyUtil;
 import com.utils.NumberToWordsConverterUtil;
@@ -206,7 +207,7 @@ public class OrderService {
 				couponId, disCount, discountValue, subTotal, order.getShippingFee(), finalTotal, finalTotalInWords,
 				products);
 	}
-
+	
 	private OrderByUserDTO.ProductDTO mapToProductDTO(OrderDetail orderDetail, Boolean isFeedback) {
 
 		String variant = getVariantFromOrderDetail(orderDetail);
@@ -291,7 +292,7 @@ public class OrderService {
 	    String currentStatus = order.getOrderStatus().getStatusName();
 	    String newStatus = newOrderStatus.get().getStatusName();
 
-	    if ("Delivered".equalsIgnoreCase(currentStatus) || "WaitingForConfirmation".equalsIgnoreCase(currentStatus)) {
+	    if ("Delivered".equalsIgnoreCase(currentStatus)) {
 	        String currentStatusVietnamese = OrderUtilsService.translateStatus(currentStatus);
 	        String newStatusVietnamese = OrderUtilsService.translateStatus(newStatus);
 
@@ -323,12 +324,62 @@ public class OrderService {
 	        order.setLastUpdatedBy(currentUser);
 	        order.setLastUpdatedDate(new Date());
 	        orderJpa.save(order);
-	        if (!newStatus.equalsIgnoreCase("Shipped")) {
+	        if (!newStatus.equalsIgnoreCase("Shipped") && !newStatus.equalsIgnoreCase("Waitingforconfirmation")) {
 	            sendOrderStatusUpdateEmail(order, newStatus, reason);
 	        }
+	        if("Waitingforconfirmation".equalsIgnoreCase(newStatus)) {
+	        	sendConfirmationEmail(order);
+	        }
+
 	    }
 
 	    return new ApiResponse<>(200, "Cập nhật trạng thái đơn hàng thành công", null);
+	}
+	
+	private void sendConfirmationEmail(Order order) {
+	    String to = order.getUser().getEmail(); 
+	    String subject = "Yêu cầu xác nhận đơn hàng";
+	    
+	    String body = String.format(
+	        "<html>" +
+	            "<head>" +
+	                "<style>" +
+	                    "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }" +
+	                    ".highlight { color: #007bff; font-weight: bold; }" +
+	                    ".footer { margin-top: 20px; font-size: 0.9em; color: #555; }" +
+	                    ".content { margin: 10px 0; }" +
+	                    ".container { width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }" +
+	                    ".header { background-color: #007bff; color: white; text-align: center; padding: 15px; border-radius: 8px 8px 0 0; }" +
+	                    ".button { display: inline-block; background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; margin-top: 20px; }" +
+	                    ".button:hover { background-color: #218838; }" +
+	                "</style>" +
+	            "</head>" +
+	            "<body>" +
+	                "<div class='container'>" +
+	                    "<div class='header'>" +
+	                        "<h2>Yêu cầu xác nhận đơn hàng</h2>" +
+	                    "</div>" +
+	                    "<div class='content'>" +
+	                        "<p>Chào <span class='highlight'>%s</span>,</p>" +
+	                        "<p>Đơn hàng của bạn đã sẵn sàng để xác nhận. Vui lòng kiểm tra và xác nhận đơn hàng của bạn.</p>" +
+	                        "<p><strong>Thông tin đơn hàng:</strong></p>" +
+	                        "<p><strong>Mã đơn hàng:</strong> %s</p>" +
+	                        "<p><strong>Ngày giao hàng dự kiến:</strong> %s</p>" +
+//	                        "<p>Vui lòng truy cập vào trang quản lý đơn hàng để xác nhận.</p>" +
+//	                        "<a href='http://localhost:3000/account' class='button'>Xác nhận đơn hàng</a>" +
+	                    "</div>" +
+	                    "<div class='footer'>" +
+	                        "<p>Cảm ơn bạn đã mua hàng tại chúng tôi!</p>" +
+	                        "<p><small>Đây là email tự động, vui lòng không trả lời email này.</small></p>" +
+	                    "</div>" +
+	                "</div>" +
+	            "</body>" +
+	        "</html>", 
+	        order.getFullname(), 
+	        order.getOrderId(), 
+	        DateUtils.formatDate( order.getDeliveryDate())
+	    );
+	    CompletableFuture.runAsync(() ->  mailService.sendHtmlEmail(to,subject,body));
 	}
 
 	private void sendOrderStatusUpdateEmail(Order order, String newStatus, String reason) {
@@ -478,7 +529,7 @@ public class OrderService {
 		case "processed":
 			return "shipped".equalsIgnoreCase(newStatus);
 		case "shipped":
-			return "delivered".equalsIgnoreCase(newStatus);
+			return "waitingforconfirmation".equalsIgnoreCase(newStatus);
 		case "delivered":
 			return false;
 		case "cancelled":
@@ -809,9 +860,8 @@ public class OrderService {
 		}
 
 		BaseFont bf = BaseFont.createFont("C:/Windows/Fonts/times.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-		Font font = new Font(bf, 7, Font.NORMAL); 
-		Font fontBold = new Font(bf, 8, Font.BOLD);
-
+		Font font = new Font(bf, 5, Font.BOLD);
+		Font fontBold = new Font(bf, 6, Font.BOLD);
 		Font infoFont = new Font(Font.FontFamily.HELVETICA, 4, Font.BOLD);
 
 		Float height = calculateRequiredHeight(orderData, font);
@@ -1097,7 +1147,7 @@ public class OrderService {
 
 		com.google.zxing.common.BitMatrix matrix = new MultiFormatWriter().encode(qrCodeData, BarcodeFormat.QR_CODE,
 				size, size);
-		Integer dpi = 3000;
+		Integer dpi = 200;
 		BufferedImage image = matrixToBufferedImage(matrix, dpi);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ImageIO.write(image, "png", baos);
@@ -1121,7 +1171,7 @@ public class OrderService {
 	}
 
 	private String generateQrCodeData(OrderQRCodeDTO orderData) {
-	    return "http://localhost:3000/orders/" + orderData.getOrderId();
+		return "https://stepstothefuture.store/orders/" + orderData.getOrderId();
 	}
 
 	public ApiResponse<BufferedImage> convertPdfToImage(ByteArrayOutputStream pdfStream) {
@@ -1141,14 +1191,14 @@ public class OrderService {
 
 	private float calculateRequiredHeight(OrderQRCodeDTO orderData, Font font) {
 		float height = 0;
-		height += 40f * 2;
+		height += 35f * 2;
 
 		int numRows = orderData.getProductDetails().size() + 1;
 		height += 10f * numRows;
 
 		for (OrderDetailProductDetailsDTO productDetail : orderData.getProductDetails()) {
 			String productName = productDetail.getProductName();
-			float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 6);
+			float productNameHeight = font.getSize() * (int) Math.ceil((float) productName.length() / 8);
 			height += productNameHeight;
 		}
 
@@ -1161,7 +1211,7 @@ public class OrderService {
 
 		String customerAddress = orderData.getAddress();
 		if (customerAddress != null) {
-			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 15);
+			customerInfoHeight += font.getSize() * (int) Math.ceil((float) customerAddress.length() / 20);
 		}
 
 		String customerPhone = orderData.getPhone();
@@ -1216,6 +1266,5 @@ public class OrderService {
 	                .body(new ApiResponse<>(500, "Đã xảy ra lỗi trong quá trình xử lý hoàn tiền", null));
 	    }
 	}
-
 
 }
