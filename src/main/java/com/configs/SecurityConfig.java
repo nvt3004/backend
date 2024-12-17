@@ -115,25 +115,25 @@ public class SecurityConfig {
 		return expressionHandler;
 	}
 
-	// @Bean
-	// public CorsConfigurationSource corsConfigurationSource() {
-	// 	CorsConfiguration configuration = new CorsConfiguration();
-	// 	configuration.setAllowedOrigins(Arrays.asList(
-	// 		"http://localhost:3000",
-	// 		"https://stepstothefuture.store",
-	// 		"http://103.72.97.191:3000",
-	// 		"https://api.stepstothefuture.store",
-	// 		"https://py.stepstothefuture.store",
-	// 		"http://103.72.97.191:5000",
-	// 		"http://103.72.97.191:8080"
-	// 	));
-	// 	configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-	// 	configuration.setAllowedHeaders(Arrays.asList("*"));
-	// 	configuration.setAllowCredentials(true);
-	
-	// 	UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-	// 	source.registerCorsConfiguration("/**", configuration);
-	// 	return source;
-	// }
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(Arrays.asList(
+			"http://localhost:3000",
+			"https://stepstothefuture.store",
+			"http://103.72.97.191:3000",
+			"https://api.stepstothefuture.store",
+			"https://py.stepstothefuture.store",
+			"http://103.72.97.191:5000",
+			"http://103.72.97.191:8080"
+		));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
+		configuration.setAllowedHeaders(Arrays.asList("*"));
+		configuration.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
+	}
 
 }
