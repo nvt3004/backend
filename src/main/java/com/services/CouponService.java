@@ -117,13 +117,6 @@ public class CouponService {
 		return fieldErrors;
 	}
 
-	public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
-		Coupon coupon = new Coupon();
-		String couponCode;
-
-        return fieldErrors;
-    }
-
     public Coupon saveCoupon(CouponCreateDTO couponCreateDTO) {
         Coupon coupon = new Coupon();
         String couponCode;
@@ -144,28 +137,7 @@ public class CouponService {
         return couponJpa.save(coupon);
     }
 
-    public Coupon updateCoupon(Integer id, CouponCreateDTO couponCreateDTO) throws InvalidException {
 
-        Coupon existingCoupon = couponJpa.findById(id)
-                .orElseThrow(() -> new InvalidException("Không tìm thấy mã giảm giá với ID " + id));
-
-        boolean isCouponApplied = orderJpa.existsByCouponId(id);
-        boolean isCouponUsedByUser = userCouponJpa.existsByCouponId(id);
-
-        if (isCouponApplied || isCouponUsedByUser) {
-            throw new InvalidException(
-                    "Không thể cập nhật mã giảm giá này vì đã được người dùng lấy về hoặc áp dụng vào đơn hàng.");
-        }
-
-        existingCoupon.setDisPercent(couponCreateDTO.getDisPercent());
-        existingCoupon.setDisPrice(couponCreateDTO.getDisPrice());
-        existingCoupon.setDescription(couponCreateDTO.getDescription());
-        existingCoupon.setStartDate(couponCreateDTO.getStartDate());
-        existingCoupon.setEndDate(couponCreateDTO.getEndDate());
-
-        if (!isCouponApplied) {
-            existingCoupon.setQuantity(couponCreateDTO.getQuantity());
-        }
 	public Coupon updateCoupon(Integer id, CouponUpdateDTO couponUpdateDTO) throws InvalidException {
 
 	    Coupon existingCoupon = couponJpa.findById(id)
