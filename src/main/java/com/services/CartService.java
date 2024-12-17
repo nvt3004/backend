@@ -3,6 +3,7 @@ package com.services;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.responsedto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +14,6 @@ import com.entities.Image;
 import com.entities.ProductVersion;
 import com.repositories.CartJPA;
 import com.repositories.UserJPA;
-import com.responsedto.Attribute;
-import com.responsedto.AttributeProductResponse;
-import com.responsedto.CartItemResponse;
-import com.responsedto.ProductDetailResponse;
 import com.utils.UploadService;
 
 @Service
@@ -35,6 +32,9 @@ public class CartService {
 	
 	@Autowired
 	VersionService vsService;
+
+	@Autowired
+	SaleService saleService;
 
 	public Cart addCart(Cart cart) {
 		Cart cartTemp = cartJPA.getCartByUser(cart.getUser().getUserId());
@@ -57,11 +57,17 @@ public class CartService {
 			boolean activeVersion = cart.getProductVersionBean().getProduct().isStatus() && cart.getProductVersionBean().isStatus();
 			int stockQuantityVersion = vsService.getTotalStockQuantityVersion(cart.getProductVersionBean().getId());
 			boolean active = pdvsion.isStatus() && pdvsion.getProduct().isStatus();
+			SaleProductDTO saleProductDTO = saleService.getVersionSaleDTO(pdvsion.getId());
 			
 			CartItemResponse item = new CartItemResponse(cart.getCartPrdId(), cart.getProductVersionBean().getId(),
 					activeVersion, cart.getProductVersionBean().getQuantity(),
 					cart.getProductVersionBean().getProduct().getProductName(),
 					cart.getProductVersionBean().getRetailPrice(), cart.getQuantity(), stockQuantityVersion, active);
+
+			if(saleProductDTO != null) {
+				item.setSale(saleProductDTO.getSale());
+				item.setSalePrice(saleProductDTO.getPrice());
+			}
 
 			ProductDetailResponse productDetail = productService
 					.getProductDetail(cart.getProductVersionBean().getProduct().getProductId());
