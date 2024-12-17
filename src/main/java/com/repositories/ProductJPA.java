@@ -1,5 +1,6 @@
 package com.repositories;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -51,4 +52,22 @@ public interface ProductJPA extends JpaRepository<Product, Integer> {
 
 //Đổi lại thành nút tra cứu hêt, phân trang đổi lại thành tiếng việt
 	// Chứng chỉ tin học, ngoại ngữ
+
+	@Query("SELECT DISTINCT p FROM Product p " +
+		       "LEFT JOIN p.productCategories pc " +
+		       "LEFT JOIN p.productVersions pv " +
+		       "LEFT JOIN pv.attributeOptionsVersions aov " +
+		       "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+		       "AND (:categoryID IS NULL OR pc.category.categoryId = :categoryID OR pc IS NULL) " +
+		       "AND (:minPrice IS NULL OR pv.retailPrice >= :minPrice OR pv IS NULL) " +
+		       "AND (:maxPrice IS NULL OR pv.retailPrice <= :maxPrice OR pv IS NULL) " +
+		       "AND (:attributeIds IS NULL OR aov.attributeOption.id IN :attributeIds OR aov IS NULL) " +
+		       "AND p.status = true")
+		List<Product> findProducts(@Param("search") String search, 
+		                           @Param("categoryID") Integer categoryID,
+		                           @Param("attributeIds") List<Integer> attributeIds, 
+		                           @Param("minPrice") BigDecimal minPrice,
+		                           @Param("maxPrice") BigDecimal maxPrice);
+
+
 }
