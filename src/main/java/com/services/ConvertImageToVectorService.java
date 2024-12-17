@@ -43,7 +43,9 @@ public class ConvertImageToVectorService {
 				InputStream imageStream = response.body();
 
 				// Gửi ảnh tới Flask API để phân tích và nhận chuỗi vector
-				return sendImageToFlask(imageStream);
+				String vector = sendImageToFlask(imageStream);
+				System.out.println("vector"+vector);
+				return vector;
 			} else {
 				throw new IOException("Failed to retrieve image, status code: " + response.statusCode());
 			}

@@ -115,7 +115,6 @@ public class ProductClientController {
 		// Tạo đối tượng ResponseAPI để chứa kết quả trả về
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
 
-		// Kiểm tra xem có hình ảnh trong request không
 		if (image.isPresent()) {
 			// Chuyển MultipartFile thành InputStream
 			InputStream imageStream = image.get().getInputStream();
