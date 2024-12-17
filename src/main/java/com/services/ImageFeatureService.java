@@ -13,7 +13,7 @@ import java.util.HashMap;
 public class ImageFeatureService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String PYTHON_API_URL = "http://localhost:5000/api/load_images";
+    private final String PYTHON_API_URL = "https://py.stepstothefuture.store/api/load_images";
 
     public String loadImages(List<String> imagePaths) {
         HashMap<String, Object> request = new HashMap<>();

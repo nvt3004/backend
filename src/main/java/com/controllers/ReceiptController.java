@@ -90,15 +90,15 @@ public class ReceiptController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 		}
 
-		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf(page, size);
+		Page<ReceiptResponse> receiptDTOPage = warehouseService.getAllWarehousesStf(page, size, keyword);
 
 		if (receiptDTOPage.isEmpty()) {
 			ApiResponse<List<ReceiptDTO>> response = new ApiResponse<>(404, "No receipts found", null);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
-		PageImpl<ReceiptResponse> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(), receiptDTOPage.getPageable(),
-				receiptDTOPage.getTotalElements());
+		PageImpl<ReceiptResponse> receiptDTOList = new PageImpl<>(receiptDTOPage.getContent(),
+				receiptDTOPage.getPageable(), receiptDTOPage.getTotalElements());
 
 		ApiResponse<?> response = new ApiResponse<>(200, "Success", receiptDTOList);
 		return ResponseEntity.ok(response);

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,7 +57,7 @@ public class OrderController {
 
 	@Autowired
 	private JWTService jwtService;
-	
+
 	@Autowired
 	private UploadService uploadService;
 
@@ -68,7 +69,6 @@ public class OrderController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "5") int size,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-System.out.println("Dị là dô đây");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -231,6 +231,54 @@ System.out.println("Dị là dô đây");
 		return ResponseEntity.ok(response);
 
 	}
+	
+	@GetMapping("/user/orders/statuses")
+	
+	public ResponseEntity<ApiResponse<?>> getAllOrderStatus2(
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
+		List<OrderStatusDTO> orderStatusDTOList = orderStatusService.getAllOrderStatusDTOs();
+		ApiResponse<List<OrderStatusDTO>> response = new ApiResponse<>(200, "Order statuses fetched successfully",
+				orderStatusDTOList);
+
+		return ResponseEntity.ok(response);
+
+	}
 
 	@PutMapping("/staff/orders/update-order-detail")
 	@PreAuthorize("hasPermission(#userid, 'Update Order')")
@@ -348,7 +396,8 @@ System.out.println("Dị là dô đây");
 	@PutMapping("/staff/orders/update-status")
 	@PreAuthorize("hasPermission(#userid, 'Update Order')")
 	public ResponseEntity<ApiResponse<?>> updateOrderStatus(@RequestParam("orderId") Integer orderId,
-			@RequestParam("statusId") Integer statusId, @RequestHeader("Authorization") Optional<String> authHeader) {
+			@RequestBody(required = false) Map<String, String> payload, @RequestParam("statusId") Integer statusId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
@@ -389,8 +438,8 @@ System.out.println("Dị là dô đây");
 			return ResponseEntity.badRequest()
 					.body(new ApiResponse<>(400, "Some required parameters are missing.", null));
 		}
-
-		errorResponse = orderService.updateOrderStatus(orderId, statusId, user);
+		String reason = payload != null ? payload.get("reason") : null;
+		errorResponse = orderService.updateOrderStatus(orderId, statusId, user, reason);
 
 		if (errorResponse.getErrorCode() == 200) {
 			return ResponseEntity.ok(errorResponse);
@@ -403,7 +452,7 @@ System.out.println("Dị là dô đây");
 	@PreAuthorize("hasPermission(#userid, 'View Order')")
 	public ResponseEntity<ApiResponse<?>> getOrderDetail(@PathVariable Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
-System.out.println("Chạy Vô OrderDetails");
+		System.out.println("Chạy Vô OrderDetails");
 		ApiResponse<?> errorResponse = new ApiResponse<>();
 
 		if (!authHeader.isPresent()) {
@@ -504,7 +553,7 @@ System.out.println("Chạy Vô OrderDetails");
 	}
 
 	@PutMapping("/user/orders/cancel-order")
-	@PreAuthorize("hasPermission(#userid, 'Delete Order')")
+	//@PreAuthorize("hasPermission(#userid, 'Delete Order')")
 	public ResponseEntity<ApiResponse<?>> cancelOrder(@RequestParam("orderId") Integer orderId,
 			@RequestHeader("Authorization") Optional<String> authHeader) {
 
@@ -556,8 +605,58 @@ System.out.println("Chạy Vô OrderDetails");
 		}
 	}
 
+	@PutMapping("/user/orders/confirm-received")
+	public ResponseEntity<ApiResponse<?>> confirmOrderReceived(@RequestParam("orderId") Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+
+		if (orderId == null) {
+			return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Order ID is required.", null));
+		}
+
+		ApiResponse<?> response = orderService.confirmOrderReceived(orderId, user);
+
+		if (response.getErrorCode() == 200) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.status(HttpStatus.valueOf(response.getErrorCode())).body(response);
+		}
+	}
+
 	@GetMapping("/staff/orders/export")
-//	@PreAuthorize("hasPermission(#userId, 'STAFF_ORDER_VIEW_ALL')")
 	public ResponseEntity<?> exportOrdersToExcel(
 			@RequestParam(value = "isAdminOrder", required = false) Boolean isAdminOrder,
 			@RequestParam(value = "keyword", required = false) String keyword,
@@ -615,8 +714,7 @@ System.out.println("Chạy Vô OrderDetails");
 	}
 
 	@GetMapping("/orders/{orderId}")
-	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId,
-			@RequestHeader("Authorization") Optional<String> authHeaders) {
+	public ResponseEntity<ApiResponse<?>> getOrderDetailByOrderId(@PathVariable Integer orderId) {
 		if (orderId == null) {
 			ApiResponse<String> response = new ApiResponse<>(400, "Order ID is required", null);
 			return ResponseEntity.badRequest().body(response);
@@ -657,32 +755,108 @@ System.out.println("Chạy Vô OrderDetails");
 //			}
 //		}
 //	}
-	
+
 	@PostMapping("/staff/orders/export")
-	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId) {
-	    try {
-	        // 1. Tạo PDF từ Order ID
-	        ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
-	        ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
-	        byte[] pdfBytes = pdfStream.toByteArray();
+	public ResponseEntity<?> exportInvoiceAsPdf(@RequestParam("orderId") Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) {
 
-	        // 2. Trả về PDF dưới dạng file
-	        HttpHeaders headers = new HttpHeaders();
-	        headers.setContentType(MediaType.APPLICATION_PDF);
-	        headers.setContentDispositionFormData("attachment", "invoice.pdf");
-	        headers.setContentLength(pdfBytes.length);
+		ApiResponse<?> errorResponse = new ApiResponse<>();
 
-	        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
 
-	    } catch (IllegalArgumentException e) {
-	        ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
-	        return ResponseEntity.badRequest().body(response);
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-	    }
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		try {
+			// 1. Tạo PDF từ Order ID
+			ApiResponse<ByteArrayOutputStream> pdfStreamResponse = orderService.generateInvoicePdf(orderId);
+			ByteArrayOutputStream pdfStream = pdfStreamResponse.getData();
+			byte[] pdfBytes = pdfStream.toByteArray();
+
+			// 2. Trả về PDF dưới dạng file
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_PDF);
+			headers.setContentDispositionFormData("attachment", "invoice.pdf");
+			headers.setContentLength(pdfBytes.length);
+
+			return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+		} catch (IllegalArgumentException e) {
+			ApiResponse<String> response = new ApiResponse<>(400, e.getMessage(), null);
+			return ResponseEntity.badRequest().body(response);
+		} catch (Exception e) {
+			e.printStackTrace();
+			ApiResponse<String> response = new ApiResponse<>(500, "Error generating PDF: " + e.getMessage(), null);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+		}
 	}
 
+	@PutMapping("/staff/orders/refund/{orderId}")
+	public ResponseEntity<ApiResponse<?>> refundOrder(@PathVariable Integer orderId,
+			@RequestHeader("Authorization") Optional<String> authHeader) throws Exception {
+		ApiResponse<?> errorResponse = new ApiResponse<>();
+
+		if (!authHeader.isPresent()) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Authorization header is missing");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		String token = authService.readTokenFromHeader(authHeader);
+
+		try {
+			jwtService.extractUsername(token);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage("Invalid token format");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		}
+
+		User user;
+		try {
+			user = authService.validateTokenAndGetUsername(token);
+		} catch (InvalidException e) {
+			errorResponse.setErrorCode(401);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+		} catch (UserServiceException e) {
+			errorResponse.setErrorCode(400);
+			errorResponse.setMessage(e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+		} catch (Exception e) {
+			errorResponse.setErrorCode(500);
+			errorResponse.setMessage("An unexpected error occurred: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+		}
+		return orderService.refundOrder(orderId, user);
+
+	}
 
 }

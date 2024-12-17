@@ -270,6 +270,8 @@ public class PermissionService {
         userEntity.setBirthday(userModel.getBirthday());
         userEntity.setGender(userModel.getGender());
         userEntity.setStatus(Byte.valueOf("1"));
+        userEntity.setProvider("Guest");
+
         if (userModel.getUsername().matches(emailRegex)) {
             userEntity.setEmail(userModel.getUsername());
         } else {

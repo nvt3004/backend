@@ -28,6 +28,10 @@ public interface SaleJPA extends JpaRepository<Sale, Integer> {
     @Query("SELECT o FROM Sale o WHERE o.saleName LIKE:keyword AND o.startDate<=:now AND o.endDate >:now AND o.startDate>=:startDate AND o.endDate<=:endDate AND o.status=:status")
     public Page<Sale> getAllSalesInProgess(String keyword, LocalDateTime startDate, LocalDateTime endDate, LocalDateTime now,boolean status, Pageable pageable);
 
+    //Trạng thai đang diễn ra
+    @Query("SELECT o FROM Sale o WHERE  o.startDate<=:now AND o.endDate >=:now AND o.status=:status")
+    public List<Sale> getAllSalesInProgess( LocalDateTime now,boolean status);
+
     //Trạng thai đang khóa
     @Query("SELECT o FROM Sale o WHERE o.saleName LIKE:keyword AND o.startDate<=:now AND o.endDate >:now AND o.startDate>=:startDate AND o.endDate<=:endDate AND o.status=:status")
     public Page<Sale> getAllSalesInBlock(String keyword, LocalDateTime startDate, LocalDateTime endDate, LocalDateTime now,boolean status, Pageable pageable);

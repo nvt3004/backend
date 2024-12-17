@@ -61,7 +61,7 @@ public class SecurityConfig {
 								"/api/reset-password", "/api/auth/refresh", "/api/user/feedback/**", "api/product/**",
 								"api/getImage/**", "/api/home/**", "/api/vnp/**", "/images/**", "/api/today/**")
 						.permitAll().requestMatchers("/api/admin/**").hasAnyAuthority("Admin")
-						.requestMatchers("/api/analytics/**").hasAnyAuthority("Admin")
+						.requestMatchers("/api/analytics/**").hasAnyAuthority("User", "Admin", "Staff")
 						.requestMatchers("/api/staff/**", "/api/push/product").hasAnyAuthority("Staff", "Admin")
 						.requestMatchers("/api/support/**").hasAnyAuthority("Support", "Admin")
 						.requestMatchers("/api/user/**").hasAnyAuthority("User", "Admin", "Staff")
@@ -122,7 +122,10 @@ public class SecurityConfig {
 			"http://localhost:3000",
 			"https://stepstothefuture.store",
 			"http://103.72.97.191:3000",
-			"https://api.stepstothefuture.store"
+			"https://api.stepstothefuture.store",
+			"https://py.stepstothefuture.store",
+			"http://103.72.97.191:5000",
+			"http://103.72.97.191:8080"
 		));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));

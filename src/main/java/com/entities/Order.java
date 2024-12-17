@@ -8,6 +8,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -52,6 +53,7 @@ public class Order implements Serializable {
 
 	private String fullname;
 
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "order_date", nullable = false, updatable = false)
 	private Date orderDate;
 
@@ -80,7 +82,7 @@ public class Order implements Serializable {
 	private Coupon coupon;
 
 	// bi-directional many-to-one association to Payment
-	@OneToOne(mappedBy = "order")
+	@OneToOne(mappedBy = "order",cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@JsonManagedReference("order-payment")
 	private Payment payment;
 

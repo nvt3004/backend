@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImageSearchService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String PYTHON_API_URL = "http://localhost:5000/api/search_image";
+    private final String PYTHON_API_URL = "https://py.stepstothefuture.store/api/search_image";
 
     public String searchImage(MultipartFile imageFile) throws Exception {
         HttpHeaders headers = new HttpHeaders();

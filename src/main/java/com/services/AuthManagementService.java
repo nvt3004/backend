@@ -535,7 +535,7 @@ public class AuthManagementService {
 
             usersRepo.save(user);
 
-            String resetLink = "http://localhost:3000/auth/reset-password?token=" + jwt;
+            String resetLink = "https://stepstothefuture.store/auth/reset-password?token=" + jwt;
 
             mailService.sendEmail(email, "Reset Password", "Click the link to reset your password: " + resetLink);
 

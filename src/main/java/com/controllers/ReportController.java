@@ -27,230 +27,336 @@ import com.services.UserService;
 @RestController
 @RequestMapping("/api/admin/report")
 public class ReportController {
-	@Autowired
-	AuthService authService;
+    @Autowired
+    AuthService authService;
 
-	@Autowired
-	JWTService jwtService;
+    @Autowired
+    JWTService jwtService;
 
-	@Autowired
-	ProductService productService;
+    @Autowired
+    ProductService productService;
 
-	@Autowired
-	UserService userService;
+    @Autowired
+    UserService userService;
 
-	@Autowired
-	ReportService reportService;
+    @Autowired
+    ReportService reportService;
 
-	@GetMapping("/revenue")
-	public ResponseEntity<ResponseAPI<BigDecimal>> getReportRevenue(
-			@RequestHeader("Authorization") Optional<String> authHeader, 
-			@RequestParam("startDate") String startDateStr,
-			@RequestParam("endDate") String endDateStr
-			) 
-	{
-		ResponseAPI<BigDecimal> response = new ResponseAPI<>();
-		String token = authService.readTokenFromHeader(authHeader);
-		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-	    LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
-	    LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
+    @GetMapping("/revenue")
+    public ResponseEntity<ResponseAPI<BigDecimal>> getReportRevenue(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr
+    ) {
+        ResponseAPI<BigDecimal> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			response.setCode(400);
-			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-		}
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
+        LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
 
-		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-		}
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
 
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
 
-		if (user.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
 
-		BigDecimal revenue = reportService.getReportRevenue(startDate, endDate);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
 
-		response.setCode(200);
-		response.setData(revenue);
-		response.setMessage("Success");
+        BigDecimal revenue = reportService.getReportRevenue(startDate, endDate);
 
-		return ResponseEntity.ok(response);
-	}
-	
-	@GetMapping("/total-product-buy")
-	public ResponseEntity<ResponseAPI<Integer>> getReportTotalProductBuy(
-			@RequestHeader("Authorization") Optional<String> authHeader, 
-			@RequestParam("startDate") String startDateStr,
-			@RequestParam("endDate") String endDateStr
-			) 
-	{
-		ResponseAPI<Integer> response = new ResponseAPI<>();
-		String token = authService.readTokenFromHeader(authHeader);
-		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-	    LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
-	    LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
+        response.setCode(200);
+        response.setData(revenue);
+        response.setMessage("Success");
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			response.setCode(400);
-			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-		}
+        return ResponseEntity.ok(response);
+    }
 
-		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+    @GetMapping("/total-order")
+    public ResponseEntity<ResponseAPI<Integer>> getReportTotalOrder(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr,
+            @RequestParam("statusId") Integer statusId
+    ) {
+        ResponseAPI<Integer> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
 
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-		}
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
+        LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
 
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
 
-		if (user.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
 
-		Integer totalProduct = reportService.getTotalProductBuy(startDate, endDate);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
 
-		response.setCode(200);
-		response.setData(totalProduct);
-		response.setMessage("Success");
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
 
-		return ResponseEntity.ok(response);
-	}
-	
-	@GetMapping("/profit")
-	public ResponseEntity<ResponseAPI<BigDecimal>> getReportProfit(
-			@RequestHeader("Authorization") Optional<String> authHeader, 
-			@RequestParam("startDate") String startDateStr,
-			@RequestParam("endDate") String endDateStr
-			) 
-	{
-		ResponseAPI<BigDecimal> response = new ResponseAPI<>();
-		String token = authService.readTokenFromHeader(authHeader);
-		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-	    LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
-	    LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			response.setCode(400);
-			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-		}
+        Integer total = reportService.getReportTotalOrder(startDate, endDate, statusId);
 
-		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+        response.setCode(200);
+        response.setData(total);
+        response.setMessage("Success");
 
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-		}
+        return ResponseEntity.ok(response);
+    }
 
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
+    //Top 5 sản phẩm bán chạy
+    @GetMapping("/product-betsaler")
+    public ResponseEntity<ResponseAPI<List<ReportProductInventoryResponse>>> getReportProductBestSaler(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr
+    ) {
+        ResponseAPI<List<ReportProductInventoryResponse>> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
+        LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
 
-		if (user.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
 
-		BigDecimal profit = reportService.getTotalProfit(startDate, endDate);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
 
-		response.setCode(200);
-		response.setData(profit);
-		response.setMessage("Success");
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
 
-		return ResponseEntity.ok(response);
-	}
-	
-	@GetMapping("/top-inventory")
-	public ResponseEntity<ResponseAPI<List<ReportProductInventoryResponse>>> getReportProductStock(
-			@RequestHeader("Authorization") Optional<String> authHeader
-			) 
-	{
-		ResponseAPI<List<ReportProductInventoryResponse>> response = new ResponseAPI<>();
-		String token = authService.readTokenFromHeader(authHeader);
-	
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
 
-		try {
-			jwtService.extractUsername(token);
-		} catch (Exception e) {
-			response.setCode(400);
-			response.setMessage("Invalid token format");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-		}
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
 
-		if (jwtService.isTokenExpired(token)) {
-			response.setCode(401);
-			response.setMessage("Token expired");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
 
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-		}
+        List<ReportProductInventoryResponse> products = reportService.getReportTopSanPhamBanChay(startDate,endDate);
 
-		String username = jwtService.extractUsername(token);
-		User user = userService.getUserByUsername(username);
-		if (user == null) {
-			response.setCode(404);
-			response.setMessage("Account not found");
+        response.setCode(200);
+        response.setData(products);
+        response.setMessage("Success");
 
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-		}
+        return ResponseEntity.ok(response);
+    }
 
-		if (user.getStatus() == 0) {
-			response.setCode(403);
-			response.setMessage("Account locked");
 
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-		}
 
-		List<ReportProductInventoryResponse> productStocks = reportService.getTop5Products();
+    @GetMapping("/total-product-buy")
+    public ResponseEntity<ResponseAPI<Integer>> getReportTotalProductBuy(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr
+    ) {
+        ResponseAPI<Integer> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
 
-		response.setCode(200);
-		response.setData(productStocks);
-		response.setMessage("Success");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
+        LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
 
-		return ResponseEntity.ok(response);
-	}
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        Integer totalProduct = reportService.getTotalProductBuy(startDate, endDate);
+
+        response.setCode(200);
+        response.setData(totalProduct);
+        response.setMessage("Success");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/profit")
+    public ResponseEntity<ResponseAPI<BigDecimal>> getReportProfit(
+            @RequestHeader("Authorization") Optional<String> authHeader,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr
+    ) {
+        ResponseAPI<BigDecimal> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        LocalDateTime startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay();
+        LocalDateTime endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59);
+
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        BigDecimal profit = reportService.getTotalProfit(startDate, endDate);
+
+        response.setCode(200);
+        response.setData(profit);
+        response.setMessage("Success");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/top-inventory")
+    public ResponseEntity<ResponseAPI<List<ReportProductInventoryResponse>>> getReportProductStock(
+            @RequestHeader("Authorization") Optional<String> authHeader
+    ) {
+        ResponseAPI<List<ReportProductInventoryResponse>> response = new ResponseAPI<>();
+        String token = authService.readTokenFromHeader(authHeader);
+
+
+        try {
+            jwtService.extractUsername(token);
+        } catch (Exception e) {
+            response.setCode(400);
+            response.setMessage("Invalid token format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        if (jwtService.isTokenExpired(token)) {
+            response.setCode(401);
+            response.setMessage("Token expired");
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        String username = jwtService.extractUsername(token);
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            response.setCode(404);
+            response.setMessage("Account not found");
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        if (user.getStatus() == 0) {
+            response.setCode(403);
+            response.setMessage("Account locked");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        List<ReportProductInventoryResponse> productStocks = reportService.getTop5Products();
+
+        response.setCode(200);
+        response.setData(productStocks);
+        response.setMessage("Success");
+
+        return ResponseEntity.ok(response);
+    }
 
 }

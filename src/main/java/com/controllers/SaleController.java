@@ -10,6 +10,7 @@ import com.models.VersionSaleDTO;
 import com.repositories.ProductVersionJPA;
 import com.repositories.SaleJPA;
 import com.responsedto.SaleResponse;
+import com.responsedto.Version;
 import com.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -213,6 +214,13 @@ public class SaleController {
             return ResponseEntity.status(999).body(response);
         }
 
+        if(saleService.duplicateVersionSaleStartedAdd(saleDTO)){
+            response.setCode(999);
+            response.setMessage("Sản phẩm đã áp dụng trong một chương trình giảm giá khác trong cùng khoảng thời gian");
+
+            return ResponseEntity.status(999).body(response);
+        }
+
         saleService.addSale(saleDTO);
 
         response.setCode(200);
@@ -267,7 +275,7 @@ public class SaleController {
 
         if (saleDTO.getId() == null) {
             response.setCode(999);
-            response.setMessage("Id chương trình giảm giá không hợp lệ");
+            response.setMessage("Chương trình giảm giá không tồn tại");
 
             return ResponseEntity.status(999).body(response);
         }
@@ -300,19 +308,6 @@ public class SaleController {
             return ResponseEntity.status(999).body(response);
         }
 
-        if (!saleDTO.getStartDate().isAfter(LocalDateTime.now())) {
-            response.setCode(999);
-            response.setMessage("Thời gian bắt đầu phải từ thời gian hiện tại trở đi");
-
-            return ResponseEntity.status(999).body(response);
-        }
-
-        if (!saleDTO.getEndDate().isAfter(saleDTO.getStartDate())) {
-            response.setCode(999);
-            response.setMessage("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
-
-            return ResponseEntity.status(999).body(response);
-        }
 
         if (saleDTO.getVersionSaleDTOS() == null) {
             response.setCode(999);
@@ -341,11 +336,18 @@ public class SaleController {
             return ResponseEntity.status(999).body(response);
         }
 
-        Set<Integer> set = new HashSet<>(saleDTO.getVersionSaleDTOS().stream().map(i-> i.getIdVersion()).toList());
+        Set<Integer> set = new HashSet<>(saleDTO.getVersionSaleDTOS().stream().map(i -> i.getIdVersion()).toList());
 
         if (set.size() < saleDTO.getVersionSaleDTOS().size()) {
             response.setCode(999);
             response.setMessage("Sản phẩm không được trùng");
+
+            return ResponseEntity.status(999).body(response);
+        }
+
+        if(saleService.duplicateVersionSaleStartedUpdate(saleDTO)){
+            response.setCode(999);
+            response.setMessage("Sản phẩm đã áp dụng trong một chương trình giảm giá khác trong cùng khoảng thời gian");
 
             return ResponseEntity.status(999).body(response);
         }

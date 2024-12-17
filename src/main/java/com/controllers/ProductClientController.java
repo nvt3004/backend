@@ -1,19 +1,27 @@
 package com.controllers;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.services.*;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,17 +33,13 @@ import com.entities.Category;
 import com.entities.User;
 import com.entities.Wishlist;
 import com.errors.ResponseAPI;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.responsedto.Att;
 import com.responsedto.FilterAttribute;
+import com.responsedto.PriceSale;
 import com.responsedto.ProductDTO;
-import com.services.AlgoliaProductService;
-import com.services.AuthService;
-import com.services.GetProductService;
-import com.services.JWTService;
-import com.services.ProductClientService;
-import com.services.ProductSearchImageService;
-// import com.services.TranscriptService;
-import com.services.UserService;
+//import com.services.TranscriptService;
 import com.utils.UploadService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,38 +72,42 @@ public class ProductClientController {
 	}
 
 	@Autowired
-	private ProductSearchImageService productSearchImageService;
+	ProductSearchImageService productSearchImageService;
 
-//	@Autowired
-//	private TranscriptService transcriptService;
-//
-//    @PostMapping("/transcription")
-//    public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
-//
-//        if (file.isEmpty()) {
-//            ResponseAPI<String> response = new ResponseAPI<>();
-//            response.setCode(400);
-//            response.setMessage("No file provided.");
-//            response.setData(null);
-//            return ResponseEntity.status(400).body(response);
-//        }
-//
-//        String transcriptText = transcriptService.transcribe(file);
-//      
-//        ResponseAPI<String> response = new ResponseAPI<>();
-//
-//        if (transcriptText != null) {
-//            response.setCode(200);
-//            response.setMessage("Success");
-//            response.setData(transcriptText); 
-//            return ResponseEntity.ok(response);
-//        } else {
-//            response.setCode(500);
-//            response.setMessage("An error occurred during transcription.");
-//            response.setData(null);
-//            return ResponseEntity.status(500).body(response);
-//        }
-//    }
+	@Autowired
+	TranscriptService transcriptService;
+
+	@PostMapping("/transcription")
+	public ResponseEntity<?> transcribe(@RequestParam("file") MultipartFile file) {
+		ResponseAPI<String> response = new ResponseAPI<>();
+		if (file.isEmpty()) {
+			response.setCode(400);
+			response.setMessage("No file provided.");
+			response.setData(null);
+			return ResponseEntity.status(400).body(response);
+		}
+		try {
+			String transcript = transcriptService.Transcript(file);
+
+			if (transcript != null) {
+
+				response.setCode(200);
+				response.setMessage("Success");
+				response.setData(transcript);
+				return ResponseEntity.ok(response);
+			} else {
+				response.setCode(500);
+				response.setMessage("An error occurred during transcription.");
+				response.setData(null);
+				return ResponseEntity.status(500).body(response);
+			}
+		} catch (Exception e) {
+			response.setCode(500);
+			response.setMessage("Error: " + e.getMessage());
+			response.setData(null);
+			return ResponseEntity.status(500).body(response);
+		}
+	}
 
 	@PostMapping("/searchByImage")
 	public ResponseAPI<List<ProductDTO>> searchProductByImage(@RequestPart("image") Optional<MultipartFile> image,
@@ -131,6 +139,11 @@ public class ProductClientController {
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 			}
 			// Thiết lập dữ liệu vào response
 			response.setCode(200);
@@ -182,6 +195,11 @@ public class ProductClientController {
 				if (img != null && !img.isEmpty()) {
 					productDTO.setImgName(uploadService.getUrlImage(img));
 				}
+				PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+				productDTO.setQuantity(priceSale.getQuantity());
+				productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+				productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+				productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 			}
 
 			if (items.isEmpty()) {
@@ -223,24 +241,7 @@ public class ProductClientController {
 				}
 			}
 
-			items = algoliaProductService.getTopProducts();
-
-			for (ProductDTO productDTO : items) {
-				if (user != null) {
-					for (Wishlist wishlistItem : wishlist) {
-						if (String.valueOf(wishlistItem.getProduct().getProductId())
-								.equalsIgnoreCase(productDTO.getId())) {
-							productDTO.setLike(true);
-							break;
-						}
-					}
-				}
-
-				String img = productDTO.getImgName();
-				if (img != null && !img.isEmpty()) {
-					productDTO.setImgName(uploadService.getUrlImage(img));
-				}
-			}
+			items = inforService.getNewProduct(user);
 
 			if (items.isEmpty()) {
 				response.setCode(204);
@@ -370,6 +371,11 @@ public class ProductClientController {
 							productDTO.setImgName(imageUrl);
 						}
 					}
+					PriceSale priceSale = inforService.getSale(Integer.valueOf(productDTO.getId()));
+					productDTO.setQuantity(priceSale.getQuantity());
+					productDTO.setDiscountPercent(priceSale.getDiscountPercent());
+					productDTO.setMinPriceSale(priceSale.getMinPriceSale());
+					productDTO.setMaxPriceSale(priceSale.getMaxPriceSale());
 				}
 			}
 

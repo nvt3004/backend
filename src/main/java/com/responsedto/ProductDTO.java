@@ -26,5 +26,8 @@ public class ProductDTO {
 	private List<Integer> attributeId;
 	private BigDecimal minPrice;
 	private BigDecimal maxPrice;
-	
+	private BigDecimal minPriceSale;
+	private BigDecimal maxPriceSale;
+	private BigDecimal discountPercent;
+	private int quantity;
 }

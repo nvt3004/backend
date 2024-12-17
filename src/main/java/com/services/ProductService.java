@@ -1,6 +1,7 @@
 package com.services;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -8,8 +9,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.entities.*;
+import com.repositories.*;
+import com.responsedto.*;
+import com.responsedto.Attribute;
 import org.springframework.aot.generate.InMemoryGeneratedFiles;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -17,35 +23,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import com.entities.AttributeOption;
-import com.entities.AttributeOptionsVersion;
-import com.entities.Category;
-import com.entities.Image;
-import com.entities.Product;
-import com.entities.ProductCategory;
-import com.entities.ProductSale;
-import com.entities.ProductVersion;
 import com.models.CategoryDTO;
 import com.models.OptionDTO;
 import com.models.OrderDTO;
 import com.models.ProductDTO;
 import com.models.VersionDTO;
-import com.repositories.AttributeOptionsVersionJPA;
-import com.repositories.CategoryJPA;
-import com.repositories.ImageJPA;
-import com.repositories.ProductCategoryJPA;
-import com.repositories.ProductCustomJPA;
-import com.repositories.ProductJPA;
-import com.repositories.ProductVersionJPA;
-import com.responsedto.Attribute;
-import com.responsedto.AttributeProductResponse;
-import com.responsedto.ImageResponse;
-import com.responsedto.PageCustom;
-import com.responsedto.ProductDetailResponse;
-import com.responsedto.ProductHomeResponse;
-import com.responsedto.ProductResponse;
-import com.responsedto.ProductVersionResponse;
-import com.responsedto.Version;
 import com.utils.UploadService;
 
 import com.entities.Product;
@@ -90,6 +72,12 @@ public class ProductService {
     @Autowired
     VersionService vsService;
 
+    @Autowired
+    SaleService saleService;
+
+    @Autowired
+    SaleJPA saleJPA;
+
     public PageCustom<ProductHomeResponse> getProducts(int page, int size) {
         return productCustomJPA.getAllProducts(page, size);
     }
@@ -122,6 +110,17 @@ public class ProductService {
         return productResponses;
     }
 
+    public List<ProductResponse> getAllProductsByKeywordSaleUpdate(int page, int size, boolean status, String keyword, Integer idSaleUpdate) {
+        List<Product> products = productJPA.getAllProductByKeyword(true, keyword);
+
+        List<ProductResponse> productResponses = products.stream().map(i -> {
+                    return createProductResponseSaleUpdate(i, idSaleUpdate);
+                })
+                .toList();
+
+        return productResponses;
+    }
+
     public PageImpl<ProductResponse> getProductsByKeywordAndCategory(int page, int size, int idCat, boolean status,
                                                                      String keyword) {
         Sort sort = Sort.by(Sort.Direction.DESC, "productId");
@@ -140,7 +139,7 @@ public class ProductService {
 
     private ProductResponse createProductResponse(Product product) {
         ProductResponse response = new ProductResponse();
-
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
         response.setId(product.getProductId());
         response.setPrice(product.getProductPrice());
         response.setProductName(product.getProductName());
@@ -186,6 +185,18 @@ public class ProductService {
                 version.setImage(imgres);
             }
 
+            //Tính giam gia phien ban san pham
+            for (VersionSale vsSale : vs.getVersionSales()) {
+                Sale sale = vsSale.getSale();
+
+                if ((dateNow.isAfter(sale.getStartDate()) || dateNow.isEqual(sale.getStartDate())) &&
+                        (dateNow.isBefore(sale.getEndDate()) || dateNow.isEqual(sale.getEndDate()))) {
+                    version.setIdSale(sale.getId());
+                    version.setSale(sale.getDisPercent());
+                    version.setSaleName(sale.getSaleName());
+                }
+            }
+
             List<Attribute> attributes = getAllAttributeByVersion(vs);
             version.setAttributes(attributes);
 
@@ -196,6 +207,87 @@ public class ProductService {
 
         return response;
     }
+
+
+    private ProductResponse createProductResponseSaleUpdate(Product product, Integer saleId) {
+        ProductResponse response = new ProductResponse();
+        Sale saleEntity = saleJPA.findById(saleId).get();
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        LocalDateTime startDate = saleEntity.getStartDate();
+        LocalDateTime endDate = saleEntity.getEndDate();
+        response.setId(product.getProductId());
+        response.setPrice(product.getProductPrice());
+        response.setProductName(product.getProductName());
+        response.setDiscription(product.getDescription());
+        response.setDiscount(getDiscount(product));
+        response.setImage(uploadService.getUrlImage(product.getProductImg()));
+        response.setStatus(product.isStatus());
+
+        response.setCategories(product.getProductCategories().stream().map(item -> {
+            CategoryDTO cat = new CategoryDTO();
+
+            cat.setId(item.getCategory().getCategoryId());
+            cat.setName(item.getCategory().getCategoryName());
+
+            return cat;
+        }).toList());
+
+        Integer stockTotal = 0;
+
+        for (ProductVersion vs : product.getProductVersions()) {
+            int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
+            stockTotal += stockQuantity;
+        }
+
+        response.setTotalStock(stockTotal);
+
+        List<ProductVersionResponse> versions = product.getProductVersions().stream().map(vs -> {
+            ProductVersionResponse version = new ProductVersionResponse();
+            int stockQuantity = versionService.getTotalStockQuantityVersion(vs.getId());
+            version.setId(vs.getId());
+            version.setVersionName(vs.getVersionName());
+            version.setRetailPrice(vs.getRetailPrice());
+            version.setImportPrice(vs.getImportPrice());
+            version.setQuantity(stockQuantity);
+            version.setActive(vs.isStatus() && product.isStatus());
+
+            if (vs.getImage() != null) {
+                Image img = vs.getImage();
+                ImageResponse imgres = new ImageResponse();
+                imgres.setId(img.getImageId());
+                imgres.setName(uploadService.getUrlImage(img.getImageUrl()));
+
+                version.setImage(imgres);
+            }
+
+            //Tính giam gia phien ban san pham
+            for (VersionSale vsSale : vs.getVersionSales()) {
+                Sale sale = vsSale.getSale();
+                Integer id = Integer.valueOf(sale.getId());
+
+                boolean isTimeOverlap =
+                        (sale.getStartDate().isBefore(endDate) && sale.getEndDate().isAfter(startDate)) ||  // Giao nhau
+                                (sale.getStartDate().isEqual(startDate) || sale.getStartDate().isEqual(endDate) || sale.getEndDate().isEqual(endDate) || sale.getEndDate().isEqual(startDate)) ||  // Bằng
+                                (startDate.isEqual(sale.getStartDate()) && endDate.isEqual(sale.getEndDate()));    // Entity nằm trong DTO
+
+                if (isTimeOverlap && !id.equals(saleId) && !sale.getEndDate().isBefore(dateNow)) {
+                    version.setIdSale(sale.getId());
+                    version.setSale(sale.getDisPercent());
+                    version.setSaleName(sale.getSaleName());
+                }
+            }
+
+            List<Attribute> attributes = getAllAttributeByVersion(vs);
+            version.setAttributes(attributes);
+
+            return version;
+        }).toList();
+
+        response.setVersions(versions);
+
+        return response;
+    }
+
 
     private float getDiscount(Product product) {
         List<ProductSale> sales = product.getProductSales();
@@ -231,6 +323,9 @@ public class ProductService {
         int inStockProductParent = 0;
         BigDecimal minPrice = product.getProductVersions().get(0).getRetailPrice();
         BigDecimal maxPrice = product.getProductVersions().get(0).getRetailPrice();
+        BigDecimal minSale = new BigDecimal(0);
+        BigDecimal maxSale = new BigDecimal(0);
+        boolean inFirst = true;
 
         for (ProductVersion vs : product.getProductVersions()) {
             Version versionDto = new Version();
@@ -248,6 +343,25 @@ public class ProductService {
                 maxPrice = vs.getRetailPrice();
             }
 
+            SaleProductDTO sale = saleService.getVersionSaleDTO(vs.getId());
+
+
+            if(sale != null && inFirst) {
+                minSale = sale.getSale();
+                maxSale = sale.getSale();
+                inFirst = false;
+            }
+
+            // Min sale
+            if(sale != null && sale.getSale().compareTo(minSale)==-1) {
+                minSale = sale.getSale();
+            }
+
+            //Max sale
+            if(sale != null && sale.getSale().compareTo(maxSale)==1) {
+                maxSale = sale.getSale();
+            }
+
             List<Attribute> attributes = getAllAttributeByVersion(vs);
             String imageUrl = null;
             if (vs.getImage() != null) {
@@ -261,11 +375,17 @@ public class ProductService {
             versionDto.setActive(vs.isStatus() && product.isStatus());
             versionDto.setImage(imageUrl);
             versionDto.setAttributes(attributes);
+            if(sale != null) {
+                versionDto.setSale(sale.getSale());
+                versionDto.setSalePrice(sale.getPrice());
+            }
 
             versions.add(versionDto);
         }
         productParrent.setMinPrice(minPrice);
         productParrent.setMaxPrice(maxPrice);
+        productParrent.setMinSale(minSale);
+        productParrent.setMaxSale(maxSale);
         productParrent.setInStock(Long.valueOf(inStockProductParent));
 
         return new ProductDetailResponse(productParrent, versions, productAttributes);

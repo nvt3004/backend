@@ -4,11 +4,13 @@ import com.entities.ProductVersion;
 import com.entities.Sale;
 import com.entities.VersionSale;
 import com.models.SaleDTO;
+import com.models.VersionDTO;
 import com.models.VersionSaleDTO;
 import com.repositories.ProductVersionJPA;
 import com.repositories.SaleJPA;
 import com.repositories.VersionSaleJPA;
 import com.responsedto.ProductResponse;
+import com.responsedto.SaleProductDTO;
 import com.responsedto.SaleResponse;
 import com.responsedto.Version;
 import com.utils.UploadService;
@@ -16,10 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,6 +51,8 @@ public class SaleService {
         Page<Sale> sales = null;
         List<SaleResponse> saleResponses = new ArrayList<>();
         LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        startDate = startDate.plusHours(7);
+        endDate = endDate.plusHours(7);
 
         if (status == 2) { // Trang thai chua bat dau
             sales = saleJPA.getAllSalesNotStarted(keyword, startDate, endDate, dateNow, pageable);
@@ -65,6 +71,7 @@ public class SaleService {
             saleResponses = sales.stream().map(this::crateSaleResponse).toList();
         }
 
+
         PageImpl<SaleResponse> result = new PageImpl<SaleResponse>(saleResponses, pageable,
                 sales.getTotalElements());
 
@@ -78,12 +85,72 @@ public class SaleService {
     }
 
     public void addSale(SaleDTO saleDTO) {
-        saleDTO.setStatus(false);
+        saleDTO.setStatus(true);
         saleDTO.setId(-1);
 
         Sale saleSaved = createSale(saleDTO);
         createVersionSale(saleSaved, saleDTO.getVersionIds());
     }
+
+    public boolean duplicateVersionSaleStartedAdd(SaleDTO saleDTO) {
+        List<VersionSale> versionSales = versionSaleJPA.findAll();
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+
+        for (Integer versionId : saleDTO.getVersionIds()) {
+            for (VersionSale versionSale : versionSales) {
+                Sale sale = versionSale.getSale();
+                ProductVersion version = versionSale.getProductVersion();
+
+                // Đảm bảo so sánh với thời gian của Sale entity đã giảm bớt 7 giờ
+                LocalDateTime startDate = sale.getStartDate().minusHours(7).truncatedTo(ChronoUnit.MINUTES);
+                LocalDateTime endDate = sale.getEndDate().minusHours(7).truncatedTo(ChronoUnit.MINUTES);
+                System.out.println(saleDTO.getStartDate() + " - "+startDate);
+
+                // Kiểm tra điều kiện giao nhau của thời gian
+                boolean isTimeOverlap =
+                        (saleDTO.getStartDate().isBefore(endDate) && saleDTO.getEndDate().isAfter(startDate)) ||  // Giao nhau
+                                (saleDTO.getStartDate().isEqual(startDate) || saleDTO.getStartDate().isEqual(endDate) || saleDTO.getEndDate().isEqual(endDate) || saleDTO.getEndDate().isEqual(startDate)) ||  // Bằng
+                                (startDate.isEqual(saleDTO.getStartDate()) && endDate.isEqual(saleDTO.getEndDate()));    // Entity nằm trong DTO
+
+                if (isTimeOverlap && versionId.equals(version.getId()) && !endDate.isBefore(dateNow)) {
+                    return true;  // Điều kiện trùng lặp và không phải quá hạn
+                }
+            }
+        }
+
+        return false;  // Không có giao nhau nào được tìm thấy
+    }
+
+    public boolean duplicateVersionSaleStartedUpdate(SaleDTO saleDTO) {
+        List<VersionSale> versionSales = versionSaleJPA.findAll();
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+
+        for (VersionSaleDTO versionId : saleDTO.getVersionSaleDTOS()) {
+            for (VersionSale versionSale : versionSales) {
+                Sale sale = versionSale.getSale();
+                Integer saleId = Integer.valueOf(sale.getId());
+                ProductVersion version = versionSale.getProductVersion();
+
+                // Đảm bảo so sánh với thời gian của Sale entity đã giảm bớt 7 giờ
+                LocalDateTime startDate = sale.getStartDate().minusHours(7).truncatedTo(ChronoUnit.MINUTES);
+                LocalDateTime endDate = sale.getEndDate().minusHours(7).truncatedTo(ChronoUnit.MINUTES);
+
+                // Kiểm tra điều kiện giao nhau của thời gian
+                boolean isTimeOverlap =
+                        (saleDTO.getStartDate().isBefore(endDate) && saleDTO.getEndDate().isAfter(startDate)) ||  // Giao nhau
+                                (saleDTO.getStartDate().isEqual(startDate) || saleDTO.getStartDate().isEqual(endDate) || saleDTO.getEndDate().isEqual(endDate) || saleDTO.getEndDate().isEqual(startDate)) ||  // Bằng
+                                (startDate.isEqual(saleDTO.getStartDate()) && endDate.isEqual(saleDTO.getEndDate()));    // Entity nằm trong DTO
+
+                if (isTimeOverlap && versionId.getIdVersion().equals(version.getId()) && !endDate.isBefore(dateNow) && !saleId.equals(saleDTO.getId())) {
+                    return true;  // Điều kiện trùng lặp và không phải quá hạn
+                }
+            }
+        }
+
+        return false;  // Không có giao nhau nào được tìm thấy
+    }
+
+
 
     public void updateSale(SaleDTO saleDTO) {
         Sale saleSaved = createSale(saleDTO);
@@ -213,7 +280,15 @@ public class SaleService {
             ProductVersion versionEntity = versionSale.getProductVersion();
             Version versionResponse = new Version();
 
+            SaleProductDTO saleProductDTO = getVersionSaleDTO(versionEntity.getId());
+            if(saleProductDTO != null) {
+                System.out.println("Giam: "+saleProductDTO.getSale());
+                System.out.println("Goc: "+versionEntity.getRetailPrice());
+                System.out.println("Con: "+saleProductDTO.getPrice());
+            }
+
             versionResponse.setId(versionEntity.getId());
+            versionResponse.setVersionSaleId(versionSale.getId());
             versionResponse.setVersionName(versionEntity.getVersionName());
             versionResponse.setQuantity(versionService.getTotalStockQuantityVersion(versionEntity.getId()));
             versionResponse.setPrice(versionEntity.getRetailPrice());
@@ -224,5 +299,32 @@ public class SaleService {
         }
 
         return versions;
+    }
+
+    //Hàm sẽ trả về đối tượng co 2 thuoc tinh: sale=> la % giam gia, price: là gia san pham sau khi đã giảm giá
+    public SaleProductDTO getVersionSaleDTO(Integer versionId) {
+        LocalDateTime dateNow = LocalDateTime.now().withSecond(0).withNano(0).plusHours(7);
+        List<Sale> sales = saleJPA.getAllSalesInProgess(dateNow, true);
+        BigDecimal motTram = BigDecimal.valueOf(100);
+
+        if(versionId == null) return null;
+
+        for (Sale sale : sales) {
+            for (VersionSale versionSale : sale.getVersionSales()) {
+                Integer id = Integer.valueOf(versionSale.getProductVersion().getId());
+                if (versionId.equals(id)) {
+                    SaleProductDTO saleProductDTO = new SaleProductDTO();
+                    BigDecimal priceVersion = versionSale.getProductVersion().getRetailPrice();
+                    BigDecimal phanTram = BigDecimal.ONE.subtract(sale.getDisPercent().divide(motTram));
+
+                    saleProductDTO.setSale(sale.getDisPercent());
+                    saleProductDTO.setPrice(priceVersion.multiply(phanTram));
+
+                    return saleProductDTO;
+                }
+            }
+        }
+
+        return null;
     }
 }

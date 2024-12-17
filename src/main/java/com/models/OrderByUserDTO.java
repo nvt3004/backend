@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class OrderByUserDTO {
     private Integer orderId;
     private Date orderDate;
+    private Date expectedDeliveryDate;
     private String statusName;
     private Integer couponId;
 	private String disCount;
