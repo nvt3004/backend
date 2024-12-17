@@ -1,28 +1,17 @@
 package com.controllers;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.entities.AttributeOption;
-import com.entities.AttributeOptionsVersion;
 import com.entities.Product;
 import com.entities.ProductVersion;
 import com.errors.ResponseAPI;
 import com.repositories.ProductVersionJPA;
-import com.responsedto.Attribute;
 import com.responsedto.ProductVersionResponse;
 import com.services.ProductService;
 import com.services.VersionService;
@@ -53,40 +42,34 @@ public class VersionController {
 
 		if (product == null) {
 			response.setCode(404);
-			response.setMessage("Product not found!");
+			response.setMessage("Không tìm thấy sản phẩm!");
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (versionName.isBlank() || versionName.isEmpty() || versionName == null) {
 			response.setCode(999);
-			response.setMessage("Version name invalid!");
+			response.setMessage("Tên phiên bản không hợp lệ!");
 			return ResponseEntity.status(999).body(response);
 		}
 
 		if (retailPrice == null || retailPrice.compareTo(BigDecimal.ZERO) <= 0) {
 			response.setCode(999);
-			response.setMessage("Retail price invalid!");
+			response.setMessage("Giá bán lẻ không hợp lệ!");
 			return ResponseEntity.status(999).body(response);
 		}
-
-		// if (importPrice == null || importPrice.compareTo(BigDecimal.ZERO) <= 0) {
-		// 	response.setCode(999);
-		// 	response.setMessage("ImportPrice price invalid!");
-		// 	return ResponseEntity.status(999).body(response);
-		// }
 
 		boolean isExitVersion = versionService.isExitVersionInProduct(product, versionModal.getAttributes());
 
 		if (isExitVersion) {
 			response.setCode(999);
-			response.setMessage("The version attribute already exists!");
+			response.setMessage("Phiên bản với thuộc tính này đã tồn tại!");
 			return ResponseEntity.status(999).body(response);
 		}
 
 		versionService.addVersion(versionModal, product);
 		response.setCode(200);
 		response.setData(true);
-		response.setMessage("Success");
+		response.setMessage("Thêm phiên bản thành công!");
 		return ResponseEntity.ok(response);
 	}
 
@@ -103,35 +86,34 @@ public class VersionController {
 
 		if (version == null) {
 			response.setCode(404);
-			response.setMessage("Version not found!");
+			response.setMessage("Không tìm thấy phiên bản!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (!version.isStatus() || !version.getProduct().isStatus()) {
 			response.setCode(404);
-			response.setMessage("Version not found!");
+			response.setMessage("Phiên bản hoặc sản phẩm không còn tồn tại!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (versionName.isBlank() || versionName.isEmpty() || versionName == null) {
 			response.setCode(999);
-			response.setMessage("Version name invalid!");
+			response.setMessage("Tên phiên bản không hợp lệ!");
 			return ResponseEntity.status(999).body(response);
 		}
 
 		if (retailPrice == null || retailPrice.compareTo(BigDecimal.ZERO) <= 0) {
 			response.setCode(999);
-			response.setMessage("Retail price invalid!");
+			response.setMessage("Giá bán lẻ không hợp lệ!");
 			return ResponseEntity.status(999).body(response);
 		}
-		
 
 		versionService.updateVersion(versionModal);
 		response.setCode(200);
 		response.setData(true);
-		response.setMessage("Success");
+		response.setMessage("Cập nhật phiên bản thành công!");
 		return ResponseEntity.ok(response);
 	}
 
@@ -145,14 +127,14 @@ public class VersionController {
 
 		if (version == null) {
 			response.setCode(404);
-			response.setMessage("Version not found!");
+			response.setMessage("Không tìm thấy phiên bản!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
 
 		if (!version.isStatus() || !version.getProduct().isStatus()) {
 			response.setCode(404);
-			response.setMessage("Version not found!");
+			response.setMessage("Phiên bản hoặc sản phẩm không còn tồn tại!");
 
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
 		}
@@ -162,7 +144,7 @@ public class VersionController {
 
 		response.setCode(200);
 		response.setData(true);
-		response.setMessage("Success");
+		response.setMessage("Xóa phiên bản thành công!");
 		return ResponseEntity.ok(response);
 	}
 

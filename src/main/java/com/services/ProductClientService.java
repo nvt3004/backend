@@ -1,13 +1,11 @@
 package com.services;
 
-import java.awt.print.Pageable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,7 +25,6 @@ import com.entities.ProductSale;
 import com.entities.ProductVersion;
 import com.entities.User;
 import com.entities.Wishlist;
-import com.models.VersionSaleDTO;
 import com.repositories.AttributeOptionJPA;
 import com.repositories.CartJPA;
 import com.repositories.CategoryJPA;
@@ -322,39 +319,66 @@ public class ProductClientService {
 	}
 
 	public List<ProductDTO> getRecommendedProducts(User user) {
-
-		List<ProductDTO> topProducts = algoliaProductService.getTop50Products();
-		topProducts = getRandomProducts(topProducts, 25);
-
+		// Kiểm tra nếu người dùng null
 		if (user == null) {
-			System.out.println("User is null. Returning top products only.");
-			return topProducts.stream().limit(24).collect(Collectors.toList());
+			System.out.println("User is null. No recommendations available.");
+			return Collections.emptyList();
 		}
 
-		List<Product> prodFromCart = cartJPA.getProductsByUserId(user.getUserId());
-		List<Product> prodFromOrder = orderJPA.getProductsByUserId(user.getUserId());
+		// Lấy sản phẩm từ giỏ hàng, đơn hàng (chỉ lấy sản phẩm có status = true)
+		List<Product> prodFromCart = cartJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus)
+				.collect(Collectors.toList());
 
+		List<Product> prodFromOrder = orderJPA.getProductsByUserId(user.getUserId()).stream().filter(Product::isStatus)
+				.collect(Collectors.toList());
+
+		// Lấy tất cả sản phẩm trong kho (đã lọc status = true trong getProduct2)
+		List<ProductDTO> allProducts = getProduct2();
+
+		// Lấy danh sách sản phẩm từ wishlist, giỏ hàng và đơn hàng
 		List<ProductDTO> wishlistProducts = getProductWish(user);
 		List<ProductDTO> productsFromCart = getProductCart(prodFromCart);
 		List<ProductDTO> productsFromOrder = getProductCart(prodFromOrder);
 
+		// Random sản phẩm để đa dạng kết quả
+		allProducts = getRandomProducts(allProducts, 25);
 		wishlistProducts = getRandomProducts(wishlistProducts, 25);
 		productsFromCart = getRandomProducts(productsFromCart, 25);
 		productsFromOrder = getRandomProducts(productsFromOrder, 25);
 
+		// Loại bỏ trùng lặp sản phẩm
 		Set<String> uniqueProductIds = new HashSet<>();
 		List<ProductDTO> combinedProducts = new ArrayList<>();
 
+		// Gộp sản phẩm từ wishlist, cart, và order
 		for (ProductDTO product : Stream
-				.concat(Stream.concat(topProducts.stream(), wishlistProducts.stream()),
-						Stream.concat(productsFromCart.stream(), productsFromOrder.stream()))
+				.concat(Stream.concat(wishlistProducts.stream(), productsFromCart.stream()), productsFromOrder.stream())
 				.collect(Collectors.toList())) {
 			if (uniqueProductIds.add(product.getId())) {
 				combinedProducts.add(product);
 			}
 		}
+
+		// Thêm sản phẩm từ allProducts (đã lọc status = true sẵn)
+		for (ProductDTO product : allProducts) {
+			if (uniqueProductIds.add(product.getId())) {
+				combinedProducts.add(product);
+			}
+		}
+
+		// Xáo trộn danh sách sản phẩm và trả về tối đa 24 sản phẩm
 		Collections.shuffle(combinedProducts);
-		return combinedProducts.stream().limit(24).collect(Collectors.toList());
+		return combinedProducts.stream().limit(12).collect(Collectors.toList());
+	}
+
+	// Phương thức chuyển đổi Product thành ProductDTO
+	private ProductDTO convertToProductDTO(Product product) {
+		ProductDTO productDTO = new ProductDTO();
+		productDTO.setId(String.valueOf(product.getProductId()));
+		productDTO.setName(product.getProductName());
+		productDTO.setDescription(product.getDescription());
+		// Add thêm các thuộc tính khác nếu cần
+		return productDTO;
 	}
 
 	private List<ProductDTO> getRandomProducts(List<ProductDTO> productList, int limit) {
@@ -394,6 +418,45 @@ public class ProductClientService {
 			productDTO.setLike(true);
 
 			productDTOs.add(productDTO);
+		}
+		return productDTOs;
+	}
+
+	public List<ProductDTO> getProduct2() {
+		List<ProductDTO> productDTOs = new ArrayList<>();
+		List<Product> prods = productJPA.findAll();
+		for (Product pro : prods) {
+
+			ProductDTO productDTO = new ProductDTO();
+			productDTO.setId(String.valueOf(pro.getProductId()));
+			productDTO.setName(pro.getProductName());
+
+			BigDecimal minPrice = null;
+			BigDecimal maxPrice = BigDecimal.ZERO;
+			List<String> images = new ArrayList<>();
+
+			for (ProductVersion productVer : pro.getProductVersions()) {
+
+				if (minPrice == null || productVer.getRetailPrice().compareTo(minPrice) < 0) {
+					minPrice = productVer.getRetailPrice();
+				}
+				if (productVer.getRetailPrice().compareTo(maxPrice) > 0) {
+					maxPrice = productVer.getRetailPrice();
+				}
+
+				images.add(productVer.getImage() == null ? null : productVer.getImage().getImageUrl());
+
+			}
+
+			productDTO.setMinPrice(minPrice);
+			productDTO.setMaxPrice(maxPrice);
+			productDTO.setImgName(images.isEmpty() ? null : images.get(0));
+			productDTO.setImages(images);
+			productDTO.setLike(true);
+			if (pro.isStatus()) {
+				productDTOs.add(productDTO);
+			}
+
 		}
 		return productDTOs;
 	}
@@ -461,7 +524,6 @@ public class ProductClientService {
 		return list;
 	}
 
-	// còn sử dụng
 	public List<ProductDTO> getALLProduct(User user) {
 		List<ProductDTO> productDTOs = new ArrayList<>();
 		try {
@@ -580,5 +642,77 @@ public class ProductClientService {
 			System.out.println("Error: " + e);
 			return productDTOs;
 		}
+	}
+
+	public List<ProductDTO> getProduct(String search, Integer categoryID, List<Integer> attributeIds,
+			BigDecimal minPrice, BigDecimal maxPrice, String sort, int page, int pageSize) {
+
+		List<ProductDTO> productDTOs = new ArrayList<>();
+		try {
+
+			List<Product> products = productJPA.findProducts(search, categoryID, attributeIds, minPrice, maxPrice);
+
+			if (products == null || products.isEmpty()) {
+				return productDTOs;
+			}
+			if (sort != null && sort.equalsIgnoreCase("DESC")) {
+				products.sort((p1, p2) -> getMaxPrice(p2).compareTo(getMaxPrice(p1)));
+			} else {
+				products.sort((p1, p2) -> getMaxPrice(p1).compareTo(getMaxPrice(p2)));
+			}
+
+			int start = page * pageSize;
+			int end = Math.min(start + pageSize, products.size());
+
+			if (start >= products.size()) {
+				return productDTOs;
+			}
+
+			List<Product> paginatedProducts = products.subList(start, end);
+
+			for (Product product : paginatedProducts) {
+				ProductDTO productDTO = new ProductDTO();
+				productDTO.setId(String.valueOf(product.getProductId()));
+				productDTO.setName(product.getProductName());
+				productDTO.setDescription(product.getDescription());
+
+				List<String> images = new ArrayList<>();
+
+				BigDecimal minPrice1 = null;
+				BigDecimal maxPrice1 = new BigDecimal("0.00");
+
+				for (ProductVersion productVer : product.getProductVersions()) {
+
+					// Thêm ảnh sản phẩm và cập nhật min/max price
+					if (productVer.getImage() != null) {
+						images.add(productVer.getImage().getImageUrl());
+					}
+					if (minPrice1 == null || productVer.getRetailPrice().compareTo(minPrice1) < 0) {
+						minPrice1 = productVer.getRetailPrice();
+					}
+					if (productVer.getRetailPrice().compareTo(maxPrice1) > 0) {
+						maxPrice1 = productVer.getRetailPrice();
+					}
+				}
+
+				productDTO.setMinPrice(minPrice1);
+				productDTO.setMaxPrice(maxPrice1);
+				productDTO.setImgName(images.isEmpty() ? null : images.get(0));
+				if (product.isStatus()) {
+					productDTOs.add(productDTO);
+				}
+			}
+
+			return productDTOs;
+		} catch (Exception e) {
+			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace();
+			return productDTOs;
+		}
+	}
+
+	private BigDecimal getMaxPrice(Product product) {
+		return product.getProductVersions().stream().map(ProductVersion::getRetailPrice).max(BigDecimal::compareTo)
+				.orElse(BigDecimal.ZERO);
 	}
 }

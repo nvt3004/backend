@@ -115,7 +115,6 @@ public class ProductClientController {
 		// Tạo đối tượng ResponseAPI để chứa kết quả trả về
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
 
-		// Kiểm tra xem có hình ảnh trong request không
 		if (image.isPresent()) {
 			// Chuyển MultipartFile thành InputStream
 			InputStream imageStream = image.get().getInputStream();
@@ -313,16 +312,16 @@ public class ProductClientController {
 			@RequestParam(defaultValue = "ASC") String sortMaxPrice, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "12") int pageSize) {
 
-		System.out.println("Search Request Parameters:");
-		System.out.println("Authorization Header: " + authHeader.orElse("None"));
-		System.out.println("Query: " + query);
-		System.out.println("Category ID: " + categoryID);
-		System.out.println("Min Price: " + minPrice);
-		System.out.println("Max Price: " + maxPrice);
-		System.out.println("Attributes: " + attribute);
-		System.out.println("Sort Max Price: " + sortMaxPrice);
-		System.out.println("Page: " + page);
-		System.out.println("Page Size: " + pageSize);
+//		System.out.println("Search Request Parameters:");
+//		System.out.println("Authorization Header: " + authHeader.orElse("None"));
+//		System.out.println("Query: " + query);
+//		System.out.println("Category ID: " + categoryID);
+//		System.out.println("Min Price: " + minPrice);
+//		System.out.println("Max Price: " + maxPrice);
+//		System.out.println("Attributes: " + attribute);
+//		System.out.println("Sort Max Price: " + sortMaxPrice);
+//		System.out.println("Page: " + page);
+//		System.out.println("Page Size: " + pageSize);
 
 		ResponseAPI<List<ProductDTO>> response = new ResponseAPI<>();
 		List<Wishlist> wishlist = new ArrayList<>();
@@ -339,6 +338,8 @@ public class ProductClientController {
 				response.setMessage("Invalid attribute format. Attributes should be integers separated by commas.");
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 			}
+		}else {
+			attributeIds = null;
 		}
 		try {
 			User user = null;
@@ -355,8 +356,8 @@ public class ProductClientController {
 				}
 			}
 
-			List<ProductDTO> products = algoliaProductService.searchProducts(categoryID, attributeIds, minPrice,
-					maxPrice, query, sortMaxPrice, page, pageSize);
+			List<ProductDTO> products = inforService.getProduct(query, categoryID, attributeIds, minPrice,
+					maxPrice, sortMaxPrice, page, pageSize);
 
 			if (products != null && !products.isEmpty()) {
 				for (ProductDTO productDTO : products) {
@@ -415,4 +416,7 @@ public class ProductClientController {
 		return ResponseEntity.ok(response);
 	}
 
+	
+	
+	
 }

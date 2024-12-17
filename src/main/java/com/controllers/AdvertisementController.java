@@ -63,17 +63,23 @@ public class AdvertisementController {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // Validate startDate and endDate
-        if (startDate.isBefore(now)) {
-            response.setCode(444);
-            response.setMessage("Start date must be greater than the current date.");
-            return ResponseEntity.ok(response);
-        }
-
         if (endDate.isBefore(startDate)) {
             response.setCode(445);
             response.setMessage("End date must be greater than start date.");
             return ResponseEntity.ok(response);
+        }
+
+        // Kiểm tra ngày bắt đầu của quảng cáo không được nằm trong khoảng ngày của
+        // quảng cáo khác
+        List<Advertisement> existingAdvertisements = adversitementJPA.findAllAdvertisementsWithStatus1();
+        for (Advertisement existingAdvertisement : existingAdvertisements) {
+            if ((startDate.isEqual(existingAdvertisement.getStartDate())
+                    || startDate.isAfter(existingAdvertisement.getStartDate()))
+                    && startDate.isBefore(existingAdvertisement.getEndDate())) {
+                response.setCode(446);
+                response.setMessage("Start date overlaps with another advertisement.");
+                return ResponseEntity.ok(response);
+            }
         }
 
         // Create a new Advertisement object
@@ -97,12 +103,13 @@ public class AdvertisementController {
     }
 
     @PutMapping("/update/{id}")
+    @PreAuthorize("hasPermission(#userId, 'Update Advertisement')")
     public ResponseEntity<ResponseAPI<Boolean>> updateAdvertisement(
             @PathVariable("id") Integer id,
             @RequestParam("advName") String advName,
             @RequestParam("advDescription") String advDescription,
-            @RequestParam("startDate") String startDate,
-            @RequestParam("endDate") String endDate,
+            @RequestParam("startDate") LocalDateTime startDate,
+            @RequestParam("endDate") LocalDateTime endDate,
             @RequestParam("status") int status,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @RequestParam(value = "existingImages", required = false) List<String> existingImages,
@@ -120,19 +127,20 @@ public class AdvertisementController {
             return ResponseEntity.status(404).body(response);
         }
 
+        List<Advertisement> existingAdvertisements = adversitementJPA.findAllAdvertisementsWithStatus1();
+        for (Advertisement existingAdvertisement : existingAdvertisements) {
+            if ((startDate.isEqual(existingAdvertisement.getStartDate())
+                    || startDate.isAfter(existingAdvertisement.getStartDate()))
+                    && startDate.isBefore(existingAdvertisement.getEndDate())) {
+                response.setCode(446);
+                response.setMessage("Start date overlaps with another advertisement.");
+                return ResponseEntity.ok(response);
+            }
+        }
+
         // Cập nhật thông tin quảng cáo
         advertisement.setAdvDescription(advDescription);
         advertisement.setAdvName(advName);
-
-        // Chuyển đổi từ String thành LocalDateTime
-        try {
-            advertisement.setStartDate(LocalDateTime.parse(startDate));
-            advertisement.setEndDate(LocalDateTime.parse(endDate));
-        } catch (DateTimeParseException e) {
-            response.setCode(400);
-            response.setMessage("Invalid date format");
-            return ResponseEntity.status(400).body(response);
-        }
 
         advertisement.setStatus((byte) status);
 

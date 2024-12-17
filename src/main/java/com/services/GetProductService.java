@@ -61,7 +61,7 @@ public class GetProductService {
 
 			String vectorString = String.join(", ",
 					processedVector.stream().map(BigDecimal::toPlainString).toArray(String[]::new));
-			// System.out.println(vectorString);
+			System.out.println(vectorString);
 
 			List<ProductVector> productVectors = productVectorJPA.getProductVectorByVector(vectorString);
 
