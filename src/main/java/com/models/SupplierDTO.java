@@ -13,26 +13,26 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SupplierDTO {
 
-    @NotBlank(message = "Địa chỉ không được để trống")
-    @Size(max = 255, message = "Địa chỉ không được vượt quá 255 ký tự")
+    @NotBlank(message = "Address cannot be blank")
+    @Size(max = 255, message = "Address cannot be longer than 255 characters")
     private String address;
 
-    @NotBlank(message = "Tên liên hệ không được để trống")
-    @Size(max = 100, message = "Tên liên hệ không được vượt quá 100 ký tự")
+    @NotBlank(message = "Contact name cannot be blank")
+    @Size(max = 100, message = "Contact name cannot be longer than 100 characters")
     private String contactName;
 
-    @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email phải hợp lệ")
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Email should be valid")
     private String email;
 
     private Boolean isActive = true;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
-    @Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự")
+    @NotBlank(message = "Phone number cannot be blank")
+    @Size(max = 20, message = "Phone number cannot be longer than 20 characters")
     private String phone;
 
-    @NotBlank(message = "Tên nhà cung cấp không được để trống")
-    @Size(max = 100, message = "Tên nhà cung cấp không được vượt quá 100 ký tự")
+    @NotBlank(message = "Supplier name cannot be blank")
+    @Size(max = 100, message = "Supplier name cannot be longer than 100 characters")
     private String supplierName;
 
     private int id;
