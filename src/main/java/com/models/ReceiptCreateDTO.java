@@ -12,30 +12,31 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 @Data
 public class ReceiptCreateDTO {
-    @NotNull(message = "Mã nhà cung cấp là bắt buộc.")
-    @Min(value = 1, message = "Mã nhà cung cấp phải lớn hơn hoặc bằng 1.")
+    @NotNull(message = "Supplier ID is required.")
+    @Min(value = 1, message = "Supplier ID must be greater than or equal to 1.")
     private Integer supplierId;
 
-    @NotNull(message = "Mô tả là bắt buộc.")
-    @Size(min = 5, max = 255, message = "Mô tả phải có độ dài từ 5 đến 255 ký tự.")
+    @NotNull(message = "Description is required.")
+    @Size(min = 5, max = 255, message = "Description must be between 5 and 255 characters.")
     private String description;
 
-    @NotEmpty(message = "Danh sách phiên bản sản phẩm là bắt buộc.")
+    @NotEmpty(message = "Product versions are required.")
     @Valid
     private List<ProductVersionDTO> productVersions;
 
     @Data
     public static class ProductVersionDTO {
-        @NotNull(message = "Mã phiên bản sản phẩm là bắt buộc.")
-        @Min(value = 1, message = "Mã phiên bản sản phẩm phải lớn hơn hoặc bằng 1.")
+        @NotNull(message = "Product version ID is required.")
+        @Min(value = 1, message = "Product version ID must be greater than or equal to 1.")
         private Integer productVersionId;
 
-        @NotNull(message = "Số lượng là bắt buộc.")
-        @Min(value = 1, message = "Số lượng phải lớn hơn 0.")
+        @NotNull(message = "Quantity is required.")
+        @Min(value = 1, message = "Quantity must be greater than 0.")
         private Integer quantity;
 
-        @NotNull(message = "Giá là bắt buộc.")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Giá phải lớn hơn 0.")
+        @NotNull(message = "Price is required.")
+        @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0.")
         private BigDecimal price;
     }
 }
+
